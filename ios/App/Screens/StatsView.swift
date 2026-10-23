@@ -28,13 +28,7 @@ struct StatsView: View {
                         Picker("Watch time period", selection: $period) { ForEach(Period.allCases) { Text($0.label).tag($0) } }.pickerStyle(.menu).fixedSize()
                         if period == .year { Picker("Year", selection: $year) { ForEach(years, id: \.self) { Text(String($0)).tag($0) } }.pickerStyle(.menu).fixedSize() }
                     }
-                    HStack(spacing: 0) {
-                        ForEach(ranges, id: \.period) { range in
-                            Button { period = range.period; selectedDay = nil } label: {
-                                Text(range.label).font(.system(size: 12, weight: .semibold)).foregroundStyle(period == range.period ? Color(webHex: "#21182e") : Color(webHex: "#c5c0cf")).frame(maxWidth: .infinity).frame(height: 34).background(period == range.period ? theme.accent : .clear)
-                            }.buttonStyle(.plain)
-                        }
-                    }.clipShape(RoundedRectangle(cornerRadius: 11)).overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(.white.opacity(0.13)))
+                    StatsRangeSelector(selection: $period)
                     Text(DiaryDate.duration(minutes)).font(.system(size: 38, weight: .bold)).foregroundStyle(.tint).tracking(-1)
                     Text("\(events.count) watches · \(Set(events.map(\.titleId)).count) movies & shows").font(.caption).foregroundStyle(.secondary)
                     Chart(daily) { day in BarMark(x: .value("Day", day.date, unit: .day), y: .value("Minutes", day.minutes)).foregroundStyle(.tint).cornerRadius(3) }
@@ -73,9 +67,8 @@ struct StatsView: View {
                 }.diaryPanel()
             }.padding(.horizontal, 16).padding(.bottom, 24)
             }.refreshable { await store.refresh() }
-        }.onChange(of: router.statsRevision) { _, _ in applyShortcut() }.onAppear { applyShortcut() }
+        }.onChange(of: router.statsRevision) { _, _ in applyShortcut() }.onAppear { applyShortcut() }.onChange(of: period) { _, _ in selectedDay = nil }
     }
-    private var ranges: [(period: Period, label: String)] { [(.week, "7D"), (.month, "30D"), (.ninetyDays, "90D"), (.year, "1Y"), (.all, "All")] }
     private func applyShortcut() { if router.statsRevision > appliedShortcutRevision { appliedShortcutRevision = router.statsRevision; period = .today; selectedDay = nil } }
     private var homeSummary: HomeOverview { HomeOverview(workspace: store.workspace, now: store.now) }
     private var heatmap: [(date: Date, count: Int)] {
@@ -109,5 +102,26 @@ struct StatsView: View {
             for genre in names.isEmpty ? ["Uncategorized"] : Array(names) { counts[genre, default: 0] += 1 }
         }
         return counts.map { Genre(name: $0.key, count: $0.value, percent: Int((Double($0.value) / Double(max(1, titles.count)) * 100).rounded())) }.sorted { $0.count == $1.count ? $0.name < $1.name : $0.count > $1.count }
+    }
+}
+
+private struct StatsRangeSelector: View {
+    @Binding var selection: Period
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
+    private let ranges: [Period] = [.week, .month, .ninetyDays, .year, .all]
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(ranges) { range in
+                Button { selection = range } label: {
+                    Text(label(range)).font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(selection == range ? Color(webHex: "#21182e") : Color(webHex: "#c5c0cf"))
+                        .frame(maxWidth: .infinity).frame(height: 34)
+                        .background { if selection == range { Rectangle().fill(theme.accent) } }
+                }.buttonStyle(.plain).accessibilityAddTraits(selection == range ? .isSelected : [])
+            }
+        }.clipShape(RoundedRectangle(cornerRadius: 11)).overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(.white.opacity(0.13)))
+    }
+    private func label(_ value: Period) -> String {
+        switch value { case .week: "7D"; case .month: "30D"; case .ninetyDays: "90D"; case .year: "1Y"; case .all: "All"; case .today: "Today" }
     }
 }

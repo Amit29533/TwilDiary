@@ -45,3 +45,5 @@ Exact next action: push batch, inspect CI and corrected accessibility/geometry t
 No deploys, hosted D1 mutations, provider-account writes or secrets. Test only fixtures/local data. Existing Cloudflare backend is authoritative. No Mac/Swift execution on Windows. All compile, XCTest and XCUITest runs happen in GitHub Actions; core Swift tests run there too. No pbxproj is handwritten.
 
 GitHub CLI: prepend C:/Program Files/GitHub CLI to PATH. Push only ios-native. Workflow: .github/workflows/ios.yml; project: ios/project.yml. Download with gh run download RUN_ID; keep screenshot evidence and label synthetic UI fixtures honestly. Separate TwilDiary-iOS repository remains unchanged.
+
+Additional visual check: the Year menu updated but the range-bar selection was not visibly filled in the build-4 screenshot. Extracted a binding-backed StatsRangeSelector with structural selected background and explicit selected accessibility traits; tests now assert Year selected and cleared on Home→Today. This joins the accessibility/hit-target follow-up before acceptance. Run 40009034584 is superseded by this coherent follow-up; do not use it as acceptance evidence.

@@ -64,12 +64,14 @@ import XCTest
         let app = launch(); app.buttons["tab-stats"].tap()
         XCTAssertTrue(app.buttons["30D"].waitForExistence(timeout: 5))
         app.buttons["1Y"].tap()
+        XCTAssertTrue(app.buttons["1Y"].isSelected)
         capture("Stats year")
         app.buttons["tab-home"].tap()
         app.buttons["home-stats"].tap()
         XCTAssertTrue(app.staticTexts["Today"].exists || app.buttons.containing(NSPredicate(format: "label CONTAINS 'Today'")).firstMatch.exists)
         XCTAssertTrue(app.buttons["7D"].exists)
         XCTAssertTrue(app.buttons["90D"].exists)
+        XCTAssertFalse(app.buttons["1Y"].isSelected)
         capture("Stats from Home")
     }
     private func capture(_ name: String) {
