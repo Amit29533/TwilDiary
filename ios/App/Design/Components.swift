@@ -74,7 +74,7 @@ struct PageHeader: View {
             } else { Text(name).font(.system(size: 26, weight: .bold)).tracking(-1.2).foregroundStyle(Color(webHex: "#f3f0f7")).lineLimit(1).minimumScaleFactor(0.7) }
             if let count { Text(count).font(.system(size: 13)).foregroundStyle(Color(webHex: "#a09aa9")).lineLimit(1) }
             Spacer(minLength: 0)
-            if let onSearch { Button(action: onSearch) { DiaryIcon(name: "search", size: 22).frame(width: 44, height: 44) }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel(name == "Library" ? "Search library" : "Search") }
+            if let onSearch { Button(action: onSearch) { DiaryIcon(name: "search", size: 22).frame(width: 44, height: 44) }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel(name == "Library" ? "Search library" : "Search").accessibilityIdentifier("search-" + name.lowercased()) }
         }.frame(height: 56).padding(.horizontal, 14).background(Color(webHex: "#050507"))
     }
 }
@@ -121,13 +121,13 @@ struct Artwork: View {
         GeometryReader { proxy in
           ZStack {
             LinearGradient(colors: [tint, Color(webHex: "#1c1728")], startPoint: .topLeading, endPoint: .bottomTrailing)
-            if let path, path.hasPrefix("asset:") || path.hasPrefix("/demo/") || path.hasPrefix("scene:"), let image = DemoArtwork.image(path) { Image(uiImage: image).resizable().scaledToFill() }
-            else if let image = fixtureImage(path) { Image(uiImage: image).resizable().scaledToFill() }
+            if let path, path.hasPrefix("asset:") || path.hasPrefix("/demo/") || path.hasPrefix("scene:"), let image = DemoArtwork.image(path) { Image(uiImage: image).resizable().scaledToFill().frame(width: proxy.size.width, height: proxy.size.height).clipped() }
+            else if let image = fixtureImage(path) { Image(uiImage: image).resizable().scaledToFill().frame(width: proxy.size.width, height: proxy.size.height).clipped() }
             else if let path, let url = URL(string: path), url.scheme == "https" {
-                AsyncImage(url: url) { phase in if let image = phase.image { image.resizable().scaledToFill() } else { initials } }
+                AsyncImage(url: url) { phase in if let image = phase.image { image.resizable().scaledToFill().frame(width: proxy.size.width, height: proxy.size.height).clipped() } else { initials } }
             } else { initials }
           }.frame(width: proxy.size.width, height: proxy.size.height).clipped()
-        }.accessibilityHidden(true)
+        }.contentShape(Rectangle()).accessibilityHidden(true)
     }
     private var tint: Color {
         let values = ["#543173", "#514779", "#294959", "#345682", "#477062", "#73435f"]
@@ -166,9 +166,12 @@ struct PosterCard: View {
                 .overlay(alignment: .bottomLeading) { if present || title.queued == true { DiaryIcon(name: present ? "monitor" : "download", size: 13).foregroundStyle(Color(webHex: present ? "#9edbc4" : "#b795f6")).padding(6).background(.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 6)).padding(7) } }
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             Text(title.name).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color(webHex: "#f3f0f7")).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
-        }.accessibilityElement(children: .combine)
+        }.contentShape(Rectangle()).accessibilityElement(children: .ignore).accessibilityLabel(title.name).accessibilityValue(accessibleDetails)
     }
     private var present: Bool { store.workspace.locations.contains { $0.titleId == title.id && $0.evidence == "present" } }
+    private var accessibleDetails: String {
+        [title.categoryName, title.status.capitalized, store.publicScore(title, source: ratingSource).map { "Rating " + $0.formatted(.number.precision(.fractionLength(1))) }, title.status == "watching" ? "\(Int((progress * 100).rounded())) percent watched" : nil].compactMap { $0 }.joined(separator: ", ")
+    }
     private var progress: Double {
         LibraryProgress.fraction(title: title, workspace: store.workspace)
     }

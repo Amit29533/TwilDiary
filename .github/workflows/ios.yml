@@ -32,8 +32,11 @@ jobs:
           key: spm-macos26-xcode26.6-${{ hashFiles('ios/**/Package.resolved', 'ios/**/Package.swift', 'ios/project.yml') }}
       - name: Generate Xcode project
         run: |
-          brew install xcodegen
-          xcodegen generate --spec ios/project.yml
+          xcodegen_archive="$RUNNER_TEMP/xcodegen-2.46.0.zip"
+          curl --fail --location --retry 3 --silent --show-error https://github.com/yonaskolb/XcodeGen/releases/download/2.46.0/xcodegen.zip --output "$xcodegen_archive"
+          printf '%s  %s\n' 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806 "$xcodegen_archive" | shasum -a 256 --check -
+          unzip -q "$xcodegen_archive" -d "$RUNNER_TEMP/twildiary-tools"
+          "$RUNNER_TEMP/twildiary-tools/xcodegen/bin/xcodegen" generate --spec ios/project.yml
       - name: Compile simulator and test bundles
         id: simulator
         run: bash ios/scripts/ci.sh build-simulator

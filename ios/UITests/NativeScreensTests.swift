@@ -41,7 +41,9 @@ import XCTest
         app.buttons["Genre sections"].tap(); capture("Library genres")
     }
     func testCatalogSearchReviewAndCastProfile() {
-        let app = launch(); app.buttons["tab-home"].tap(); app.buttons["Search"].tap()
+        let app = launch(); app.buttons["tab-home"].tap()
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "label == 'Search'")).count, 1, "Inactive tabs must not expose controls to VoiceOver")
+        app.buttons["search-twildiary"].tap()
         let search = app.textFields["Search library and online"]
         XCTAssertTrue(search.waitForExistence(timeout: 5)); search.tap(); search.typeText("Clockmaker\n")
         let result = app.buttons["search-movie:900001"]

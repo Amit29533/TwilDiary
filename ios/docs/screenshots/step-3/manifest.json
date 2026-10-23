@@ -87,5 +87,14 @@
       "device": "iPhone 17 Pro",
       "fixture": true
     }
-  ]
+  ],
+  "visualReview": {
+    "accepted": false,
+    "findings": [
+      "Duplicate system/custom tab bars",
+      "Poster artwork exceeds grid bounds",
+      "Custom chrome uses default blue accent"
+    ],
+    "followUpCommit": "a825529"
+  }
 }

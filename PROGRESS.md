@@ -22,7 +22,13 @@ Run 40001908810 for db13a65 passed: simulator and unsigned-device builds, 10 cor
 
 Visual inspection caught issues despite passing tests: system and custom tab bars both visible, blue system accent in custom chrome, and poster images overflowing grid bounds. The current follow-up removes the system TabView, retains lazily mounted per-tab navigation stacks, explicitly uses theme accents and constrains artwork to its viewport. Added geometry and single-tab-bar assertions. Do not offer the build-3 IPA as visually ready.
 
-Other follow-ups: first-open Queue/Planned shortcuts, public-rating category constraints, manifest-aware poster progress, the original Stats range bar synchronized to its period menu, 90-day calendar boundary, streak heatmap, source-correct genre denominator and 70/70 web-reference manifest. Build number 4. Exact next action: push follow-up, inspect CI diagnostics, download and visually inspect corrected screenshots before offering IPA.
+Other follow-ups: first-open Queue/Planned shortcuts, public-rating category constraints, manifest-aware poster progress, the original Stats range bar synchronized to its period menu, 90-day calendar boundary, streak heatmap, source-correct genre denominator and 70/70 web-reference manifest. Run 40005569021 for a825529 compiled simulator/device and passed 11 core + 8 endpoint/session tests; 3/5 UI tests passed. Screenshots confirm the visible single tab bar, theme color and grid fixes. Two stricter checks failed: inactive NavigationStacks expose duplicate Search accessibility nodes; cropped image hit/accessibility bounds exceed their cells. The next batch hides each stack's inner content from accessibility when inactive, constrains image frames/content shapes and gives posters explicit accessible summaries. Search queries retain a uniqueness assertion plus a stable identifier. Build number 5.
+
+The official XcodeGen 2.46.0 archive is now SHA-256 pinned (4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806), replacing the three-minute Homebrew metadata fetch without changing tool version. Archive layout inspected on Windows; execution/generation still happens only in macOS CI.
+
+Local backend contract probe passed 18 requests covering create, watch/idempotent retry, card receipt, Queue/favorite/notes/rating patch, stale-version rejection, revoke/restore, Trash/restore and cleanup. It is hardcoded to the isolated loopback reference server and changes only a fresh synthetic UUID. Existing fixture title versions remained unchanged; hosted requests: zero. Report: ios/docs/LOCAL-API-CONTRACTS.json.
+
+Exact next action: push batch, inspect CI and corrected accessibility/geometry tests, download screenshots and compare before offering IPA. Do not call build 4 green; its UI checks failed.
 
 ## Remaining parity work
 

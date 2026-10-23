@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import TwilDiaryCore
 
 @main struct TwilDiaryApp: App {
@@ -92,7 +93,7 @@ struct RootView: View {
     private var navigation: some View {
         HStack(spacing: 0) {
             ForEach(AppTab.allCases, id: \.self) { tab in
-                Button { router.selectedTab = tab } label: {
+                Button { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil); router.selectedTab = tab } label: {
                     VStack(spacing: 2) { DiaryIcon(name: tab.icon, size: 23); Text(tab.label).font(.system(size: 11)) }
                         .frame(maxWidth: .infinity).frame(height: 57)
                         .foregroundStyle(router.selectedTab == tab ? theme.accent : Color(webHex: "#a09aa9"))
@@ -107,12 +108,12 @@ struct RootView: View {
     }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {
-            content().background(tab == .library ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).onAppear { router.detailTabs.remove(tab) }
-                .navigationDestination(for: String.self) { TitleDetailView(id: $0).onAppear { router.detailTabs.insert(tab) } }
-                .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).onAppear { router.detailTabs.insert(tab) } }
-                .navigationDestination(for: PersonRoute.self) { PersonView(id: $0.id).onAppear { router.detailTabs.insert(tab) } }
+            content().background(tab == .library ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).accessibilityHidden(router.selectedTab != tab).onAppear { router.detailTabs.remove(tab) }
+                .navigationDestination(for: String.self) { TitleDetailView(id: $0).accessibilityHidden(router.selectedTab != tab).onAppear { router.detailTabs.insert(tab) } }
+                .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).accessibilityHidden(router.selectedTab != tab).onAppear { router.detailTabs.insert(tab) } }
+                .navigationDestination(for: PersonRoute.self) { PersonView(id: $0.id).accessibilityHidden(router.selectedTab != tab).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: AppDestination.self) { destination in
-                    Group { switch destination { case .explore: ExploreView(); case .history: HistoryView(); case .files: FilesView(); case .trash: TrashView() } }.onAppear { router.detailTabs.remove(tab) }
+                    Group { switch destination { case .explore: ExploreView(); case .history: HistoryView(); case .files: FilesView(); case .trash: TrashView() } }.accessibilityHidden(router.selectedTab != tab).onAppear { router.detailTabs.remove(tab) }
                 }
         }
     }

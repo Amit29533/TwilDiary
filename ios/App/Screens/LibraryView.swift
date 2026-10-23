@@ -78,7 +78,7 @@ struct LibraryView: View {
         switch router.libraryShortcut { case "queue": status = "queue"; case "planned": status = "planned"; case "disk": drive = "mapped"; default: break }
     }
     private func poster(_ title: MediaTitle) -> some View {
-        NavigationLink(value: title.id) { PosterCard(title: title) }.buttonStyle(.plain).accessibilityIdentifier("title-" + title.id)
+        NavigationLink(value: title.id) { PosterCard(title: title).contentShape(Rectangle()) }.buttonStyle(.plain).contentShape(Rectangle()).accessibilityIdentifier("title-" + title.id)
             .contextMenu {
                 Button(title.favorite ? "Remove favorite" : "Favorite") { Task { await store.patch(title, values: ["favorite": !title.favorite]) } }
                 Button(title.queued == true ? "Remove from Queue" : "Add to Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }
