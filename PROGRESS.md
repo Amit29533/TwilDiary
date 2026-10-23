@@ -1,59 +1,63 @@
 # Native TwilDiary progress
 
-Updated: 24 October 2026. Branch: ios-native. Web source: b43454e.
+Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native → ios/**. Web source of truth: main baseline b43454e. The separate TwilDiary-iOS repository remains unchanged. No PR has been created or merged; GitHub's Compare & pull request banner is only a suggestion.
 
-## Current work
+## Current request and exact next action
 
-The user asked to move past the procedural foundation gates and build the actual app. The 10-step ROADMAP remains a parity checklist, not a claim that those steps passed. Reused the earlier native client without changing that separate repository. Existing web source and deploy workflows are untouched.
+Build 8, source fe17ea6, run **40017058735**, is in progress. The current request replaces the continuous show/anime detail progress track with the web's per-episode pieces. Implementation is committed/pushed; wait for CI, read any failures, download screenshots/logs/IPA, visually inspect Title detail and Stats year, verify the IPA and publish the passed-build screenshot. Do not offer a failed or unreviewed build as accepted.
 
-## Implemented in this batch
-
-- Swift 6, iOS 26+, XcodeGen and the existing secure Access sign-in/session client.
-- Native app shell, separate tab navigation, web vector icons, six accent themes, compact poster/public-rating badges, fixed headers, contained search focus and compact progress cards.
-- Home carousel, shortcuts routed to the main tabs, weekly time/count/streak/day bars, planned picks, upcoming episodes and history.
-- Library category/status/genre/disk filters, Queue, grid/list/genre sections, public TMDB/Trakt preference and restoration from Trash.
-- Catalog search/discovery/review/import, manual add, cast profiles and filmography. Release paths use the real authenticated API; synthetic data is only selected by Debug --ui-testing.
-- Title cast/recommendations below the episode list; compact episode window with expansion, notes/location collapsed. Existing watch/status/Undo operations preserved.
-- Source inventory, isolated Playwright references at 390x844, extracted design assets and image-comparison tooling under ios/tools and ios/docs.
+The track uses the source SVG's 12-unit slots, 9-unit rounded pieces, 3-unit gaps, a 12pt drawing in a 44pt row, accent watched fill, 36.08% accent for Up next and #ffffff20 unwatched fill. Episode identities preserve holes in watch history and unloaded manifest slots. Movies retain continuous progress. Two core tests cover holes, ordering, unloaded/empty slots and stale-next precedence. The UI test checks all 16 pieces/gaps, eight filled episodes, and the separate continuous movie track. Interactive range editing remains an explicitly tracked parity gap.
 
 ## CI truth
 
-Run 40001908810 for db13a65 passed: simulator and unsigned-device builds, 10 core tests, 8 session/endpoint tests, 4 UI tests, zero build warnings. Downloaded 13 screenshot attachments and IPA; verified SHA-256, arm64, bundle ID, build 3 and iOS 26 minimum. Evidence: ios/docs/screenshots/step-3 (synthetic fixtures).
+| Run | Source | Outcome and evidence |
+| --- | --- | --- |
+| 40001908810 | db13a65 | 10 core + 8 endpoint/session + 4 UI tests passed, zero warnings; visual review found duplicate bars and grid overflow. Historical evidence in ios/docs/screenshots/step-3 is marked not accepted. |
+| 40005569021 | a825529 | Builds/core/session passed; 3/5 UI passed. Visual bar/grid corrections present; hit bounds and inactive accessibility failed. |
+| 40009671759 | 55828e4 | Builds/core/session passed; 4/5 UI passed. Remaining failure: hidden cached stacks exposed duplicate Search controls. |
+| 40012507026 | 07673eb | 11 core + 8 endpoint/session + 5 UI tests passed; zero warnings; single native tab lifecycle/custom bar and poster hit geometry verified. Stats selected accessibility trait passed but visual fill was missing. |
+| 40014507822 | d952cb9 | Builds/core/session passed; 4/5 UI passed, zero warnings. Stats fill now visibly correct in downloaded screenshot/video. Color assertion accidentally sampled label glyphs; corrected to the empty left interior in build 8. |
+| 40017058735 | fe17ea6 | In progress: build 8, episode pieces + movie regression + corrected Stats pixel sampling. |
 
-Visual inspection caught issues despite passing tests: system and custom tab bars both visible, blue system accent in custom chrome, and poster images overflowing grid bounds. The current follow-up removes the system TabView, retains lazily mounted per-tab navigation stacks, explicitly uses theme accents and constrains artwork to its viewport. Added geometry and single-tab-bar assertions. Do not offer the build-3 IPA as visually ready.
+Build-6 artifacts are downloaded under .local/ios-app-build-40012507026. Its arm64 IPA SHA-256 is 8bf20602033c21d5d1262b91a02217a5e1124719a58561beaa1133bef380d240. The currently uncommitted step-8 screenshots still come from build 6; replace them with verified build-8 evidence before committing that directory. No new IPA has yet been copied to Downloads in this batch.
 
-Other follow-ups: first-open Queue/Planned shortcuts, public-rating category constraints, manifest-aware poster progress, the original Stats range bar synchronized to its period menu, 90-day calendar boundary, streak heatmap, source-correct genre denominator and 70/70 web-reference manifest. Run 40005569021 for a825529 compiled simulator/device and passed 11 core + 8 endpoint/session tests; 3/5 UI tests passed. Screenshots confirm the visible single tab bar, theme color and grid fixes. Two stricter checks failed: inactive NavigationStacks expose duplicate Search accessibility nodes; cropped image hit/accessibility bounds exceed their cells. The next batch hides each stack's inner content from accessibility when inactive, constrains image frames/content shapes and gives posters explicit accessible summaries. Search queries retain a uniqueness assertion plus a stable identifier. Build number 5.
+## Work present (not full parity acceptance)
 
-The official XcodeGen 2.46.0 archive is now SHA-256 pinned (4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806), replacing the three-minute Homebrew metadata fetch without changing tool version. Archive layout inspected on Windows; execution/generation still happens only in macOS CI.
+- Swift 6, iOS 26+, XcodeGen; real Access sign-in, database-independent session validation, restricted URLSession transport and Keychain credentials.
+- Native TabView lifecycle with independent NavigationStacks; system bar hidden; custom capsule, fixed headers, source Lucide assets, six themes, contained search focus and cropped poster hit bounds.
+- Home carousel, Explore/Queue/Disk shortcuts, weekly totals/streak/day bars, planned pick, upcoming episodes and history. Home → Stats opens Today without adding new range buttons.
+- Library category/status/genre/disk filters, public TMDB/Trakt ratings preference, grid/list/genre sections, Queue and versioned Trash restore.
+- Authenticated catalog search/discovery/review/import, manual add, cast profiles and typed movie/TV filmography.
+- Title status/watch actions, remaining time, season selection beside Episodes, episode window/expansion, cast/recommendations and collapsed notes/location sections.
+- Stats shared period/menu selection, 90-day boundary, basic daily charts, streak heatmap, backlog counts and watched-title genre denominator.
+- Complete-snapshot paginated reload preserves in-memory data on read failure; uncertain mutations retain operation identities and server version/Undo receipts.
 
-Local backend contract probe passed 18 requests covering create, watch/idempotent retry, card receipt, Queue/favorite/notes/rating patch, stale-version rejection, revoke/restore, Trash/restore and cleanup. It is hardcoded to the isolated loopback reference server and changes only a fresh synthetic UUID. Existing fixture title versions remained unchanged; hosted requests: zero. Report: ios/docs/LOCAL-API-CONTRACTS.json.
+Debug --ui-testing uses isolated synthetic data and read-only mutation stand-ins. Release builds cannot select that mode. Browsing UI tests do not establish write-flow coverage. The local contract probe passed 18 requests on the isolated loopback backend, including watch/idempotency, patch/conflict, revoke/restore and Trash/restore; it cleaned only its fresh synthetic UUID and left pre-existing fixture versions unchanged. Hosted requests: zero. Report: ios/docs/LOCAL-API-CONTRACTS.json.
 
-Exact next action: push batch, inspect CI and corrected accessibility/geometry tests, download screenshots and compare before offering IPA. Do not call build 4 green; its UI checks failed.
+## References and comparison
 
-## Remaining parity work
+- Primary Playwright references: ios/docs/reference/chromium-win32 — 70/70 enumerated states captured at 390×844.
+- Secondary: ios/docs/reference/chromium-win32-402x778 — matches iPhone 17 Pro content after documented 62pt top/34pt bottom OS insets. Added the show reference for the episode-track comparison.
+- Native screenshots are synthetic simulator evidence, not live owner data. Windows Chromium font metrics differ from iOS; screenshot capture alone is not a parity pass.
+- Source inventory, tokens/icons and comparison scripts are under ios/docs and ios/tools. Roadmap remains the 10-step parity checklist; the user subsequently asked to prioritize actual app work over procedural gates. No entire step is claimed complete without evidence.
 
-- Stats full backlog, averages/comparison, monthly/year chart buckets, zero-day coverage and drilldown parity remain incomplete; shared period/bar selection and current streak heatmap are implemented.
-- Complete per-episode actions, watch date editing/rewatches, spoiler controls, progress slider and title transaction edge cases.
-- Complete native Trakt setup/review/apply, scanner mismatch and backup/export management screens.
-- Durable protected offline snapshot/outbox; current complete-snapshot reload preserves in-memory data on read failure, but is not durable offline support.
-- Full multi-size/accessibility/empty/error/loading regression and real-phone haptics/scroll/gesture checks.
-- Reference capture rerun completed 70/70 successfully. The full manifest now records all enumerated states; this is web reference evidence, not native parity evidence.
-- Visual parity is unfinished. Windows Chromium reference font metrics differ from iOS. Each screen still requires simulator comparison and refinement.
+## Remaining parity work / known issues
 
-## Boundaries / build
+- Title individual episode toggles, spoiler reveal, watch date editing/rewatches, interactive range editing, layout refinement and complete transaction UI regression.
+- Stats averages/comparison, hourly/monthly/zero-day buckets, longest/active streak details and full backlog/runtime drilldowns.
+- Glance waiting/sort, complete Explore shelves/filters, scanner mismatch review and native Trakt setup/scan/review/apply.
+- Full More/settings, backups/import/export and TMDB credential/status management views.
+- Protected durable offline snapshot/outbox; reload generation guards; reviewed editor versions and expected-previous safety on minus. Undo toast currently uses a safe-area inset and needs the web's overlay/no-reflow behavior verified.
+- Multi-size, accessibility/empty/error/loading/rapid-tap regression; real-device haptics, scrolling, animation timing and LiveContainer login. See DEVICE-CHECKS.md.
 
-No deploys, hosted D1 mutations, provider-account writes or secrets. Test only fixtures/local data. Existing Cloudflare backend is authoritative. No Mac/Swift execution on Windows. All compile, XCTest and XCUITest runs happen in GitHub Actions; core Swift tests run there too. No pbxproj is handwritten.
+No credential is currently required for this fixture-backed work. Provider redirect registration or real-device behavior may require user input later; never fake successful sync or writes.
 
-GitHub CLI: prepend C:/Program Files/GitHub CLI to PATH. Push only ios-native. Workflow: .github/workflows/ios.yml; project: ios/project.yml. Download with gh run download RUN_ID; keep screenshot evidence and label synthetic UI fixtures honestly. Separate TwilDiary-iOS repository remains unchanged.
+## Build and safety boundaries
 
-Additional visual check: the Year menu updated but the range-bar selection was not visibly filled in the build-4 screenshot. Extracted a binding-backed StatsRangeSelector with structural selected background and explicit selected accessibility traits; tests now assert Year selected and cleared on Home→Today. This joins the accessibility/hit-target follow-up before acceptance. Run 40009034584 is superseded by this coherent follow-up; do not use it as acceptance evidence.
+No Mac/Swift execution locally. All compilation, XCTest, core tests and simulator work happen on GitHub Actions. Never hand-write pbxproj. Workflow: .github/workflows/ios.yml. XcodeGen source: ios/project.yml. Pinned macos-26 / Xcode 26.6 / iPhone 17 Pro iOS 26.5. Official XcodeGen 2.46.0 archive is SHA-256 pinned. Builds enforce zero compiler warnings and upload logs, xcresult, screenshots and an unsigned arm64 IPA.
 
-Latest completed run: 40009671759 (55828e4), simulator/device/core/session checks pass, 4/5 UI tests pass, zero build warnings. Poster tap/accessibility geometry and the binding-backed Stats selected-state checks now pass. The remaining failure is duplicate hidden Search nodes from cached NavigationStacks; even inner accessibilityHidden did not remove them. The current batch restores Apple's native TabView for tab lifecycle/accessibility, explicitly hides its system tab bar inside every navigation root/destination and via appearance, and retains the web-matched custom capsule. Tests still require zero system bars, unique Search, preserved tab search state and non-overlapping posters. Build 6. Push and verify; do not offer build 5 as fully green.
+GitHub CLI: prepend C:/Program Files/GitHub CLI to PATH. Run gh run view RUN --log-failed on failure; gh run download RUN for artifacts. Commit messages: step N: description. Push only ios-native. No web source/deploy workflow changes, main pushes, force pushes, hosted D1 mutations/deploys, provider-account writes or committed secrets. Test fixtures or the isolated LOCAL_DIARY=1 loopback backend only. The existing Cloudflare backend remains authoritative.
 
-Run 40012507026 for 07673eb passed: 11 core + 8 session/endpoint + 5 UI tests, zero warnings, 15 screenshots and unsigned arm64 build-6 IPA downloaded/verified (SHA-256 8bf20602033c21d5d1262b91a02217a5e1124719a58561beaa1133bef380d240). Visual inspection confirms single navigation, theme colors, clipped poster cells and active-tab accessibility. However, Stats Year still had no visible accent fill despite the selected trait passing. Do not call that visual parity accepted. The current batch draws the selected segment as a parent-level background, refreshes selector identity on selection and adds a real screenshot-pixel accent check above the selected label. Build 7. Exact next action: push, verify CI/color assertion, download/inspect screenshots, then offer IPA as an unfinished native preview.
+## Build-8 review follow-up
 
-## Current request: episode pieces (build 8)
-
-The user identified the continuous series progress bar as a parity defect. Series now use the web SVG's proportions: one 9-unit rounded piece per 12-unit episode slot, with 3-unit gaps, 12pt drawing inside a 44pt row, watched accent, 36.08% next-episode accent and #ffffff20 unwatched fill. Slots follow the selected season's ordered episode identities, preserving holes and unloaded manifest slots; movies retain their continuous bar. This change ports the displayed track; interactive range editing remains an explicitly tracked parity gap. Added two core rule tests and a simulator screenshot-pixel test for all 16 pieces/gaps and 8 watched episodes in the synthetic 18 Again fixture. CI is the only Swift compilation authority. Build 7 run 40014507822 remains in progress; review it before pushing this coherent batch to avoid canceling its visual Stats verification.
-
-Build-7 run 40014507822 completed with zero warnings; simulator/device builds, 11 core and 8 endpoint/session tests passed; 4/5 UI tests passed. The sole failure sampled antialiased label text (blue 173) instead of the Stats background. Downloaded screenshot/video frame visibly confirms the correct 1Y accent rectangle. The pixel check now samples the left interior at vertical center, away from glyphs/borders, and saves the attachment before asserting. Build 8 combines the episode pieces, movie-continuity regression and this test-coordinate correction. Exact next action: push, inspect CI, download and review screenshots and IPA; never offer a failed run as acceptance evidence.
+Run 40017058735 compiled simulator/device and passed 13 core + 8 endpoint/session tests, zero warnings; 4/5 UI tests passed. Stats now passes its pixel assertion. The only failure was the episode test deriving slot positions from accessibility ink bounds, which omit the SVG's outer margins: a late gap sample landed inside an unwatched piece (47). Downloaded video frame confirms exactly 16 correctly separated pieces, eight filled, one next and seven unfilled. The revised UI test counts real foreground runs and internal gaps from a screenshot scanline rather than assuming padded geometry; it still requires all 16 pieces, eight full accents and the next tint. Title attachment is captured before asserting. App rendering and build number 8 are unchanged. Commit/push this test-only correction and await a fully green run before publishing.

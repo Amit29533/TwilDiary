@@ -26,8 +26,8 @@ import UIKit
         let track = app.otherElements["episode-progress"]
         XCTAssertTrue(track.waitForExistence(timeout: 5))
         XCTAssertEqual(track.value as? String, "8 of 16 episodes watched")
-        assertEpisodePieces(track, app: app)
         capture("Title detail")
+        assertEpisodePieces(track, app: app)
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["title-quiet-orbit"].tap()
         XCTAssertTrue(app.progressIndicators["movie-progress"].waitForExistence(timeout: 5))
@@ -93,17 +93,38 @@ import UIKit
     private func assertEpisodePieces(_ track: XCUIElement, app: XCUIApplication) {
         guard let image = XCUIScreen.main.screenshot().image.cgImage else { XCTFail("Missing episode screenshot"); return }
         let scale = CGFloat(image.width) / app.frame.width
-        let slot = track.frame.width / 16
-        for index in 0..<16 {
-            let piece = sample(image, at: CGPoint(x: track.frame.minX + (CGFloat(index) + 5.5 / 12) * slot, y: track.frame.midY), scale: scale)
-            let gap = sample(image, at: CGPoint(x: track.frame.minX + (CGFloat(index) + 11.0 / 12) * slot, y: track.frame.midY), scale: scale)
-            XCTAssertLessThan(gap[0], 35, "Each episode must have a visible gap after it")
+        // Accessibility reports the visible ink bounds, excluding the SVG's outer margins.
+        // Count actual foreground runs instead of deriving slot positions from those bounds.
+        let left = floor(track.frame.minX * scale)
+        let width = Int(ceil(track.frame.maxX * scale) - left)
+        guard width > 0, let row = image.cropping(to: CGRect(x: left, y: floor(track.frame.midY * scale), width: CGFloat(width), height: 1)) else { XCTFail("Missing episode row"); return }
+        var bytes = [UInt8](repeating: 0, count: width * 4)
+        let rendered = bytes.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(data: buffer.baseAddress, width: width, height: 1, bitsPerComponent: 8, bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.draw(row, in: CGRect(x: 0, y: 0, width: CGFloat(width), height: 1)); return true
+        }
+        XCTAssertTrue(rendered)
+        var pieces: [(start: Int, end: Int)] = []
+        var insidePiece = false
+        for x in 0..<width {
+            let foreground = bytes[x * 4] > 35 || bytes[x * 4 + 1] > 35 || bytes[x * 4 + 2] > 40
+            if foreground {
+                if !insidePiece { pieces.append((start: x, end: x)) }
+                else { pieces[pieces.count - 1].end = x }
+            }
+            insidePiece = foreground
+        }
+        guard pieces.count == 16 else { XCTFail("Expected 16 separate episode pieces; rendered \(pieces.count)"); return }
+        for index in pieces.indices {
+            let center = (pieces[index].start + pieces[index].end) / 2
+            let piece = [Int(bytes[center * 4]), Int(bytes[center * 4 + 2])]
+            if index > 0 { XCTAssertGreaterThan(pieces[index].start - pieces[index - 1].end, 2, "Every adjacent pair must have a visible gap") }
             if index < 8 {
                 XCTAssertGreaterThan(piece[0], 120, "Each watched episode must have its own filled piece")
-                XCTAssertGreaterThan(piece[2], 180)
+                XCTAssertGreaterThan(piece[1], 180)
             } else {
-                XCTAssertGreaterThan(piece[2], gap[2] + 10, "Unwatched pieces must remain visible")
                 XCTAssertLessThan(piece[0], 120, "Unwatched episodes must not appear filled")
+                if index == 8 { XCTAssertGreaterThan(piece[1], 70, "Up next must have a softer accent tint") }
             }
         }
     }
