@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build-test-artifacts:
-    runs-on: macos-26
+    runs-on: macos-26-intel
     timeout-minutes: 35
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
@@ -29,7 +29,7 @@ jobs:
         uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ios/.spm
-          key: spm-macos26-xcode26.6-${{ hashFiles('ios/**/Package.resolved', 'ios/**/Package.swift', 'ios/project.yml') }}
+          key: spm-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/**/Package.resolved', 'ios/**/Package.swift', 'ios/project.yml') }}
       - name: Generate Xcode project
         run: |
           xcodegen_archive="$RUNNER_TEMP/xcodegen-2.46.0.zip"

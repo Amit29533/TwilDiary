@@ -5,6 +5,7 @@ ARTIFACTS="$PWD/ios/.artifacts"
 mkdir -p "$ARTIFACTS/logs"
 PROJECT="$PWD/ios/TwilDiary.xcodeproj"
 COMMON=(-project "$PROJECT" -scheme TwilDiary -clonedSourcePackagesDirPath "$PWD/ios/.spm" CODE_SIGNING_ALLOWED=NO)
+SIM_ARCH=$(uname -m)
 
 case "${1:?CI stage required}" in
   inventory)
@@ -26,11 +27,9 @@ print('Selected simulator:', json.dumps(record))
 with open(os.environ['GITHUB_ENV'], 'a') as file:
     file.write('SIMULATOR_ID=' + device['udid'] + '\n')
 PY
-    SIM_ID=$(python3 -c 'import json; print(json.load(open("ios/.artifacts/simulator.json"))["udid"])')
-    xcrun simctl boot "$SIM_ID" || true
     ;;
   build-simulator)
-    xcodebuild build-for-testing "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=arm64" \
+    xcodebuild build-for-testing "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -derivedDataPath "$PWD/ios/.derived/simulator" 2>&1 | tee "$ARTIFACTS/logs/simulator-build.log"
     ;;
   build-device)
@@ -45,7 +44,7 @@ PY
     ;;
   test)
     xcrun simctl bootstatus "$SIMULATOR_ID" -b 2>&1 | tee "$ARTIFACTS/logs/simulator-boot.log"
-    xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=arm64" \
+    xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -parallel-testing-enabled NO -derivedDataPath "$PWD/ios/.derived/simulator" \
       -resultBundlePath "$ARTIFACTS/Tests.xcresult" 2>&1 | tee "$ARTIFACTS/logs/tests.log"
     ;;
