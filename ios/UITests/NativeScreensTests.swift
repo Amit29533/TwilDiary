@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
@@ -65,6 +66,7 @@ import XCTest
         XCTAssertTrue(app.buttons["30D"].waitForExistence(timeout: 5))
         app.buttons["1Y"].tap()
         XCTAssertTrue(app.buttons["1Y"].isSelected)
+        assertRangeHighlight(app.buttons["1Y"], app: app)
         capture("Stats year")
         app.buttons["tab-home"].tap()
         app.buttons["home-stats"].tap()
@@ -77,5 +79,19 @@ import XCTest
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+    }
+    private func assertRangeHighlight(_ button: XCUIElement, app: XCUIApplication) {
+        guard let source = XCUIScreen.main.screenshot().image.cgImage else { XCTFail("Missing screenshot"); return }
+        let scale = CGFloat(source.width) / app.frame.width
+        let point = CGPoint(x: button.frame.midX, y: button.frame.minY + 5)
+        guard let pixel = source.cropping(to: CGRect(x: floor(point.x * scale), y: floor(point.y * scale), width: 1, height: 1)) else { XCTFail("Missing range sample"); return }
+        var bytes = [UInt8](repeating: 0, count: 4)
+        let rendered = bytes.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(data: buffer.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.draw(pixel, in: CGRect(x: 0, y: 0, width: 1, height: 1)); return true
+        }
+        XCTAssertTrue(rendered)
+        XCTAssertGreaterThan(Int(bytes[0]), 120, "The selected range must visibly use the accent fill")
+        XCTAssertGreaterThan(Int(bytes[2]), 180, "A selected accessibility trait alone is insufficient")
     }
 }

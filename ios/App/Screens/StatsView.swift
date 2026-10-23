@@ -114,12 +114,16 @@ private struct StatsRangeSelector: View {
             ForEach(ranges) { range in
                 Button { selection = range } label: {
                     Text(label(range)).font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(selection == range ? Color(webHex: "#21182e") : Color(webHex: "#c5c0cf"))
                         .frame(maxWidth: .infinity).frame(height: 34)
-                        .background { if selection == range { Rectangle().fill(theme.accent) } }
-                }.buttonStyle(.plain).accessibilityAddTraits(selection == range ? .isSelected : [])
+                }.buttonStyle(.plain).foregroundStyle(selection == range ? Color(webHex: "#21182e") : Color(webHex: "#c5c0cf")).accessibilityAddTraits(selection == range ? .isSelected : [])
             }
-        }.clipShape(RoundedRectangle(cornerRadius: 11)).overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(.white.opacity(0.13)))
+        }.frame(height: 34).background(alignment: .leading) {
+            GeometryReader { proxy in
+                if let index = ranges.firstIndex(of: selection) {
+                    Rectangle().fill(theme.accent).frame(width: proxy.size.width / CGFloat(ranges.count), height: 34).offset(x: proxy.size.width * CGFloat(index) / CGFloat(ranges.count))
+                }
+            }
+        }.clipShape(RoundedRectangle(cornerRadius: 11)).overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(.white.opacity(0.13))).id(selection)
     }
     private func label(_ value: Period) -> String {
         switch value { case .week: "7D"; case .month: "30D"; case .ninetyDays: "90D"; case .year: "1Y"; case .all: "All"; case .today: "Today" }
