@@ -6,7 +6,9 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary â†’ ios-native â†
 
 Build 8, source a15b103, run **40020975007**, passed: 13 core + 8 endpoint/session + 5 UI tests, zero warnings. Downloaded/verified 16 screenshots and the unsigned arm64 IPA. Visually reviewed the contact sheet, episode pieces, continuous movie track and Stats selection. Full layout parity remains unfinished (see the committed web/native title comparison). The passed-build title screenshot has been shared in chat; IPA is copied to D:/Downloads/TwilDiary-native-build8.ipa with SHA-256 sidecar.
 
-Build 9, source af0c8cd, run **40024110462**, is queued. It adds encrypted cached snapshots, late-response/session guards, reviewed editor/watch checks, selected-season response guards and a no-reflow Undo overlay. Exact next action: inspect this run, fix any compile/test errors, download/review its artifacts, then resume the first unfinished parity item. No full step is claimed complete.
+Latest result: build 10, source 3e69167, run **40029758134**, failed compilation in five Trakt controller catch blocks (caught Error shadowed the controller error state). No tests or physical IPA ran. All ten diagnostics have been reviewed; all five assignments now explicitly use self.error. Logs downloaded under .local/ios-app-build-40029758134/results. Earlier build 9 run 40024110462 acquired no runner; Intel recovery run 40026403236 compiled both targets, passed 13 core + 15 app tests, then timed out during UI execution. Neither is a fully passed build.
+
+Prepared build 11 adds the compile correction and the complete web Stats calculation projection, with 17 golden scenarios generated from unchanged src/lib/domain/stats.ts. Native Stats now includes empty buckets, period comparisons/averages, monthly year bars, selectable bucket rails, dated coverage review, current/longest/active streaks, day-history navigation, status breakdown, runtime-aware backlog/stale lists and the union of other genres. Fresh Stats defaults Today; its original five rolling buttons synchronize only the overlapping calendar choices. Exact next action: commit/push this batch, inspect all CI diagnostics, fix through a fully green run, download and visually compare every screenshot, verify the arm64 IPA, then continue the unfinished Library/Glance/locations parity. No full step is claimed complete.
 
 The track uses the source SVG's 12-unit slots, 9-unit rounded pieces, 3-unit gaps, a 12pt drawing in a 44pt row, accent watched fill, 36.08% accent for Up next and #ffffff20 unwatched fill. Episode identities preserve holes in watch history and unloaded manifest slots. Movies retain continuous progress. Two core tests cover holes, ordering, unloaded/empty slots and stale-next precedence. The UI test checks all 16 pieces/gaps, eight filled episodes, and the separate continuous movie track. Interactive range editing remains an explicitly tracked parity gap.
 
@@ -21,7 +23,9 @@ The track uses the source SVG's 12-unit slots, 9-unit rounded pieces, 3-unit gap
 | 40014507822 | d952cb9 | Builds/core/session passed; 4/5 UI passed, zero warnings. Stats fill now visibly correct in downloaded screenshot/video. Color assertion accidentally sampled label glyphs; corrected to the empty left interior in build 8. |
 | 40017058735 | fe17ea6 | Builds/core/session passed; 4/5 UI passed. Episode pieces rendered correctly, but gap sampling used accessibility ink bounds as padded bounds. |
 | 40020975007 | a15b103 | 13 core + 8 endpoint/session + 5 UI tests passed; zero warnings. Actual rendered episode runs/gaps, movie continuity and Stats fill verified. |
-| 40024110462 | af0c8cd | Queued: build 9 reliability/cache tests and no-reflow Undo. |
+| 40024110462 | af0c8cd | Infrastructure failure: no runner acquired; no steps executed. |
+| 40026403236 | d71e49a | Intel builds passed with zero warnings; 13 core + 15 native unit tests passed; UI execution timed out, incomplete. |
+| 40029758134 | 3e69167 | Simulator compilation failed in five shadowed Trakt error-state assignments; fixed locally for build 11. Tests/device packaging skipped. |
 
 Build-8 artifacts are downloaded under .local/ios-app-build-40020975007; accepted scoped screenshot evidence is in ios/docs/screenshots/step-8. Its arm64 IPA SHA-256 is 82b1de7adcdd32127cfac3321e7153e9f6297ff9ac42928ad2b4bfac5e2ab96b. This is an unfinished native preview, not a release/parity acceptance claim.
 
@@ -47,18 +51,18 @@ Debug --ui-testing uses isolated synthetic data and read-only mutation stand-ins
 
 ## Remaining parity work / known issues
 
-- Title individual episode toggles, spoiler reveal, watch date editing/rewatches, interactive range editing, layout refinement and complete transaction UI regression.
-- Stats averages/comparison, hourly/monthly/zero-day buckets, longest/active streak details and full backlog/runtime drilldowns.
-- Glance waiting/sort, complete Explore shelves/filters, scanner mismatch review and native Trakt setup/scan/review/apply.
-- Full More/settings, backups/import/export and TMDB credential/status management views.
-- Protected durable offline snapshot/outbox; reload generation guards; reviewed editor versions and expected-previous safety on minus. Undo toast currently uses a safe-area inset and needs the web's overlay/no-reflow behavior verified.
+- Title interactions, date/rewatch/episode/slider controls are implemented in build 10, awaiting a successful full test run and visual acceptance; general write-flow UI fixtures remain missing.
+- Stats calculation/zero-bucket/comparison/streak/backlog work is implemented for build 11, awaiting macOS golden tests, interaction tests and visual comparison. The source Stats chart uses daily/aggregate/monthly buckets; it does not use hourly buckets.
+- Glance waiting/sort, complete Explore shelves/filters, Library bulk management and scanner mismatch/location management remain incomplete.
+- Native More/export/TMDB status and reviewed Trakt scan/apply are implemented in build 10, awaiting green integration/UI evidence; backup/import and full sync direction/type coverage remain unfinished.
+- Protected durable snapshots, generation guards, reviewed editor/minus versions and overlay Undo are implemented; cache/session unit tests passed in the incomplete build-9 UI run. Durable retry journal/outbox remains unfinished.
 - Multi-size, accessibility/empty/error/loading/rapid-tap regression; real-device haptics, scrolling, animation timing and LiveContainer login. See DEVICE-CHECKS.md.
 
 No credential is currently required for this fixture-backed work. Provider redirect registration or real-device behavior may require user input later; never fake successful sync or writes.
 
 ## Build and safety boundaries
 
-No Mac/Swift execution locally. All compilation, XCTest, core tests and simulator work happen on GitHub Actions. Never hand-write pbxproj. Workflow: .github/workflows/ios.yml. XcodeGen source: ios/project.yml. Pinned macos-26 / Xcode 26.6 / iPhone 17 Pro iOS 26.5. Official XcodeGen 2.46.0 archive is SHA-256 pinned. Builds enforce zero compiler warnings and upload logs, xcresult, screenshots and an unsigned arm64 IPA.
+No Mac/Swift execution locally. All compilation, XCTest, core tests and simulator work happen on GitHub Actions. Never hand-write pbxproj. Workflow: .github/workflows/ios.yml. XcodeGen source: ios/project.yml. Pinned macos-26-intel / Xcode 26.6 / iPhone 17 Pro iOS 26.5. Official universal XcodeGen 2.46.0 archive is SHA-256 pinned. Builds enforce zero compiler warnings and completed unit/UI execution, and upload logs, xcresult, screenshots and an unsigned arm64 IPA.
 
 GitHub CLI: prepend C:/Program Files/GitHub CLI to PATH. Run gh run view RUN --log-failed on failure; gh run download RUN for artifacts. Commit messages: step N: description. Push only ios-native. No web source/deploy workflow changes, main pushes, force pushes, hosted D1 mutations/deploys, provider-account writes or committed secrets. Test fixtures or the isolated LOCAL_DIARY=1 loopback backend only. The existing Cloudflare backend remains authoritative.
 

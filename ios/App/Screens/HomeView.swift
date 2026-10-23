@@ -151,6 +151,7 @@ struct HistoryView: View {
     @Environment(DiaryStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     var initialDay: Date? = nil
+    var initialUnknown = false
     @State private var query = ""
     @State private var period = "all"
     @State private var showRange = false
@@ -164,7 +165,7 @@ struct HistoryView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text("Your watch history").font(.system(size: 17, weight: .semibold)); Spacer(minLength: 2)
-                        Picker("Date filter", selection: $period) { Text("Any date").tag("all"); Text("Today").tag("today"); Text("Last 7 days").tag("7d"); Text("This month").tag("month"); Text("Date range").tag("range") }.pickerStyle(.menu).fixedSize().font(.system(size: 13))
+                        Picker("Date filter", selection: $period) { Text("Any date").tag("all"); Text("Today").tag("today"); Text("Last 7 days").tag("7d"); Text("This month").tag("month"); Text("Date range").tag("range"); Text("Undated").tag("unknown") }.pickerStyle(.menu).fixedSize().font(.system(size: 13))
                     }
                     SearchField(placeholder: "Find a watched title…", text: $query, label: "Find a watched title")
                     DisclosureGroup("Date filters", isExpanded: $showRange) {
@@ -182,7 +183,7 @@ struct HistoryView: View {
                 }.padding(14)
             }
         }.navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
-            .task { if let initialDay { from = initialDay; to = initialDay; period = "range" } }
+            .task { if let initialDay { from = initialDay; to = initialDay; period = "range" }; if initialUnknown { period = "unknown" } }
             .safeAreaInset(edge: .bottom) { Button("Done") { dismiss() }.font(.subheadline).padding(10) }
     }
     private var events: [WatchEvent] {
@@ -190,8 +191,9 @@ struct HistoryView: View {
         return sortedHistory(store.workspace.activeEvents.filter { event in
             guard query.isEmpty || (store.title(event.titleId)?.name.localizedCaseInsensitiveContains(query) ?? false) else { return false }
             if period == "all" { return true }
+            if period == "unknown" { return DiaryDate.parse(event.watchedAt) == nil }
             guard let date = DiaryDate.parse(event.watchedAt) else { return period == "range" && includeUnknown }
-            guard date <= store.now else { return false }
+            guard calendar.startOfDay(for: date) <= calendar.startOfDay(for: store.now) else { return false }
             switch period {
             case "today": return calendar.isDate(date, inSameDayAs: store.now)
             case "month": return calendar.isDate(date, equalTo: store.now, toGranularity: .month)

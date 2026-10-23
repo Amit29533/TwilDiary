@@ -72,7 +72,7 @@ import TwilDiaryCore
             let next = try await service.review(kind: selectedKind, query: search, after: cursor)
             guard request == refreshID, kind == selectedKind, query == search else { return }
             accept(current.appending(next)); limit += 6
-        } catch { error = error.localizedDescription }
+        } catch { self.error = error.localizedDescription }
     }
     func scan(start: Bool) async {
         guard !busy, cooldownUntil <= .now else { return }
@@ -97,7 +97,7 @@ import TwilDiaryCore
                 previousStep = signature
             } while true
         } catch is CancellationError { paused = true }
-        catch { error = error.localizedDescription }
+        catch { self.error = error.localizedDescription }
     }
     func apply(change: TraktChange? = nil, choice: TraktChoice = .apply) async {
         guard !busy, let current = sync, current.reviewing, let id = current.run?.id, choice == .skip || cooldownUntil <= .now else { return }
@@ -118,17 +118,17 @@ import TwilDiaryCore
             }
             await refresh()
         } catch is CancellationError { paused = true }
-        catch { error = error.localizedDescription }
+        catch { self.error = error.localizedDescription }
     }
     func cancel() async {
         guard !busy, let id = sync?.run?.id else { return }
         busy = true; defer { busy = false }
-        do { try await service.cancel(id: id); await refresh() } catch { error = error.localizedDescription }
+        do { try await service.cancel(id: id); await refresh() } catch { self.error = error.localizedDescription }
     }
     func disconnect() async {
         guard !busy else { return }
         busy = true; defer { busy = false }
-        do { try await service.disconnect(); await refresh() } catch { error = error.localizedDescription }
+        do { try await service.disconnect(); await refresh() } catch { self.error = error.localizedDescription }
     }
     private func accept(_ value: TraktSync) { sync = value; cooldownUntil = .now.addingTimeInterval(Double(value.run?.retryAfter ?? 0)) }
 }

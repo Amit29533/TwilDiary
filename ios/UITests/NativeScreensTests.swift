@@ -107,6 +107,31 @@ import UIKit
         XCTAssertTrue(app.staticTexts["You’re up to date"].waitForExistence(timeout: 5))
         capture("Trakt applied")
     }
+    func testStatsCalendarRangesEmptyBucketsAndUndatedHistory() {
+        let app = launch(); app.buttons["tab-stats"].tap()
+        XCTAssertTrue(app.buttons["stats-calendar"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["30D"].isSelected, "Fresh Stats starts with Today, as on the web")
+        app.buttons["30D"].tap(); XCTAssertTrue(app.buttons["30D"].isSelected)
+        let firstDay = app.buttons["stats-bucket-0"]
+        if !firstDay.isHittable { app.swipeUp() }
+        XCTAssertTrue(firstDay.waitForExistence(timeout: 5)); firstDay.tap()
+        XCTAssertTrue(app.staticTexts["1 Oct 2026"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["No watches logged in this period."].exists)
+        capture("Stats empty day")
+        app.buttons["Close"].tap(); app.swipeDown()
+        app.buttons["stats-calendar"].tap()
+        let week = app.buttons["This Week"]
+        XCTAssertTrue(week.waitForExistence(timeout: 5)); week.tap()
+        XCTAssertTrue(app.buttons["7D"].isSelected)
+        XCTAssertFalse(app.buttons["30D"].isSelected)
+        capture("Stats week")
+        let review = app.buttons["Review dates"]
+        if !review.isHittable { app.swipeDown() }
+        review.tap()
+        XCTAssertTrue(app.staticTexts["Recently watched"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["1 watches"].waitForExistence(timeout: 5))
+        capture("Undated history")
+    }
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)

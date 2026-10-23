@@ -74,8 +74,8 @@ struct LibraryView: View {
     private func applyShortcut() {
         guard router.libraryRevision > appliedShortcutRevision else { return }
         appliedShortcutRevision = router.libraryRevision
-        category = .all; search = ""; genre = ""; drive = ""; status = "all"
-        switch router.libraryShortcut { case "queue": status = "queue"; case "planned": status = "planned"; case "disk": drive = "mapped"; default: break }
+        category = .all; search = ""; genre = router.libraryGenreShortcut; drive = ""; status = "all"
+        switch router.libraryShortcut { case "queue": status = "queue"; case "planned", "watching", "completed", "dropped": status = router.libraryShortcut ?? "all"; case "disk": drive = "mapped"; default: break }
     }
     private func poster(_ title: MediaTitle) -> some View {
         NavigationLink(value: title.id) { PosterCard(title: title).contentShape(Rectangle()) }.buttonStyle(.plain).contentShape(Rectangle()).accessibilityIdentifier("title-" + title.id)

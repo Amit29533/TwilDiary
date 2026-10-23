@@ -151,7 +151,7 @@ public struct SeasonProgress: Equatable, Sendable {
     }
 }
 
-public enum Period: String, CaseIterable, Identifiable, Sendable {
+public enum Period: String, Codable, CaseIterable, Identifiable, Sendable {
     case today, week, month, ninetyDays = "90d", year, all
     public var id: Self { self }
     public var label: String { switch self { case .today: "Today"; case .week: "This Week"; case .month: "This Month"; case .ninetyDays: "Last 90 Days"; case .year: "This Year"; case .all: "All time" } }
