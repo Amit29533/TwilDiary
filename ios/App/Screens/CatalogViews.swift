@@ -73,6 +73,8 @@ struct CatalogPoster: View {
 }
 
 struct CatalogSearchView: View {
+    var onLibraryChoose: ((String) -> Void)? = nil
+    var allowsManual = true
     @Environment(DiaryStore.self) private var store
     @State private var query = ""
     @State private var results: [CatalogItem] = []
@@ -84,7 +86,10 @@ struct CatalogSearchView: View {
             SearchField(placeholder: "Title or IMDb ID…", text: $query, label: "Search library and online")
             if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text("In Library").font(.subheadline.bold())
-                ForEach(localMatches.prefix(8)) { title in NavigationLink(value: title.id) { titleRow(title) }.buttonStyle(.plain) }
+                ForEach(localMatches.prefix(8)) { title in
+                    if let onLibraryChoose { Button { onLibraryChoose(title.id) } label: { titleRow(title) }.buttonStyle(.plain).accessibilityIdentifier("match-title-" + title.id) }
+                    else { NavigationLink(value: title.id) { titleRow(title) }.buttonStyle(.plain) }
+                }
                 if localMatches.isEmpty { Text("No library matches").font(.caption).foregroundStyle(.secondary) }
                 Text("Not In Library · TMDB").font(.subheadline.bold())
                 if loading { ProgressView("Searching…") }
@@ -100,7 +105,7 @@ struct CatalogSearchView: View {
                 }
                 if !loading && results.isEmpty && failure == nil { Text("No online matches").font(.caption).foregroundStyle(.secondary) }
             }
-            Button("Add manually") { showManual = true }.font(.subheadline.weight(.semibold))
+            if allowsManual { Button("Add manually") { showManual = true }.font(.subheadline.weight(.semibold)) }
         }.padding(14).background(Color(white: 0.06), in: RoundedRectangle(cornerRadius: 16)).padding(.horizontal, 14).padding(.bottom, 12)
             .task(id: query) { await search() }
             .sheet(isPresented: $showManual) { ManualTitleView(initialName: query) }
@@ -122,6 +127,7 @@ struct CatalogSearchView: View {
 
 struct CatalogDetailView: View {
     let route: CatalogRoute
+    var onImported: ((String) -> Void)? = nil
     @Environment(DiaryStore.self) private var store
     @State private var details: CatalogBrowse?
     @State private var failure: String?
@@ -135,8 +141,9 @@ struct CatalogDetailView: View {
                     if let saved = details.libraryTitle {
                         if saved.trashed {
                             Text("This title is in Trash").font(.title2.bold())
-                            if let title = store.title(saved.id) { Button("Restore to Library") { Task { if await store.restore(title) { importedID = title.id } } }.buttonStyle(.borderedProminent).disabled(store.busy) }
-                        } else { NavigationLink(value: saved.id) { Text("Open in Library →").font(.headline) } }
+                            if let title = store.title(saved.id) { Button("Restore to Library") { Task { if await store.restore(title) { accepted(title.id) } } }.buttonStyle(.borderedProminent).disabled(store.busy) }
+                        } else if let onImported { Button("Use this title") { onImported(saved.id) }.buttonStyle(.borderedProminent) }
+                        else { NavigationLink(value: saved.id) { Text("Open in Library →").font(.headline) } }
                     }
                     CatalogHero(details: details.details)
                     Text(details.details.overview).font(.subheadline).foregroundStyle(.secondary).lineSpacing(3)
@@ -146,7 +153,7 @@ struct CatalogDetailView: View {
                                 if details.details.mediaType == .movie { Text("Movie").tag("movie"); Text("Anime movie").tag("anime-movie") }
                                 else { Text("Show").tag("show"); Text("Anime").tag("anime") }
                             }.pickerStyle(.menu)
-                            Button { Task { importedID = await store.importTitle(details.details, category: category) } } label: { Label(store.busy ? "Adding…" : "Add to Planned", systemImage: "plus").font(.subheadline.bold()).frame(maxWidth: .infinity).padding(.vertical, 7) }.buttonStyle(.borderedProminent).disabled(store.busy || store.isPreview)
+                            Button { Task { if let id = await store.importTitle(details.details, category: category) { accepted(id) } } } label: { Label(store.busy ? "Adding…" : "Add to Planned", systemImage: "plus").font(.subheadline.bold()).frame(maxWidth: .infinity).padding(.vertical, 7) }.buttonStyle(.borderedProminent).disabled(store.busy || store.isPreview)
                         }.diaryPanel()
                     }
                     CastAndRelated(route: route)
@@ -157,6 +164,7 @@ struct CatalogDetailView: View {
             .task { await load() }
             .navigationDestination(item: $importedID) { TitleDetailView(id: $0) }
     }
+    private func accepted(_ id: String) { if let onImported { onImported(id) } else { importedID = id } }
     private func load() async {
         loading = true; failure = nil; defer { loading = false }
         do { let response = try await store.browse(route); guard !Task.isCancelled else { return }; details = response; category = response.details.suggestedCategory }

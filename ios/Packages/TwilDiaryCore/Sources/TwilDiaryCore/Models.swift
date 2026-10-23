@@ -75,7 +75,13 @@ public struct FileLocation: Codable, Identifiable, Hashable, Sendable {
     public let evidence: String
     public let sizeBytes: Int64?
     public let checkedAt: String?
-    public var path: String { root + relativePath }
+    public var path: String {
+        var base = root.replacingOccurrences(of: "/", with: "\\")
+        var relative = relativePath.replacingOccurrences(of: "/", with: "\\")
+        while base.hasSuffix("\\") { base.removeLast() }
+        while relative.hasPrefix("\\") { relative.removeFirst() }
+        return base + "\\" + relative
+    }
 }
 
 public struct WorkspacePage<Item: Decodable & Sendable>: Decodable, Sendable {

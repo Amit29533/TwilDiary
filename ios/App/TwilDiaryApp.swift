@@ -26,11 +26,13 @@ enum AppDestination: Hashable { case explore, history, files, trash }
     var paths: [AppTab: NavigationPath] = [:]
     var libraryShortcut: String?
     var libraryGenreShortcut = ""
+    var libraryDiskShortcut = ""
     var libraryRevision = 0
     var statsRevision = 0
     var detailTabs = Set<AppTab>()
-    func library(_ shortcut: String) { libraryGenreShortcut = ""; libraryShortcut = shortcut; libraryRevision += 1; paths[.library] = NavigationPath(); selectedTab = .library }
+    func library(_ shortcut: String) { libraryGenreShortcut = ""; libraryDiskShortcut = ""; libraryShortcut = shortcut; libraryRevision += 1; paths[.library] = NavigationPath(); selectedTab = .library }
     func libraryGenre(_ genre: String) { library("all"); libraryGenreShortcut = genre }
+    func libraryDisk(_ key: String) { library("all"); libraryDiskShortcut = key == "all" ? "" : key }
     func statsToday() { statsRevision += 1; paths[.stats] = NavigationPath(); selectedTab = .stats }
     func files() { selectedTab = .more; paths[.more] = NavigationPath(); paths[.more, default: NavigationPath()].append(AppDestination.files) }
     func openTitle(_ id: String, tab: AppTab) { selectedTab = tab; paths[tab, default: NavigationPath()].append(id) }

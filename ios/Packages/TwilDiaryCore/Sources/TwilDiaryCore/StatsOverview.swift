@@ -55,6 +55,10 @@ public struct StatsOverview: Codable, Equatable, Sendable {
         func runtime(_ title: MediaTitle) -> Int? { title.runtimeMinutes.flatMap { $0 > 0 ? $0 : nil } }
         func formatter(_ format: String) -> DateFormatter {
             let value = DateFormatter(); value.locale = Locale(identifier: "en_GB"); value.calendar = utc
+            // ICU abbreviates September differently across the web and Apple runtimes.
+            // Pin the web's en-GB short names; long month names remain localized en-GB.
+            let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"]
+            value.shortMonthSymbols = months; value.shortStandaloneMonthSymbols = months
             value.timeZone = utc.timeZone; value.dateFormat = format; return value
         }
         let short = formatter("d MMM"), full = formatter("d MMM yyyy"), monthShort = formatter("MMM"), monthFull = formatter("MMMM yyyy")

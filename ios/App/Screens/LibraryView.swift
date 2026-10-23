@@ -24,12 +24,12 @@ struct LibraryView: View {
     @State private var confirmEmptyTrash = false
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Library", count: String(collection.count), onSearch: { showSearch.toggle() })
-            if showSearch { SearchField(placeholder: "Search your library…", text: $search, label: "library-search").padding(.horizontal, 14).padding(.bottom, 10) }
+            PageHeader(name: "Library", count: String(collection.count), onSearch: { showSearch.toggle(); if !showSearch { search = "" } })
+            if showSearch { SearchField(placeholder: "Search your library…", text: $search, label: "library-search", autoFocus: true).padding(.horizontal, 14).padding(.bottom, 10) }
             CategoryPicker(selection: $category)
             filterBar
             orderingBar
-            if status != "all" || !genre.isEmpty || !drive.isEmpty { Button("Clear filters") { status = "all"; genre = ""; drive = "" }.font(.caption).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.bottom, 8) }
+            if category != .all || status != "all" || !genre.isEmpty || !drive.isEmpty || !search.isEmpty { Button("Clear filters") { category = .all; status = "all"; genre = ""; drive = ""; search = "" }.font(.caption).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.bottom, 8) }
             collectionContent
         }.task(id: filtered.map(\.id).joined(separator: ",") + ratingSource.rawValue) { await store.loadPublicRatings(filtered, source: ratingSource) }
             .onChange(of: router.libraryRevision) { _, _ in applyShortcut() }
@@ -52,8 +52,8 @@ struct LibraryView: View {
                         Picker("Genre", selection: $genre) { Text("All genres").tag(""); ForEach(genres, id: \.self) { value in Text("\(value) (\(collection.filter { $0.genres.contains(value) }.count))").tag(value) } }
                     } label: { filterChip(genre.isEmpty ? "Genre" : genre, selected: !genre.isEmpty) }
                     Menu {
-                        Picker("Disk", selection: $drive) { Text("All disks").tag(""); Text("On any disk").tag("mapped"); Text("Not on a disk").tag("unmapped"); ForEach(drives, id: \.self) { Text("Drive " + $0).tag($0) } }
-                    } label: { filterChip(drive.isEmpty ? "Disk" : drive == "mapped" ? "On disk" : drive == "unmapped" ? "No disk" : "Drive " + drive, selected: !drive.isEmpty) }
+                        Picker("Disk", selection: $drive) { Text("All disks").tag(""); Text("On any disk").tag("mapped"); Text("Not on a disk").tag("unmapped"); ForEach(disks) { Text($0.letters.joined(separator: " / ") + " · " + $0.deviceName).tag($0.key) } }
+                    } label: { filterChip(driveLabel, selected: !drive.isEmpty) }
                     if archived { Button { dismiss() } label: { trashChip }.accessibilityLabel("Return to Library") }
                     else { NavigationLink(value: AppDestination.trash) { trashChip }.accessibilityLabel("Open Trash") }
                 }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).padding(.horizontal, 14).padding(.vertical, 10)
@@ -86,7 +86,7 @@ struct LibraryView: View {
                 if genreRows && !selecting {
                     LazyVStack(alignment: .leading, spacing: 20) {
                         ForEach(LibraryShelf.make(filtered)) { shelf in
-                            Text(shelf.genre).font(.headline)
+                            HStack { Text(shelf.genre).font(.headline); Text("\(shelf.titles.count)").font(.caption).foregroundStyle(.secondary); Spacer(); if shelf.genre != "Without a genre" { Button("See all") { genre = shelf.genre; genreRows = false }.font(.caption.bold()).accessibilityLabel("See all \(shelf.genre) titles") } }
                             ScrollView(.horizontal) { LazyHStack(alignment: .top, spacing: 12) { ForEach(shelf.titles) { title in poster(title).frame(width: 112) } } }.scrollIndicators(.hidden)
                         }
                     }.padding(.horizontal, 14)
@@ -99,9 +99,9 @@ struct LibraryView: View {
             }.refreshable { await store.refresh() }
     }
     private func applyShortcut() {
-        guard router.libraryRevision > appliedShortcutRevision else { return }
+        guard !archived, router.libraryRevision > appliedShortcutRevision else { return }
         appliedShortcutRevision = router.libraryRevision
-        category = .all; search = ""; genre = router.libraryGenreShortcut; drive = ""; status = "all"
+        category = .all; search = ""; genre = router.libraryGenreShortcut; drive = router.libraryDiskShortcut; status = "all"
         switch router.libraryShortcut { case "queue": status = "queue"; case "planned", "watching", "completed", "dropped": status = router.libraryShortcut ?? "all"; case "disk": drive = "mapped"; default: break }
     }
     @ViewBuilder private func poster(_ title: MediaTitle, row: Bool = false) -> some View {
@@ -134,13 +134,14 @@ struct LibraryView: View {
     }
     private func layoutIcon(_ name: String, selected: Bool) -> some View { DiaryIcon(name: name, size: 18).frame(width: 32, height: 38).background(selected ? Color(webHex: "#211c30") : .clear, in: RoundedRectangle(cornerRadius: 11)) }
     private var genres: [String] { LibraryShelf.make(collection).map(\.genre).filter { $0 != "Without a genre" } }
-    private var drives: [String] { Set(store.workspace.locations.map(\.driveLetter)).sorted() }
+    private var disks: [DiskSummary] { DiskSummary.make(store.workspace.locations) }
+    private var driveLabel: String { if drive.isEmpty { return "Disk" }; if drive == "mapped" { return "On disk" }; if drive == "unmapped" { return "No disk" }; return disks.first { $0.key == drive }?.letters.joined(separator: " / ") ?? "Selected disk" }
     private var filtered: [MediaTitle] {
         var query = LibraryQuery()
         query.archived = archived
         query.query = search; query.category = category == .movies ? "movie" : category == .shows ? "show" : category == .anime ? "anime" : "all"
         query.status = status == "queue" ? "all" : status; query.queued = status == "queue"; query.genre = genre
-        query.disk = drive.isEmpty ? "all" : ["mapped", "unmapped"].contains(drive) ? drive : "drive:" + drive.uppercased()
+        query.disk = drive.isEmpty ? "all" : ["mapped", "unmapped"].contains(drive) || drive.hasPrefix("[") || drive.hasPrefix("drive:") ? drive : "drive:" + drive.uppercased()
         query.sort = sort == "name" ? .title : sort == "rating" ? .score : sort == "year" ? .year : .library
         return query.titles(in: store.workspace) { store.publicScore($0, source: ratingSource) }
     }
@@ -161,12 +162,12 @@ struct GlanceView: View {
     @State private var showSearch = false
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Glance", count: "\(titles.count) watching", onSearch: { showSearch.toggle() })
-            if showSearch { SearchField(placeholder: "Find a current watch…", text: $search, label: "Find a current watch").padding(.horizontal, 14).padding(.bottom, 10) }
+            PageHeader(name: "Glance", count: "\(store.workspace.activeTitles.filter { $0.status == "watching" }.count) watching", onSearch: { showSearch.toggle(); if !showSearch { search = "" } })
+            if showSearch { SearchField(placeholder: "Find a current watch…", text: $search, label: "Find a current watch", autoFocus: true).padding(.horizontal, 14).padding(.bottom, 10) }
             CategoryPicker(selection: $category)
             ScrollView {
                 LazyVStack(spacing: 8) { ForEach(titles) { ProgressCard(title: $0) } }.padding(.horizontal, 8).padding(.top, 12).padding(.bottom, 16)
-                if titles.isEmpty { ContentUnavailableView("Nothing in progress", systemImage: "eye", description: Text("Set a title to Watching to see it here.")) }
+                if titles.isEmpty { ContentUnavailableView("A clear little corner", systemImage: "eye", description: Text("No current watches match these filters. Try another category or clear your search.")) }
             }.refreshable { await store.refresh() }
         }
     }

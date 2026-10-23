@@ -21,7 +21,7 @@ public struct LibraryQuery: Equatable, Sendable {
             case "mapped": diskMatches = !copies.isEmpty
             default: diskMatches = copies.contains { $0.diskKey == disk || (disk.hasPrefix("drive:") && $0.driveLetter.uppercased() == String(disk.dropFirst(6))) }
             }
-            return (title.deletedAt != nil) == archived && title.name.precomposedStringWithCompatibilityMapping.lowercased().contains(needle)
+            return (title.deletedAt != nil) == archived && (needle.isEmpty || title.name.precomposedStringWithCompatibilityMapping.lowercased().contains(needle))
                 && categoryMatches && (status == "all" || title.status == status) && (!queued || title.queued == true)
                 && (!favorites || title.favorite) && (genre.isEmpty || title.genres.contains(genre))
                 && (tag.isEmpty || title.tags?.contains(tag) == true) && diskMatches

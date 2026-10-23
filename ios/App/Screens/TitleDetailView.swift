@@ -272,7 +272,7 @@ struct TitleDetailView: View {
     }
     private var watched: Set<String> { Set(store.workspace.activeEvents.filter { $0.titleId == id }.compactMap(\.episodeId)) }
     private var locations: [FileLocation] { store.workspace.locations.filter { $0.titleId == id } }
-    private var serverLabel: String { let drives = Set(locations.filter { $0.evidence == "present" }.map { "Drive " + $0.driveLetter.trimmingCharacters(in: CharacterSet(charactersIn: ":")) }).sorted(); return drives.isEmpty ? "Not Available on Server" : "Available on Server: " + drives.joined(separator: " / ") }
+    private var serverLabel: String { ServerAvailability.label(locations) }
     private var percent: Int { guard let card, card.progress.total > 0 else { return 0 }; return Int((Double(card.progress.watched) / Double(card.progress.total) * 100).rounded()) }
     private func remaining(_ title: MediaTitle) -> Int? { title.isSeries ? SeasonProgress.calculate(title: title, workspace: store.workspace, season: season).remainingMinutes : title.runtimeMinutes.map { card?.progress.watched == 1 ? 0 : $0 } }
     private func loadCard(_ title: MediaTitle) async {

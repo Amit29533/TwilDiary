@@ -66,7 +66,7 @@ folder = pathlib.Path(sys.argv[1]); warnings = []; errors = []; tests = []
 for path in sorted((folder / 'logs').glob('*.log')):
     for line in path.read_text(errors='replace').splitlines():
         if re.search(r'\b(?:error:|Test Case .* failed)', line): errors.append(f'{path.name}: {line}')
-        if 'build' in path.name and re.search(r'\bwarning:', line, re.I): warnings.append(f'{path.name}: {line}')
+        if ('build' in path.name or path.name == 'core-tests.log') and re.search(r'\bwarning:', line, re.I): warnings.append(f'{path.name}: {line}')
         if re.search(r'Executed \d+ tests|\*\* TEST .* \*\*', line): tests.append(line)
 test_log = folder / 'logs' / 'tests.log'
 if not test_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in test_log.read_text(errors='replace'):

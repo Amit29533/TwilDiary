@@ -83,6 +83,8 @@ struct SearchField: View {
     let placeholder: String
     @Binding var text: String
     let label: String
+    var autoFocus = false
+    @State private var didAutoFocus = false
     @FocusState private var focused: Bool
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     var body: some View {
@@ -92,6 +94,7 @@ struct SearchField: View {
             if !text.isEmpty { Button { text = "" } label: { DiaryIcon(name: "x", size: 16).frame(width: 26, height: 32) }.buttonStyle(.plain).accessibilityLabel("Clear search") }
         }.padding(.horizontal, 14).frame(minHeight: 48).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(focused ? theme.accent.opacity(0.65) : .white.opacity(0.13)))
+            .task { if autoFocus && !didAutoFocus { didAutoFocus = true; focused = true } }
     }
 }
 

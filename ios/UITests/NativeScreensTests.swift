@@ -3,9 +3,10 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
-        if mutations { app.launchArguments.append("--ui-mutations") }
+        if mutations || scanner { app.launchArguments.append("--ui-mutations") }
+        if scanner { app.launchArguments.append("--ui-scanner") }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
     }
@@ -164,6 +165,25 @@ import UIKit
         trash.tap(); app.buttons["Delete permanently"].tap()
         XCTAssertTrue(confirm.waitForExistence(timeout: 5)); confirm.tap()
         XCTAssertTrue(app.staticTexts["Trash is clear"].waitForExistence(timeout: 5)); capture("Trash after permanent delete")
+    }
+    func testFilesAndScannerMatchPublishLocationWithoutChangingWatchHistory() {
+        let app = launch(scanner: true); app.buttons["tab-more"].tap()
+        app.buttons["settings-files"].tap()
+        XCTAssertTrue(app.staticTexts["Mapped folders"].waitForExistence(timeout: 5)); capture("Files and drives")
+        let review = app.buttons["Fix mismatches →"]
+        for _ in 0..<8 { if review.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(review.isHittable); review.tap()
+        let match = app.buttons["match-scan-fixture-unmatched"]
+        XCTAssertTrue(match.waitForExistence(timeout: 5)); capture("Unmatched scan"); match.tap()
+        let search = app.textFields["Search library and online"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5)); search.tap(); search.typeText("18 Again\n")
+        let chosen = app.buttons["match-title-again"]
+        XCTAssertTrue(chosen.waitForExistence(timeout: 5)); chosen.tap()
+        XCTAssertTrue(app.staticTexts["No unmatched scans"].waitForExistence(timeout: 5)); capture("Scanner resolved")
+        app.buttons["Done"].tap()
+        let path = app.staticTexts["R:\\Reference\\Unmatched Series"]
+        for _ in 0..<10 { if path.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(path.exists); capture("Confirmed scanned location")
     }
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

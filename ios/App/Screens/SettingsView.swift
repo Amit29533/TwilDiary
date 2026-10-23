@@ -21,7 +21,7 @@ struct SettingsView: View {
                     settingsSection("Library") {
                         HStack(spacing: 8) { settingsIcon("star"); VStack(alignment: .leading, spacing: 3) { Text("Library ratings").font(.subheadline.weight(.semibold)); Text("Community scores, not your rating").font(.caption).foregroundStyle(.secondary) }; Spacer(minLength: 0); Picker("Library ratings", selection: $ratingSource) { ForEach(PublicRatingSource.allCases) { Text($0.label).tag($0) } }.pickerStyle(.menu).font(.caption).fixedSize() }.padding(14)
                         Divider().padding(.leading, 58)
-                        NavigationLink { FilesView() } label: { settingsRow("hard-drive", "Files & drives", subtitle: "Folders, seasons and local copies", disclosure: true) }
+                        NavigationLink { FilesView() } label: { settingsRow("hard-drive", "Files & drives", subtitle: "Folders, seasons and local copies", disclosure: true) }.accessibilityIdentifier("settings-files")
                         Divider().padding(.leading, 58)
                         NavigationLink { TrashView() } label: { settingsRow("trash-2", "Trash", subtitle: store.workspace.titles.contains(where: { $0.deletedAt != nil }) ? "\(store.workspace.titles.filter { $0.deletedAt != nil }.count) removed titles" : "No removed titles", disclosure: true) }
                     }
@@ -129,27 +129,4 @@ struct AboutView: View {
             if let url = Bundle.main.url(forResource: "Lucide-LICENSE", withExtension: "txt"), let license = try? String(contentsOf: url, encoding: .utf8) { DisclosureGroup("Lucide ISC license") { Text(license).font(.caption).textSelection(.enabled).padding(.top, 12) }.diaryPanel() }
         }.padding(16) }.background(.black).navigationTitle("About").navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar).toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
     }
-}
-
-struct FilesView: View {
-    @Environment(DiaryStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
-    var body: some View {
-        List {
-            ForEach(drives, id: \.self) { drive in
-                Section("Drive " + drive) {
-                    ForEach(store.workspace.locations.filter { $0.driveLetter == drive }) { location in
-                        VStack(alignment: .leading, spacing: 7) {
-                            Text(store.title(location.titleId)?.name ?? "Title").font(.headline)
-                            Text(location.evidence == "present" ? "Available on Server" : "Not Available on Server").font(.caption).foregroundStyle(location.evidence == "present" ? .green : .secondary)
-                            Text(location.path).font(.caption.monospaced()).textSelection(.enabled)
-                        }.padding(.vertical, 5)
-                    }
-                }
-            }
-        }.overlay { if drives.isEmpty { ContentUnavailableView("No mapped files", systemImage: "externaldrive", description: Text("Scan your drives from the existing PC app to link local copies.")) } }
-            .navigationTitle("Files & drives").navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
-    }
-    private var drives: [String] { Set(store.workspace.locations.map(\.driveLetter)).sorted() }
 }
