@@ -169,11 +169,15 @@ public struct StatsOverview: Codable, Equatable, Sendable {
         var genreCounts: [String: Int] = [:]
         for title in watchedTitles { for name in names(title) { genreCounts[name, default: 0] += 1 } }
         let contributions = genreCounts.values.reduce(0, +), total = watchedTitles.count
-        let items = genreCounts.map { name, count in
-            let share = total == 0 ? 0 : Double(count) / Double(total) * 100
-            return Genre(genre: name, count: count, percent: contributions == 0 ? 0 : Double(count) / Double(contributions) * 100, coverage: share, share: share)
-        }.sorted { $0.count == $1.count ? Self.nameBefore($0.genre, $1.genre) : $0.count > $1.count }
-        let otherNames = Set(items.dropFirst(5).map(\.genre)), otherCount = watchedTitles.filter { !names($0).isDisjoint(with: otherNames) }.count
+        var items: [Genre] = []
+        for (name, count) in genreCounts {
+            let share: Double = total == 0 ? 0 : Double(count) / Double(total) * 100
+            let percent: Double = contributions == 0 ? 0 : Double(count) / Double(contributions) * 100
+            items.append(Genre(genre: name, count: count, percent: percent, coverage: share, share: share))
+        }
+        items.sort { left, right in left.count == right.count ? Self.nameBefore(left.genre, right.genre) : left.count > right.count }
+        let otherNames: Set<String> = Set(items.dropFirst(5).map { $0.genre })
+        let otherCount = watchedTitles.filter { !names($0).isDisjoint(with: otherNames) }.count
         genres = Genres(total: total, items: items, otherCount: otherCount, otherShare: total == 0 ? 0 : Double(otherCount) / Double(total) * 100)
     }
     private static func nameBefore(_ left: String, _ right: String) -> Bool {

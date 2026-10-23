@@ -26,7 +26,7 @@ struct HomeView: View {
                     ScrollView(.horizontal) {
                         HStack(spacing: 8) {
                             NavigationLink(value: AppDestination.explore) { shortcut("Explore", "compass") }.accessibilityIdentifier("explore-shortcut")
-                            Button { router.library("queue") } label: { shortcut("Queue", "download") }
+                            Button { router.library("queue") } label: { shortcut("Queue", "download") }.accessibilityIdentifier("queue-shortcut")
                             Button { router.library("disk") } label: { shortcut("Disk Map", "hard-drive") }
                             Button { router.files() } label: { shortcut("Locations", "folder") }
                         }.buttonStyle(.plain)

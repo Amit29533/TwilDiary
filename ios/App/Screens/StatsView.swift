@@ -45,7 +45,7 @@ struct StatsView: View {
     }
     private func coverage(_ value: StatsOverview.Coverage) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) { heading("\(value.dated) of \(value.total) watches have dates"); Spacer(minLength: 4); Text("\(value.percent)%").font(.subheadline.bold()).foregroundStyle(.tint) }
+            HStack(alignment: .firstTextBaseline) { Text("\(value.dated) of \(value.total) watches have dates").font(.system(size: 15, weight: .bold)); Spacer(minLength: 4); Text("\(value.percent)%").font(.system(size: 14, weight: .bold)).foregroundStyle(.tint) }
             ProgressView(value: Double(value.percent), total: 100).accessibilityLabel("Watches with dates")
             caption(coverageCopy(value))
             if value.unknown > 0 { NavigationLink { HistoryView(initialUnknown: true) } label: { Text("Review dates").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 12).padding(.vertical, 9).overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.14))) }.buttonStyle(.plain) }
@@ -156,8 +156,8 @@ struct StatsView: View {
     private func genreRow(_ name: String, count: Int, share: Double) -> some View { VStack(spacing: 6) { HStack { Text(name).font(.system(size: 13, weight: .bold)); Spacer(); caption("\(Int(share.rounded()))% · \(count) \(count == 1 ? "title" : "titles")", size: 12) }; ProgressView(value: share, total: 100) }.foregroundStyle(.white) }
     private func heading(_ text: String) -> some View { Text(text).font(.system(size: 18, weight: .bold)) }
     private func caption(_ text: String, size: CGFloat = 13) -> some View { Text(text).font(.system(size: size)).foregroundStyle(.secondary) }
-    private func total(_ minutes: Int) -> some View { Text(DiaryDate.duration(minutes)).font(.system(size: 38, weight: .bold)).foregroundStyle(.tint).tracking(-1.8).monospacedDigit() }
-    private func metric(_ value: String, _ label: String) -> some View { VStack(alignment: .leading, spacing: 4) { Text(value).font(.system(size: 23, weight: .bold)).minimumScaleFactor(0.7).lineLimit(1); caption(label, size: 11) }.frame(maxWidth: .infinity, alignment: .leading) }
+    private func total(_ minutes: Int) -> some View { Text(DiaryDate.duration(minutes)).font(.system(size: 32, weight: .bold)).foregroundStyle(.tint).tracking(-1.6).monospacedDigit() }
+    private func metric(_ value: String, _ label: String) -> some View { VStack(alignment: .leading, spacing: 4) { Text(value).font(.system(size: 19, weight: .bold)).minimumScaleFactor(0.7).lineLimit(1); caption(label, size: 11) }.frame(maxWidth: .infinity, alignment: .leading) }
     private func heatColor(_ count: Int, _ maxCount: Int) -> Color { count == 0 ? Color.white.opacity(0.06) : theme.accent.opacity(Double(max(1, Int(ceil(Double(count) / Double(maxCount) * 4)))) / 4) }
     private func localDay(_ value: String) -> Date { let fields = value.split(separator: "-").compactMap { Int($0) }; return fields.count == 3 ? DiaryDate.calendar().date(from: DateComponents(year: fields[0], month: fields[1], day: fields[2], hour: 12)) ?? store.now : store.now }
     private var statuses: [String] { ["planned", "watching", "completed", "dropped"] }
@@ -174,8 +174,15 @@ private struct StatsRangeSelector: View {
     private let ranges: [Period] = [.week, .month, .ninetyDays, .year, .all]
     var body: some View {
         HStack(spacing: 3) { ForEach(ranges) { range in
-            Button { selection = range } label: { Text(label(range)).font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 38).background(selection == range ? theme.accent : .clear, in: RoundedRectangle(cornerRadius: 11)) }.buttonStyle(.plain).foregroundStyle(selection == range ? Color(webHex: "#21182e") : Color(webHex: "#c5c0cf")).accessibilityAddTraits(selection == range ? .isSelected : [])
-        } }.padding(3).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.white.opacity(0.13)))
+            Button { selection = range } label: { Text(label(range)).font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 38) }.buttonStyle(.plain).foregroundStyle(selection == range ? Color(webHex: "#21182e") : Color(webHex: "#c5c0cf")).accessibilityAddTraits(selection == range ? .isSelected : [])
+        } }.frame(height: 38).background(alignment: .leading) {
+            GeometryReader { geometry in
+                if let index = ranges.firstIndex(of: selection) {
+                    let width = max(0, (geometry.size.width - 12) / 5)
+                    RoundedRectangle(cornerRadius: 11).fill(theme.accent).frame(width: width, height: 38).offset(x: CGFloat(index) * (width + 3))
+                }
+            }
+        }.padding(3).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.white.opacity(0.13))).id(selection)
     }
     private func label(_ value: Period) -> String { switch value { case .week: "7D"; case .month: "30D"; case .ninetyDays: "90D"; case .year: "1Y"; case .all: "All"; case .today: "Today" } }
 }

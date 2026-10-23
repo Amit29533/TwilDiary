@@ -23,6 +23,15 @@ import TwilDiaryCore
     private var pendingRemovals: [String: WatchCard.Previous] = [:]
     var pendingSeasonAdjustments: [String: SeasonEditTransaction] = [:]
     let isPreview: Bool
+    #if DEBUG
+    private var fixture: FixtureDiaryBackend?
+    #endif
+    var canMutate: Bool {
+        #if DEBUG
+        if isPreview { return fixture != nil }
+        #endif
+        return !isPreview
+    }
     var now: Date { isPreview ? DiaryDate.parse("2026-10-23T12:00:00Z")! : .now }
     init(api: DiaryAPI? = nil, cache: (any WorkspaceCaching)? = nil) {
         self.api = api ?? DiaryAPI()
@@ -34,7 +43,12 @@ import TwilDiaryCore
         #else
         isPreview = false
         #endif
-        if isPreview { workspace = PreviewData.workspace; needsSignIn = false; hasLoadedWorkspace = true }
+        if isPreview {
+            workspace = PreviewData.workspace; needsSignIn = false; hasLoadedWorkspace = true
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-mutations") { fixture = FixtureDiaryBackend(workspace: workspace) }
+            #endif
+        }
         else {
             needsSignIn = self.api.credential == nil
             restoreCachedWorkspace()
@@ -50,6 +64,9 @@ import TwilDiaryCore
         } catch { if generation == sessionGeneration { fail(error) } }
     }
     func signOut() {
+        #if DEBUG
+        fixture = nil
+        #endif
         sessionGeneration = UUID(); snapshotGeneration = UUID()
         api.signOut(); workspace = Workspace(); publicRatings = [:]; hasLoadedWorkspace = false; error = nil
         showingCachedSnapshot = false; lastRefreshedAt = nil; loading = false; busy = false
@@ -68,6 +85,9 @@ import TwilDiaryCore
         catch { if session == sessionGeneration { fail(error) } }
     }
     func reload() async throws {
+        #if DEBUG
+        if let fixture { workspace = fixture.workspace; hasLoadedWorkspace = true; return }
+        #endif
         let session = sessionGeneration, revision = UUID()
         snapshotGeneration = revision
         // Publish only a complete snapshot. A failed page cannot replace good data with a partial diary.
@@ -92,6 +112,10 @@ import TwilDiaryCore
     func title(_ id: String) -> MediaTitle? { titleIndex[id] }
     func browserCredential() -> AccessCredential? { api.credential }
     func read<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> T {
+        #if DEBUG
+        if let fixture { return try fixture.request(path, method: method, body: body) }
+        if isPreview { throw APIError.message("The browsing fixture is read-only.") }
+        #endif
         let generation = sessionGeneration
         do {
             let value: T = try await api.request(path, method: method, body: body)
@@ -138,7 +162,7 @@ import TwilDiaryCore
     }
     func loadSeason(_ title: MediaTitle, number: Int) async {
         await perform {
-            let _: EmptyResponse = try await self.api.request("/api/titles/\(title.id)/seasons/\(number)/metadata", method: "POST")
+            let _: EmptyResponse = try await self.read("/api/titles/\(title.id)/seasons/\(number)/metadata", method: "POST")
         }
     }
     func markNext(_ title: MediaTitle, season: Int? = nil, expectedEpisode: String? = nil) async {
@@ -152,7 +176,7 @@ import TwilDiaryCore
             }
             let operation = self.pendingWatches[key]!
             let result: WatchReceipt
-            do { result = try await self.api.request("/api/titles/\(title.id)/watches", method: "POST", body: operation) }
+            do { result = try await self.read("/api/titles/\(title.id)/watches", method: "POST", body: operation) }
             catch { if Self.definitivelyRejected(error) { self.pendingWatches.removeValue(forKey: key) }; throw error }
             self.pendingWatches.removeValue(forKey: key)
             // Do not undo somebody else's pre-existing watch returned by an idempotent server response.
@@ -172,7 +196,7 @@ import TwilDiaryCore
             }
             let event = self.pendingRemovals[title.id]!
             let result: EventReceipt
-            do { result = try await self.api.request("/api/watch-events/\(event.id)", method: "PATCH", body: ["action": "revoke", "expectedVersion": event.version]) }
+            do { result = try await self.read("/api/watch-events/\(event.id)", method: "PATCH", body: ["action": "revoke", "expectedVersion": event.version]) }
             catch { if Self.definitivelyRejected(error) { self.pendingRemovals.removeValue(forKey: title.id) }; throw error }
             self.pendingRemovals.removeValue(forKey: title.id)
             self.undoLabel = "Watch removed"
@@ -180,7 +204,7 @@ import TwilDiaryCore
         }
     }
     private func changeEvent(_ event: WatchEvent, action: String) async throws {
-        let _: EventReceipt = try await api.request("/api/watch-events/\(event.id)", method: "PATCH", body: ["action": action, "expectedVersion": event.version ?? 1])
+        let _: EventReceipt = try await read("/api/watch-events/\(event.id)", method: "PATCH", body: ["action": action, "expectedVersion": event.version ?? 1])
     }
     func pendingViewing(key: String, episode: String?, date: Date, rewatch: Bool) -> [String: Any] {
         if pendingWatches[key] == nil { pendingWatches[key] = ["operationId": UUID().uuidString, "episodeId": episode as Any? ?? NSNull(), "watchedAt": date.ISO8601Format(), "rewatch": rewatch] }
@@ -192,35 +216,56 @@ import TwilDiaryCore
     @discardableResult func patch(_ title: MediaTitle, values: [String: Any], expectedVersion: Int? = nil) async -> Bool {
         await perform {
             var body = values; body["expectedVersion"] = expectedVersion ?? title.version
-            let _: EmptyResponse = try await self.api.request("/api/titles/\(title.id)", method: "PATCH", body: body)
+            let _: EmptyResponse = try await self.read("/api/titles/\(title.id)", method: "PATCH", body: body)
         }
     }
     func setStatus(_ title: MediaTitle, status: String, watchedAt: Date? = nil) async {
         if status != "planned" && status != "completed" { await patch(title, values: ["status": status]); return }
+        await perform { try await self.applyProgress([title], status: status, watchedAt: watchedAt ?? self.now) }
+    }
+    @discardableResult func manage(_ reviewed: [MediaTitle], change: CollectionChange) async -> Bool {
         await perform {
-            // Completing a series must load the catalogue before the transaction.
-            if status == "completed" && title.isSeries {
-                for season in title.seasons ?? [] where season.number > 0 && season.metadataLoadedAt == nil {
-                    let _: EmptyResponse = try await self.api.request("/api/titles/\(title.id)/seasons/\(season.number)/metadata", method: "POST")
-                }
-            }
-            let key = title.id + ":" + status
-            if self.pendingProgress[key] == nil {
-                self.pendingProgress[key] = ["operationId": UUID().uuidString, "items": [["id": title.id, "expectedVersion": title.version ?? 1]], "status": status, "watchedAt": (watchedAt ?? Date.now).ISO8601Format(), "today": DiaryDate.day()]
-            }
-            let receipt: ProgressReceipt
-            do { receipt = try await self.api.request("/api/progress/status", method: "POST", body: self.pendingProgress[key]) }
-            catch { if Self.definitivelyRejected(error) { self.pendingProgress.removeValue(forKey: key) }; throw error }
-            self.pendingProgress.removeValue(forKey: key)
-            self.pendingWatches = self.pendingWatches.filter { $0.key != title.id && !$0.key.hasPrefix("viewing:" + title.id + ":") }
-            self.pendingSeasonAdjustments = self.pendingSeasonAdjustments.filter { !$0.key.hasPrefix(title.id + ":") }
-            self.pendingRemovals.removeValue(forKey: title.id)
-            self.undoLabel = status == "planned" ? "Progress reset" : "Marked completed"
-            let undoBody: [String: Any] = ["operationId": UUID().uuidString, "undoOf": receipt.operationId]
-            self.undoAction = {
-                let _: ProgressReceipt = try await self.api.request("/api/progress/status", method: "POST", body: undoBody)
+            let request = try CollectionRequest(titles: reviewed, change: change)
+            if case .status(let status) = change, ["planned", "completed"].contains(status) {
+                try await self.applyProgress(reviewed, status: status, watchedAt: self.now)
+            } else {
+                guard let body = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any] else { throw APIError.message("Invalid collection change.") }
+                let receipt: CollectionReceipt = try await self.read("/api/titles/bulk", method: "POST", body: body)
+                guard receipt.count == reviewed.count, Set(receipt.ids) == Set(reviewed.map(\.id)), receipt.action == change.action else { throw APIError.message("The selection response was incomplete. Refresh before trying again.") }
             }
         }
+    }
+    @discardableResult func emptyTrash() async -> Bool {
+        await perform { let _: EmptyResponse = try await self.read("/api/trash", method: "DELETE", body: ["confirmation": "EMPTY_TRASH"]) }
+    }
+    private func applyProgress(_ reviewed: [MediaTitle], status: String, watchedAt: Date) async throws {
+        let request = try CollectionRequest(titles: reviewed, change: .status(status))
+        let ids = Set(reviewed.map(\.id)), key = status + ":" + ids.sorted().joined(separator: ",")
+        if pendingProgress[key] == nil {
+            if status == "completed" {
+                for title in reviewed where title.isSeries {
+                    for season in title.seasons ?? [] where season.number > 0 {
+                        let fresh = title.tmdbId == nil || ((season.metadataVersion ?? 1) >= 2 && (DiaryDate.parse(season.metadataLoadedAt).map { self.now.timeIntervalSince($0) < 6 * 60 * 60 } ?? false))
+                        if season.metadataLoadedAt == nil || !fresh {
+                            let _: EmptyResponse = try await read("/api/titles/\(title.id)/seasons/\(season.number)/metadata", method: "POST")
+                        }
+                    }
+                }
+            }
+            pendingProgress[key] = ["operationId": UUID().uuidString, "items": request.items.map { ["id": $0.id, "expectedVersion": $0.expectedVersion] as [String: Any] }, "status": status, "watchedAt": watchedAt.ISO8601Format(), "today": DiaryDate.day(now)]
+        }
+        let receipt: ProgressReceipt
+        do { receipt = try await read("/api/progress/status", method: "POST", body: pendingProgress[key]) }
+        catch { if Self.definitivelyRejected(error) { pendingProgress.removeValue(forKey: key) }; throw error }
+        guard receipt.operationId == pendingProgress[key]?["operationId"] as? String else { throw APIError.message("The progress receipt did not match your request. Refresh before retrying.") }
+        pendingProgress.removeValue(forKey: key)
+        for id in ids {
+            pendingWatches = pendingWatches.filter { $0.key != id && !$0.key.hasPrefix("viewing:" + id + ":") }
+            pendingSeasonAdjustments = pendingSeasonAdjustments.filter { !$0.key.hasPrefix(id + ":") }; pendingRemovals.removeValue(forKey: id)
+        }
+        undoLabel = status == "planned" ? "Progress reset" : "Marked completed"
+        let undoBody: [String: Any] = ["operationId": UUID().uuidString, "undoOf": receipt.operationId]
+        undoAction = { let _: ProgressReceipt = try await self.read("/api/progress/status", method: "POST", body: undoBody) }
     }
     func undo() async {
         guard let action = undoAction else { return }
@@ -239,7 +284,7 @@ import TwilDiaryCore
         }
     }
     @discardableResult func perform(_ action: () async throws -> Void) async -> Bool {
-        guard !busy, !isPreview else { return false }
+        guard !busy, canMutate else { return false }
         let generation = sessionGeneration
         snapshotGeneration = UUID()
         busy = true; defer { if generation == sessionGeneration { busy = false } }
@@ -268,6 +313,7 @@ import TwilDiaryCore
     private struct WatchReceipt: Decodable { let event: WatchEvent; let added: Bool }
     private struct EventReceipt: Decodable { let event: WatchEvent }
     private struct ProgressReceipt: Decodable { let operationId: String }
+    private struct CollectionReceipt: Decodable { let ids: [String]; let action: String; let count: Int }
     private struct PublicRatingsPage: Decodable { let ratings: [String: PublicRating] }
     private struct TitleReceipt: Decodable {
         struct Identity: Decodable { let id: String; let version: Int }

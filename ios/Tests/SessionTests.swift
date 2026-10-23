@@ -320,6 +320,58 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertTrue(writes.allSatisfy { $0.url?.path == "/api/trakt/sync/fixture-run/apply" && $0.httpMethod == "POST" })
         XCTAssertTrue(bodies.allSatisfy { $0["changeId"] as? String == "fixture-change" })
     }
+    func testBulkCollectionUsesOneAtomicRequestWithFrozenReviewedVersions() async throws {
+        let workspace = PreviewData.workspace, reviewed = Array(PreviewData.workspace.activeTitles.prefix(2))
+        let pages = try workspacePages(workspace)
+        let response = String(decoding: try JSONSerialization.data(withJSONObject: ["ids": reviewed.map(\.id), "count": reviewed.count, "action": "queue"]), as: UTF8.self)
+        StubProtocol.state.reset { request in
+            if request.httpMethod == "POST" { return .init(response) }
+            return .init(pages[request.url?.query ?? ""] ?? #"{"items":[],"next":null}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = workspace; store.hasLoadedWorkspace = true
+        let success = await store.manage(reviewed, change: .queue(true))
+        XCTAssertTrue(success)
+        let writes = StubProtocol.state.recorded().filter { $0.httpMethod == "POST" }
+        XCTAssertEqual(writes.count, 1); XCTAssertEqual(writes.first?.url?.path, "/api/titles/bulk")
+        let body = try bodyObject(XCTUnwrap(writes.first))
+        XCTAssertEqual(Set(body.keys), ["action", "items", "queued"])
+        let items = try XCTUnwrap(body["items"] as? [[String: Any]])
+        XCTAssertEqual(items.compactMap { $0["id"] as? String }, reviewed.map(\.id))
+        XCTAssertEqual(items.compactMap { $0["expectedVersion"] as? Int }, reviewed.compactMap(\.version))
+    }
+    func testBulkResetRetriesItsOriginalOperationAndUsesProgressUndoEndpoint() async throws {
+        let workspace = PreviewData.workspace, reviewed = Array(PreviewData.workspace.activeTitles.prefix(2))
+        let pages = try workspacePages(workspace)
+        StubProtocol.state.reset { request in
+            if request.httpMethod == "POST" {
+                let count = StubProtocol.state.recorded().filter { $0.httpMethod == "POST" }.count
+                if count == 1 { return .init(503, #"{"error":{"message":"Unconfirmed progress"}}"#) }
+                let body = (try? JSONSerialization.jsonObject(with: request.httpBody ?? Data())) as? [String: Any]
+                let json: [String: Any] = ["operationId": body?["operationId"] as? String ?? "invalid"]
+                return .init(String(decoding: (try? JSONSerialization.data(withJSONObject: json)) ?? Data(), as: UTF8.self))
+            }
+            return .init(pages[request.url?.query ?? ""] ?? #"{"items":[],"next":null}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = workspace; store.hasLoadedWorkspace = true
+        let first = await store.manage(reviewed, change: .status("planned"))
+        XCTAssertFalse(first)
+        let second = await store.manage(reviewed, change: .status("planned"))
+        XCTAssertTrue(second); XCTAssertEqual(store.undoLabel, "Progress reset")
+        var writes = StubProtocol.state.recorded().filter { $0.httpMethod == "POST" }
+        XCTAssertEqual(writes.count, 2)
+        let a = try bodyObject(writes[0]), b = try bodyObject(writes[1])
+        XCTAssertEqual(a["operationId"] as? String, b["operationId"] as? String)
+        XCTAssertEqual(a["watchedAt"] as? String, b["watchedAt"] as? String)
+        XCTAssertTrue(writes.allSatisfy { $0.url?.path == "/api/progress/status" })
+        await store.undo(); XCTAssertNil(store.undoLabel)
+        writes = StubProtocol.state.recorded().filter { $0.httpMethod == "POST" }
+        XCTAssertEqual(writes.count, 3)
+        let undo = try bodyObject(writes[2])
+        XCTAssertEqual(undo["undoOf"] as? String, b["operationId"] as? String)
+        XCTAssertNotEqual(undo["operationId"] as? String, undo["undoOf"] as? String)
+    }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
                                        "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),

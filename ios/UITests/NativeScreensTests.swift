@@ -3,8 +3,9 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch() -> XCUIApplication {
+    private func launch(mutations: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
+        if mutations { app.launchArguments.append("--ui-mutations") }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
     }
@@ -131,6 +132,38 @@ import UIKit
         XCTAssertTrue(app.staticTexts["Recently watched"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["1 watches"].waitForExistence(timeout: 5))
         capture("Undated history")
+    }
+    func testLibraryBulkQueueTrashRestoreAndPermanentDeleteInIsolatedFixture() {
+        let app = launch(mutations: true); app.buttons["tab-library"].tap()
+        app.buttons["title-again"].press(forDuration: 1)
+        app.buttons["Select"].tap()
+        let other = app.buttons["select-title-after-rain"]
+        XCTAssertTrue(other.waitForExistence(timeout: 5)); other.tap()
+        XCTAssertTrue(app.staticTexts["2 selected"].exists)
+        app.buttons["collection-action"].tap(); app.buttons["Queue"].tap()
+        app.buttons["Apply selection action"].tap()
+        let confirm = app.buttons["confirm-collection"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5)); capture("Bulk Queue review"); confirm.tap()
+        XCTAssertTrue(app.buttons["title-again"].waitForExistence(timeout: 5))
+        app.buttons["tab-home"].tap(); app.buttons["queue-shortcut"].tap()
+        XCTAssertTrue(app.buttons["title-again"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["title-after-rain"].exists); XCTAssertFalse(app.buttons["title-frieren"].exists)
+        app.buttons["title-again"].press(forDuration: 1); app.buttons["Move to Trash"].tap()
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5)); confirm.tap()
+        let trash = app.buttons["Open Trash"]
+        if !trash.isHittable { app.scrollViews.element(boundBy: 0).swipeLeft() }
+        trash.tap()
+        XCTAssertTrue(app.staticTexts["In Trash"].waitForExistence(timeout: 5)); capture("Trash populated")
+        app.buttons["Restore"].tap(); XCTAssertTrue(confirm.waitForExistence(timeout: 5)); confirm.tap()
+        XCTAssertTrue(app.staticTexts["Trash is clear"].waitForExistence(timeout: 5))
+        app.buttons["Return to Library"].tap()
+        XCTAssertTrue(app.buttons["title-again"].waitForExistence(timeout: 5))
+        app.buttons["title-again"].press(forDuration: 1); app.buttons["Move to Trash"].tap()
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5)); confirm.tap()
+        if !trash.isHittable { app.scrollViews.element(boundBy: 0).swipeLeft() }
+        trash.tap(); app.buttons["Delete permanently"].tap()
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5)); confirm.tap()
+        XCTAssertTrue(app.staticTexts["Trash is clear"].waitForExistence(timeout: 5)); capture("Trash after permanent delete")
     }
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

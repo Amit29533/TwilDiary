@@ -61,6 +61,8 @@ Done: every Home control works against fixtures/local API and matches the web, i
 
 Goal: preserve artwork-led browsing and independent collection commands.
 
+Build-12 implementation includes normalized query/shelves, reviewed selection and atomic collection operations, shared progress reset/completion transactions, archived grid/list and deletion confirmations. Awaiting compile/unit/UI evidence; checkboxes below remain acceptance gates. Native Empty Trash adds a destructive confirmation before the existing explicit server action; disk files remain untouched.
+
 - [ ] Category tabs, grid/list, genre rows, search, status/genre/disk filters and sorting.
 - [ ] Public TMDB/Trakt rating badges and preference; distinct watch status and availability.
 - [ ] Selection/long press, bulk status, favorites, Queue, Trash/restore and explicit permanent-delete test fixtures.
