@@ -21,12 +21,12 @@ The iOS 17-compatible verification app, restricted endpoint unit test, launch/in
 
 ## Last CI
 
-New branch run: not yet created. Prior separate-repo run: `39988206745`, success (verified through GitHub API).
+First branch run: `39993797967` for `80aca05`. Simulator/device compilation, unit/UI tests, screenshot export and IPA succeeded; whole run failed because upload-artifact excluded the hidden `.artifacts` parent for the multi-path logs/results upload. `gh run download` retrieved IPA and both screenshots. Fix: include hidden files only for the explicit artifact allowlist. Actual toolchain: Xcode 26.6, iPhone 17 Pro, iOS 26.5; pin runtime and arm64 destination to remove Xcode's duplicate-destination warning. Prior separate-repo run: `39988206745`, success.
 
 ## Decisions / boundaries
 
 - All new app/project/tooling lives in `/ios`; workflow `.github/workflows/ios.yml`; never hand-write `.pbxproj`.
-- SwiftUI, Swift 6 strict concurrency, Observation, iOS 17+, iPhone-only, portrait first. CI-only Swift compilation/simulators.
+- SwiftUI, Swift 6 strict concurrency, Observation, iOS 26+, iPhone-only, portrait first. The user subsequently confirmed their phone runs iOS 27 and waived older-iOS support; use iOS 26 Liquid Glass directly. The original iOS 17 proof compiled, but the target is now 26. CI-only Swift compilation/simulators.
 - Native project is now in the requested web repo branch; preserve the earlier separate native repo unchanged.
 - Existing Cloudflare backend is authoritative. No deployment, hosted D1 access/migration, provider-account mutation or Access-policy change is authorized. Any proposed backend addition requires explicit deployment approval.
 - Local fixture/reference tooling must isolate all API writes and never export owner credentials/data.
@@ -37,6 +37,9 @@ New branch run: not yet created. Prior separate-repo run: `39988206745`, success
 - README and older docs describe separate preview/diary implementations, older navigation, deferred features and historical test counts. Current `/preview` routes/controller and schema win; the audit will list exact discrepancies.
 - Browser tool last reported disabled; user explicitly requested Playwright, so isolated Playwright reference tooling may run through the terminal. No native Swift execution is attempted on Windows.
 - Prior physical sign-in failure was D1 quota exhaustion; source already contains database-independent `/api/session`. This branch may consume that existing endpoint without deploying anything.
+- Source inventory generation read and hashed 336 source/doc/migration/test files: 18 screens, 44 API handlers, 1,600 relevant CSS declarations and 349 test cases. Detailed semantic audit and state references remain in progress.
+- Disposable reference workspace is `%TEMP%/twildiary-ios-reference-b43454e`, port 5193, fresh local D1 only; sample fixture has 6 titles/66 episodes/28 events/3 mappings. No owner configuration was copied. Browser fixtures block external traffic and use fictional provider responses.
+- Windows Git Bash is not at the assumed `C:/Program Files/Git/bin/bash.exe`; no local bash syntax-check result is claimed. Actual CI executed all script stages successfully; only upload failed.
 
 ## BLOCKED
 

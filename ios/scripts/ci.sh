@@ -15,7 +15,7 @@ case "${1:?CI stage required}" in
 import json, os, pathlib, re, sys
 folder = pathlib.Path(sys.argv[1])
 devices = json.loads((folder / 'devices.json').read_text())['devices']
-candidates = [(runtime, device) for runtime, items in devices.items() if '.iOS-' in runtime
+candidates = [(runtime, device) for runtime, items in devices.items() if runtime == 'com.apple.CoreSimulator.SimRuntime.iOS-26-5'
               for device in items if device['name'] == 'iPhone 17 Pro' and device.get('isAvailable', True)]
 if not candidates:
     raise SystemExit('Required iPhone 17 Pro simulator is unavailable; inspect devices.json')
@@ -30,7 +30,7 @@ PY
     xcrun simctl boot "$SIM_ID" || true
     ;;
   build-simulator)
-    xcodebuild build-for-testing "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+    xcodebuild build-for-testing "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=arm64" \
       -derivedDataPath "$PWD/ios/.derived/simulator" 2>&1 | tee "$ARTIFACTS/logs/simulator-build.log"
     ;;
   build-device)
@@ -45,7 +45,7 @@ PY
     ;;
   test)
     xcrun simctl bootstatus "$SIMULATOR_ID" -b 2>&1 | tee "$ARTIFACTS/logs/simulator-boot.log"
-    xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+    xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=arm64" \
       -parallel-testing-enabled NO -derivedDataPath "$PWD/ios/.derived/simulator" \
       -resultBundlePath "$ARTIFACTS/Tests.xcresult" 2>&1 | tee "$ARTIFACTS/logs/tests.log"
     ;;
@@ -61,7 +61,7 @@ folder = pathlib.Path(sys.argv[1]); warnings = []; errors = []; tests = []
 for path in sorted((folder / 'logs').glob('*.log')):
     for line in path.read_text(errors='replace').splitlines():
         if re.search(r'\b(?:error:|Test Case .* failed)', line): errors.append(f'{path.name}: {line}')
-        if 'build' in path.name and re.search(r'\bwarning:', line): warnings.append(f'{path.name}: {line}')
+        if 'build' in path.name and re.search(r'\bwarning:', line, re.I): warnings.append(f'{path.name}: {line}')
         if re.search(r'Executed \d+ tests|\*\* TEST .* \*\*', line): tests.append(line)
 summary = '\n'.join(['## iOS build diagnostics', f'Build warnings: {len(warnings)}', f'Errors/failures: {len(errors)}',
                      *errors[:20], *warnings[:20], *tests[-12:]]) + '\n'
