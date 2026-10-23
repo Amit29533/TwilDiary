@@ -1,16 +1,16 @@
 # Native TwilDiary roadmap
 
-Work branch: `ios-native`. Product source: `/preview/*` at web baseline `b43454e`. Native project: `/ios`. The separate `TwilDiary-iOS` repository is preserved as reusable, previously compiled source, not accepted as parity evidence. Each step is gated by CI, tests, reference comparisons and committed evidence. No hosted writes or deployments are authorized by this plan.
+Work branch: `ios-native`. Product source: `/preview/*` at web baseline `b43454e`. Native project: `/ios`. The separate `TwilDiary-iOS` repository is preserved as reusable, previously compiled source, not accepted as parity evidence. The user subsequently asked to prioritize building the app over the sequential procedural gates. This remains the parity checklist; checked subtasks are evidence-backed and do not imply an entire step is complete. No hosted writes or deployments are authorized by this plan.
 
 ## 1. Foundation and CI
 
 Goal: prove a Windows-to-macOS-to-iPhone-artifact workflow, then freeze the audited reference and design system.
 
 - [x] Verify Git, Node 24+, GitHub CLI authentication and enabled Actions.
-- [ ] Prove minimal SwiftUI app, XCTest, XCUITest, screenshots and unsigned IPA via `gh run download`.
+- [x] Prove minimal SwiftUI app, XCTest, XCUITest, screenshots and unsigned IPA via `gh run download` (overall warning gate tracked separately).
 - [ ] Audit docs, all routes/components/controllers/domain rules/API/schema/migrations/tests; record code/document discrepancies.
-- [ ] Capture every web screen/state at 390×844 with Playwright against isolated local data; commit reference images and manifests.
-- [ ] Extract CSS/theme/type/spacing/radius/shadow/icon tokens and deterministic comparison tooling.
+- [x] Capture the 70 enumerated web screens/states at 390×844 with Playwright against isolated local data; save reference images and manifests. Further edge cases may expand this set.
+- [x] Extract CSS/theme/type/spacing/radius/shadow/icon tokens and deterministic comparison tooling.
 - [ ] Record architecture, install instructions and real-device checks; pin confirmed Xcode/simulator; zero build warnings.
 
 Screens/files: `ios/project.yml`, `ios/App`, `ios/Tests`, `ios/UITests`, `ios/tools`, `ios/docs/reference`, `ios/docs/IOS-ARCHITECTURE.md`, `.github/workflows/ios.yml`.
@@ -36,7 +36,7 @@ Done: fixture/local-backend flows preserve complete snapshots, authentication an
 Goal: reproduce fixed chrome and shared controls without changing product geometry.
 
 - [ ] Five tabs, per-tab navigation/scroll/form restoration, fixed opaque header, exact safe areas and keyboard handling.
-- [ ] Web-matched typography/icons/themes and liquid-glass fallbacks for iOS 17/reduced transparency.
+- [ ] Web-matched typography/icons/themes and Liquid Glass/reduced-transparency behavior for iOS 26+.
 - [ ] Posters/carousels/chips/native selectors/sliders/dialogs/toasts/Undo and long-press policy.
 - [ ] Motion, tap feedback, accessibility labels, rapid taps and reduced-motion tests.
 

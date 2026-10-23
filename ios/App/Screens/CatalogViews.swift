@@ -142,7 +142,10 @@ struct CatalogDetailView: View {
                     Text(details.details.overview).font(.subheadline).foregroundStyle(.secondary).lineSpacing(3)
                     if details.libraryTitle == nil {
                         VStack(alignment: .leading, spacing: 16) {
-                            Picker("Category", selection: $category) { Text("Movie").tag("movie"); Text("Show").tag("show"); Text("Anime").tag("anime"); Text("Anime movie").tag("anime-movie") }.pickerStyle(.menu)
+                            Picker("Category", selection: $category) {
+                                if details.details.mediaType == .movie { Text("Movie").tag("movie"); Text("Anime movie").tag("anime-movie") }
+                                else { Text("Show").tag("show"); Text("Anime").tag("anime") }
+                            }.pickerStyle(.menu)
                             Button { Task { importedID = await store.importTitle(details.details, category: category) } } label: { Label(store.busy ? "Adding…" : "Add to Planned", systemImage: "plus").font(.subheadline.bold()).frame(maxWidth: .infinity).padding(.vertical, 7) }.buttonStyle(.borderedProminent).disabled(store.busy || store.isPreview)
                         }.diaryPanel()
                     }

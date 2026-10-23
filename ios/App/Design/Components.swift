@@ -84,13 +84,14 @@ struct SearchField: View {
     @Binding var text: String
     let label: String
     @FocusState private var focused: Bool
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
     var body: some View {
         HStack(spacing: 10) {
             DiaryIcon(name: "search", size: 19).foregroundStyle(Color(webHex: "#a09aa9"))
             TextField(placeholder, text: $text).font(.system(size: 16)).textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search).focused($focused).onSubmit { focused = false }.accessibilityLabel(label)
             if !text.isEmpty { Button { text = "" } label: { DiaryIcon(name: "x", size: 16).frame(width: 26, height: 32) }.buttonStyle(.plain).accessibilityLabel("Clear search") }
         }.padding(.horizontal, 14).frame(minHeight: 48).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(focused ? Color.accentColor.opacity(0.65) : .white.opacity(0.13)))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(focused ? theme.accent.opacity(0.65) : .white.opacity(0.13)))
     }
 }
 
@@ -98,6 +99,11 @@ struct SearchField: View {
     static let cache = NSCache<NSString, UIImage>()
     static func image(_ path: String) -> UIImage? {
         if let saved = cache.object(forKey: path as NSString) { return saved }
+        if path.hasPrefix("scene:") {
+            let scenes: [String: CGRect] = ["frieren": CGRect(x: 506, y: 446, width: 287, height: 120), "night": CGRect(x: 510, y: 795, width: 285, height: 145), "severance": CGRect(x: 496, y: 1150, width: 299, height: 135), "again": CGRect(x: 510, y: 1480, width: 285, height: 110)]
+            guard let crop = scenes[String(path.dropFirst(6))], let file = Bundle.main.path(forResource: "glance-reference-atlas", ofType: "jpg"), let source = UIImage(contentsOfFile: file)?.cgImage?.cropping(to: crop) else { return nil }
+            let image = UIImage(cgImage: source); cache.setObject(image, forKey: path as NSString); return image
+        }
         let name = path.hasPrefix("asset:") ? String(path.dropFirst(6)) : URL(fileURLWithPath: path).deletingPathExtension().lastPathComponent
         let windows: [String: CGRect] = ["frieren": CGRect(x: 60, y: 335, width: 193, height: 240), "night": CGRect(x: 60, y: 711, width: 193, height: 242), "severance": CGRect(x: 60, y: 1084, width: 193, height: 212), "again": CGRect(x: 60, y: 1426, width: 193, height: 177)]
         let image: UIImage?
@@ -112,14 +118,16 @@ struct Artwork: View {
     let path: String?
     var title: String = ""
     var body: some View {
-        ZStack {
+        GeometryReader { proxy in
+          ZStack {
             LinearGradient(colors: [tint, Color(webHex: "#1c1728")], startPoint: .topLeading, endPoint: .bottomTrailing)
-            if let path, path.hasPrefix("asset:") || path.hasPrefix("/demo/"), let image = DemoArtwork.image(path) { Image(uiImage: image).resizable().scaledToFill() }
+            if let path, path.hasPrefix("asset:") || path.hasPrefix("/demo/") || path.hasPrefix("scene:"), let image = DemoArtwork.image(path) { Image(uiImage: image).resizable().scaledToFill() }
             else if let image = fixtureImage(path) { Image(uiImage: image).resizable().scaledToFill() }
             else if let path, let url = URL(string: path), url.scheme == "https" {
                 AsyncImage(url: url) { phase in if let image = phase.image { image.resizable().scaledToFill() } else { initials } }
             } else { initials }
-        }.clipped().accessibilityHidden(true)
+          }.frame(width: proxy.size.width, height: proxy.size.height).clipped()
+        }.accessibilityHidden(true)
     }
     private var tint: Color {
         let values = ["#543173", "#514779", "#294959", "#345682", "#477062", "#73435f"]
@@ -162,10 +170,7 @@ struct PosterCard: View {
     }
     private var present: Bool { store.workspace.locations.contains { $0.titleId == title.id && $0.evidence == "present" } }
     private var progress: Double {
-        if !title.isSeries { return store.workspace.activeEvents.contains { $0.titleId == title.id } ? 1 : 0 }
-        let episodes = store.workspace.episodes.filter { $0.titleId == title.id && $0.season > 0 }
-        let ids = Set(store.workspace.activeEvents.filter { $0.titleId == title.id }.compactMap(\.episodeId))
-        return episodes.isEmpty ? 0 : Double(episodes.filter { ids.contains($0.id) }.count) / Double(episodes.count)
+        LibraryProgress.fraction(title: title, workspace: store.workspace)
     }
 }
 
@@ -201,7 +206,7 @@ struct ProgressCard: View {
         ZStack(alignment: .leading) {
             if !compact { Label("Mark one watched", systemImage: "checkmark").font(.subheadline.bold()).foregroundStyle(.mint).padding(20) }
             Group { if compact { compactContent } else { glanceContent } }
-                .background { GeometryReader { proxy in Artwork(path: title.backdrop, title: title.name).frame(width: proxy.size.width, height: proxy.size.height).overlay(LinearGradient(colors: [.black.opacity(compact ? 0.05 : 0.35), .black.opacity(0.88)], startPoint: .top, endPoint: .bottom)) } }
+                .background { GeometryReader { proxy in Artwork(path: cardBackdrop, title: title.name).frame(width: proxy.size.width, height: proxy.size.height).overlay(LinearGradient(colors: [.black.opacity(compact ? 0.05 : 0.35), .black.opacity(0.88)], startPoint: .top, endPoint: .bottom)) } }
                 .clipShape(RoundedRectangle(cornerRadius: compact ? 12 : 14))
                 .overlay(RoundedRectangle(cornerRadius: compact ? 12 : 14).strokeBorder(.white.opacity(0.17)))
                 .offset(x: drag)
@@ -262,6 +267,7 @@ struct ProgressCard: View {
         }
     }
     private var fraction: Double { guard let card, card.progress.total > 0 else { return 0 }; return min(1, Double(card.progress.watched) / Double(card.progress.total)) }
+    private var cardBackdrop: String? { ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster }
     private var remaining: Int? {
         guard let card else { return nil }
         if !title.isSeries { return title.runtimeMinutes.map { card.progress.watched == 0 ? $0 : 0 } }

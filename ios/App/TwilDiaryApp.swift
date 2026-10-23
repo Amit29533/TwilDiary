@@ -25,6 +25,7 @@ enum AppDestination: Hashable { case explore, history, files, trash }
     var libraryShortcut: String?
     var libraryRevision = 0
     var statsRevision = 0
+    var detailTabs = Set<AppTab>()
     func library(_ shortcut: String) { libraryShortcut = shortcut; libraryRevision += 1; paths[.library] = NavigationPath(); selectedTab = .library }
     func statsToday() { statsRevision += 1; paths[.stats] = NavigationPath(); selectedTab = .stats }
     func files() { selectedTab = .more; paths[.more] = NavigationPath(); paths[.more, default: NavigationPath()].append(AppDestination.files) }
@@ -35,9 +36,8 @@ struct RootView: View {
     @Environment(DiaryStore.self) private var store
     @Environment(AppRouter.self) private var router
     @State private var showSignIn = false
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
     var body: some View {
-        @Bindable var store = store
-        @Bindable var router = router
         Group {
             if store.needsSignIn {
                 VStack(spacing: 22) {
@@ -66,13 +66,11 @@ struct RootView: View {
                     }
                 }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity).background(.black)
             } else {
-                TabView(selection: $router.selectedTab) {
-                    Tab("Home", systemImage: "house", value: AppTab.home) { diaryStack(.home) { HomeView() } }
-                    Tab("Library", systemImage: "books.vertical", value: AppTab.library) { diaryStack(.library) { LibraryView() } }
-                    Tab("Glance", systemImage: "eye", value: AppTab.glance) { diaryStack(.glance) { GlanceView() } }
-                    Tab("Stats", systemImage: "chart.bar", value: AppTab.stats) { diaryStack(.stats) { StatsView() } }
-                    Tab("More", systemImage: "ellipsis", value: AppTab.more) { diaryStack(.more) { SettingsView() } }
-                }.toolbar(.hidden, for: .tabBar)
+                ZStack {
+                    ForEach(AppTab.allCases, id: \.self) { tab in
+                        PersistentTab(selected: router.selectedTab == tab) { diaryStack(tab) { screen(tab) } }
+                    }
+                }
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         VStack(spacing: 8) {
                             if let label = store.undoLabel {
@@ -90,29 +88,45 @@ struct RootView: View {
             }
         }.task { await store.refresh() }
     }
-    private var showNavigation: Bool { router.selectedTab == .more || router.paths[router.selectedTab]?.isEmpty != false }
+    private var showNavigation: Bool { !router.detailTabs.contains(router.selectedTab) }
     private var navigation: some View {
         HStack(spacing: 0) {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 Button { router.selectedTab = tab } label: {
                     VStack(spacing: 2) { DiaryIcon(name: tab.icon, size: 23); Text(tab.label).font(.system(size: 11)) }
                         .frame(maxWidth: .infinity).frame(height: 57)
-                        .foregroundStyle(router.selectedTab == tab ? Color.accentColor : Color(webHex: "#a09aa9"))
-                        .background(router.selectedTab == tab ? Color.accentColor.opacity(0.13) : .clear, in: Capsule())
-                        .overlay(Capsule().strokeBorder(router.selectedTab == tab ? Color.accentColor.opacity(0.28) : .clear))
+                        .foregroundStyle(router.selectedTab == tab ? theme.accent : Color(webHex: "#a09aa9"))
+                        .background(router.selectedTab == tab ? theme.accent.opacity(0.13) : .clear, in: Capsule())
+                        .overlay(Capsule().strokeBorder(router.selectedTab == tab ? theme.accent.opacity(0.28) : .clear))
                 }.buttonStyle(.plain).accessibilityLabel(tab.label).accessibilityIdentifier("tab-" + tab.rawValue).accessibilityAddTraits(router.selectedTab == tab ? .isSelected : [])
             }
         }.padding(4).background(.ultraThinMaterial, in: Capsule()).overlay(Capsule().strokeBorder(.white.opacity(0.16)))
     }
+    @ViewBuilder private func screen(_ tab: AppTab) -> some View {
+        switch tab { case .home: HomeView(); case .library: LibraryView(); case .glance: GlanceView(); case .stats: StatsView(); case .more: SettingsView() }
+    }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {
-            content().background(.black).toolbar(.hidden, for: .navigationBar)
-                .navigationDestination(for: String.self) { TitleDetailView(id: $0) }
-                .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0) }
-                .navigationDestination(for: PersonRoute.self) { PersonView(id: $0.id) }
+            content().background(tab == .library ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).onAppear { router.detailTabs.remove(tab) }
+                .navigationDestination(for: String.self) { TitleDetailView(id: $0).onAppear { router.detailTabs.insert(tab) } }
+                .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).onAppear { router.detailTabs.insert(tab) } }
+                .navigationDestination(for: PersonRoute.self) { PersonView(id: $0.id).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: AppDestination.self) { destination in
-                    switch destination { case .explore: ExploreView(); case .history: HistoryView(); case .files: FilesView(); case .trash: TrashView() }
+                    Group { switch destination { case .explore: ExploreView(); case .history: HistoryView(); case .files: FilesView(); case .trash: TrashView() } }.onAppear { router.detailTabs.remove(tab) }
                 }
         }
+    }
+}
+
+/// Mount each stack on its first visit and retain it thereafter, without a second system tab bar.
+private struct PersistentTab<Content: View>: View {
+    let selected: Bool
+    @ViewBuilder var content: Content
+    @State private var mounted = false
+    init(selected: Bool, @ViewBuilder content: () -> Content) { self.selected = selected; self.content = content() }
+    var body: some View {
+        Group { if mounted || selected { content } }
+            .opacity(selected ? 1 : 0).allowsHitTesting(selected).accessibilityHidden(!selected)
+            .onChange(of: selected, initial: true) { _, value in if value { mounted = true } }
     }
 }

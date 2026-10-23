@@ -2156,7 +2156,7 @@
       }
     ],
     "file": "library-no-matches.png",
-    "sha256": "240a8a8839ce12b77217ff6e65036bb98d6220eae8f9a71f4a606ca4e6e7198b",
+    "sha256": "ff3cf22ac0c454a56e5248acf1b899ef4e40557523c711f4f24deae2ef8313a6",
     "passed": true
   },
   {
@@ -4572,11 +4572,11 @@
       }
     ],
     "file": "history-unknown.png",
-    "sha256": "5e567d8799d2317790cee33f6e2a26e07f0bfa847257741c019b5c519310a366",
+    "sha256": "5e0a1d84109aeb1789c36a838d8f906aaccdd9558ba042053eea74472368a0ee",
     "passed": true
   },
   {
-    "id": "history-empty",
+    "id": "history-no-matches",
     "path": "/preview/recently-watched",
     "scenario": "default",
     "theme": "twilight",
@@ -4638,7 +4638,7 @@
         "value": ""
       }
     ],
-    "file": "history-empty.png",
+    "file": "history-no-matches.png",
     "sha256": "bd9a4b0de7f2efcf4afac14bd730c01f98c34ca2e5de3188cae9c260df1fe498",
     "passed": true
   },
@@ -5656,8 +5656,23 @@
   {
     "id": "workspace-loading",
     "path": "/preview/home",
-    "passed": false,
-    "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('main') to be visible\u001b[22m\n"
+    "scenario": "loading",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 844,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [],
+    "file": "workspace-loading.png",
+    "sha256": "75a0bd4ead73f761505842deebd68ba16fc2f0ba801d56ffe5c9113db05718bf",
+    "passed": true
   },
   {
     "id": "offline",

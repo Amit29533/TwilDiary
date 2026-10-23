@@ -148,9 +148,9 @@ public struct SeasonProgress: Equatable, Sendable {
 }
 
 public enum Period: String, CaseIterable, Identifiable, Sendable {
-    case today, week, month, year, all
+    case today, week, month, ninetyDays = "90d", year, all
     public var id: Self { self }
-    public var label: String { switch self { case .today: "Today"; case .week: "This Week"; case .month: "This Month"; case .year: "This Year"; case .all: "All time" } }
+    public var label: String { switch self { case .today: "Today"; case .week: "This Week"; case .month: "This Month"; case .ninetyDays: "Last 90 Days"; case .year: "This Year"; case .all: "All time" } }
     public func contains(_ date: Date, now: Date, calendar: Calendar, year: Int? = nil) -> Bool {
         guard date <= now else { return false }
         switch self {
@@ -159,6 +159,7 @@ public enum Period: String, CaseIterable, Identifiable, Sendable {
             var week = calendar; week.firstWeekday = 2; week.minimumDaysInFirstWeek = 4
             return week.dateInterval(of: .weekOfYear, for: now)?.contains(date) == true
         case .month: return calendar.isDate(date, equalTo: now, toGranularity: .month)
+        case .ninetyDays: return date >= calendar.date(byAdding: .day, value: -89, to: calendar.startOfDay(for: now))!
         case .year: return calendar.component(.year, from: date) == (year ?? calendar.component(.year, from: now))
         case .all: return true
         }

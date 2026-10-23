@@ -1,6 +1,6 @@
 # Native TwilDiary progress
 
-Updated: 23 October 2026. Branch: ios-native. Web source: b43454e.
+Updated: 24 October 2026. Branch: ios-native. Web source: b43454e.
 
 ## Current work
 
@@ -18,18 +18,20 @@ The user asked to move past the procedural foundation gates and build the actual
 
 ## CI truth
 
-Latest completed run: 39995573162, commit c184642. Simulator and device compilation, unit/UI tests, screenshot export and all artifact uploads passed. Overall failure came from two UIRequiresFullScreen deprecation warnings. That plist key is removed in the current batch. Actual pinned toolchain: macOS 26, Xcode 26.6, iPhone 17 Pro / iOS 26.5 / arm64.
+Run 40001908810 for db13a65 passed: simulator and unsigned-device builds, 10 core tests, 8 session/endpoint tests, 4 UI tests, zero build warnings. Downloaded 13 screenshot attachments and IPA; verified SHA-256, arm64, bundle ID, build 3 and iOS 26 minimum. Evidence: ios/docs/screenshots/step-3 (synthetic fixtures).
 
-The new actual-app batch has not compiled yet. Exact next action: commit/push, inspect compiler/test diagnostics, fix and rerun, download the actual-app screenshots and unsigned IPA, inspect them and share screenshots. Do not call the actual app green based on the earlier hello-world run.
+Visual inspection caught issues despite passing tests: system and custom tab bars both visible, blue system accent in custom chrome, and poster images overflowing grid bounds. The current follow-up removes the system TabView, retains lazily mounted per-tab navigation stacks, explicitly uses theme accents and constrains artwork to its viewport. Added geometry and single-tab-bar assertions. Do not offer the build-3 IPA as visually ready.
+
+Other follow-ups: first-open Queue/Planned shortcuts, public-rating category constraints, manifest-aware poster progress, the original Stats range bar synchronized to its period menu, 90-day calendar boundary, streak heatmap, source-correct genre denominator and 70/70 web-reference manifest. Build number 4. Exact next action: push follow-up, inspect CI diagnostics, download and visually inspect corrected screenshots before offering IPA.
 
 ## Remaining parity work
 
-- Stats old rolling bar/collision synchronization, full streak/backlog and chart drilldown coverage.
+- Stats full backlog, averages/comparison, monthly/year chart buckets, zero-day coverage and drilldown parity remain incomplete; shared period/bar selection and current streak heatmap are implemented.
 - Complete per-episode actions, watch date editing/rewatches, spoiler controls, progress slider and title transaction edge cases.
 - Complete native Trakt setup/review/apply, scanner mismatch and backup/export management screens.
 - Durable protected offline snapshot/outbox; current complete-snapshot reload preserves in-memory data on read failure, but is not durable offline support.
 - Full multi-size/accessibility/empty/error/loading regression and real-phone haptics/scroll/gesture checks.
-- Reference capture: initial run 69/70; corrected loading and duplicate history-state cases reran successfully, but full manifest must be regenerated before declaring all-state coverage.
+- Reference capture rerun completed 70/70 successfully. The full manifest now records all enumerated states; this is web reference evidence, not native parity evidence.
 - Visual parity is unfinished. Windows Chromium reference font metrics differ from iOS. Each screen still requires simulator comparison and refinement.
 
 ## Boundaries / build

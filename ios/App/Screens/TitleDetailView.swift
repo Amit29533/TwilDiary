@@ -52,7 +52,7 @@ struct TitleDetailView: View {
                         }.diaryPanel()
                     }.padding(.horizontal, 16).padding(.bottom, 32)
                 }.background(alignment: .top) {
-                    Artwork(path: title.backdrop, title: title.name).frame(height: 310).overlay(LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
+                    Artwork(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, title: title.name).frame(height: 310).overlay(LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
                 }.background(.black)
                     .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
                     .toolbar {

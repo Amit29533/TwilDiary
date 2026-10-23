@@ -38,3 +38,12 @@ import Testing
     #expect(repeated.days.filter(\.future).allSatisfy { $0.count == 0 })
     #expect(!repeated.planned.contains { $0.id == event.titleId })
 }
+
+@Test func posterProgressKeepsUnloadedManifestEpisodesInTheTotal() throws {
+    var workspace = SampleWorkspace.make()
+    let title = try #require(workspace.titles.first)
+    workspace.episodes = workspace.episodes.filter { $0.number <= 2 }
+    #expect(LibraryProgress.fraction(title: title, workspace: workspace) == 0.5)
+    workspace.events.append(workspace.events[0])
+    #expect(LibraryProgress.fraction(title: title, workspace: workspace) == 0.5)
+}

@@ -4,8 +4,10 @@ import TwilDiaryCore
 
 struct StatsView: View {
     @Environment(DiaryStore.self) private var store
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
     @Environment(AppRouter.self) private var router
-    @State private var period = Period.today
+    @State private var period = Period.month
+    @State private var appliedShortcutRevision = 0
     @State private var year = DiaryDate.calendar().component(.year, from: Date.now)
     @State private var selectedDay: Date?
     @State private var showGenres = false
@@ -26,6 +28,13 @@ struct StatsView: View {
                         Picker("Watch time period", selection: $period) { ForEach(Period.allCases) { Text($0.label).tag($0) } }.pickerStyle(.menu).fixedSize()
                         if period == .year { Picker("Year", selection: $year) { ForEach(years, id: \.self) { Text(String($0)).tag($0) } }.pickerStyle(.menu).fixedSize() }
                     }
+                    HStack(spacing: 0) {
+                        ForEach(ranges, id: \.period) { range in
+                            Button { period = range.period; selectedDay = nil } label: {
+                                Text(range.label).font(.system(size: 12, weight: .semibold)).foregroundStyle(period == range.period ? Color(webHex: "#21182e") : Color(webHex: "#c5c0cf")).frame(maxWidth: .infinity).frame(height: 34).background(period == range.period ? theme.accent : .clear)
+                            }.buttonStyle(.plain)
+                        }
+                    }.clipShape(RoundedRectangle(cornerRadius: 11)).overlay(RoundedRectangle(cornerRadius: 11).strokeBorder(.white.opacity(0.13)))
                     Text(DiaryDate.duration(minutes)).font(.system(size: 38, weight: .bold)).foregroundStyle(.tint).tracking(-1)
                     Text("\(events.count) watches · \(Set(events.map(\.titleId)).count) movies & shows").font(.caption).foregroundStyle(.secondary)
                     Chart(daily) { day in BarMark(x: .value("Day", day.date, unit: .day), y: .value("Minutes", day.minutes)).foregroundStyle(.tint).cornerRadius(3) }
@@ -38,6 +47,16 @@ struct StatsView: View {
                     }
                     Text("Dated watches only. Estimated from title runtimes. Includes rewatches.").font(.caption).foregroundStyle(.secondary)
                 }.diaryPanel()
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Streaks").font(.title3.bold())
+                    HStack { Text("\(homeSummary.streak) \(homeSummary.streak == 1 ? "day" : "days")").font(.title2.bold()); Spacer(); Text("Current streak").font(.caption).foregroundStyle(.secondary) }
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 3), count: 12), spacing: 3) {
+                        ForEach(heatmap, id: \.date) { day in
+                            RoundedRectangle(cornerRadius: 3).fill(day.count == 0 ? Color.white.opacity(0.06) : theme.accent.opacity(min(1, 0.3 + Double(day.count) * 0.15))).frame(height: 14).accessibilityLabel("\(day.date.formatted(date: .abbreviated, time: .omitted)): \(day.count) watches")
+                        }
+                    }
+                    Text("Last 12 weeks").font(.caption2).foregroundStyle(.secondary)
+                }.diaryPanel()
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Backlog").font(.title3.bold())
                     ForEach(["planned", "watching", "completed", "dropped"], id: \.self) { status in HStack { Text(status.capitalized); Spacer(); Text("\(store.workspace.activeTitles.filter { $0.status == status }.count)").bold() }.font(.subheadline) }
@@ -45,7 +64,7 @@ struct StatsView: View {
                 }.diaryPanel()
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Genre mix").font(.title3.bold())
-                    Text("Share of your \(store.workspace.activeTitles.count) titles with each genre").font(.caption).foregroundStyle(.secondary)
+                    Text("Share of your \(watchedTitles.count) watched titles with each genre").font(.caption).foregroundStyle(.secondary)
                     ForEach(Array(genres.prefix(showGenres ? genres.count : 5)), id: \.name) { genre in
                         VStack(spacing: 5) { HStack { Text(genre.name).bold(); Spacer(); Text("\(genre.percent)% · \(genre.count) titles").foregroundStyle(.secondary) }.font(.caption); ProgressView(value: Double(genre.percent), total: 100) }
                     }
@@ -54,7 +73,21 @@ struct StatsView: View {
                 }.diaryPanel()
             }.padding(.horizontal, 16).padding(.bottom, 24)
             }.refreshable { await store.refresh() }
-        }.onChange(of: router.statsRevision) { _, _ in period = .today; selectedDay = nil }
+        }.onChange(of: router.statsRevision) { _, _ in applyShortcut() }.onAppear { applyShortcut() }
+    }
+    private var ranges: [(period: Period, label: String)] { [(.week, "7D"), (.month, "30D"), (.ninetyDays, "90D"), (.year, "1Y"), (.all, "All")] }
+    private func applyShortcut() { if router.statsRevision > appliedShortcutRevision { appliedShortcutRevision = router.statsRevision; period = .today; selectedDay = nil } }
+    private var homeSummary: HomeOverview { HomeOverview(workspace: store.workspace, now: store.now) }
+    private var heatmap: [(date: Date, count: Int)] {
+        let calendar = DiaryDate.calendar(), today = DiaryDate.calendar().startOfDay(for: store.now)
+        var counts: [Date: Int] = [:]
+        for event in store.workspace.activeEvents { if let date = DiaryDate.parse(event.watchedAt), date <= store.now { counts[calendar.startOfDay(for: date), default: 0] += 1 } }
+        // Column-major order: twelve weeks across, Monday to Sunday down.
+        let monday = calendar.dateInterval(of: .weekOfYear, for: store.now)!.start
+        return (0..<84).map { index in
+            let date = calendar.date(byAdding: .day, value: (index % 12 - 11) * 7 + index / 12, to: monday)!
+            return (date, date > today ? 0 : counts[date] ?? 0)
+        }
     }
     private var events: [WatchEvent] { store.workspace.activeEvents.filter { event in DiaryDate.parse(event.watchedAt).map { period.contains($0, now: store.now, calendar: DiaryDate.calendar(), year: year) } ?? false } }
     private var minutes: Int { events.reduce(0) { $0 + max(0, store.title($1.titleId)?.runtimeMinutes ?? 0) } }
@@ -67,11 +100,14 @@ struct StatsView: View {
         return values.map { Day(date: $0.key, minutes: $0.value) }.sorted { $0.date < $1.date }
     }
     private struct Genre { let name: String; let count: Int; let percent: Int }
+    private var watchedTitles: [MediaTitle] { let watched = Set(store.workspace.activeEvents.map(\.titleId)); return store.workspace.activeTitles.filter { watched.contains($0.id) } }
     private var genres: [Genre] {
         var counts: [String: Int] = [:]
-        let watched = Set(store.workspace.activeEvents.map(\.titleId))
-        let titles = store.workspace.activeTitles.filter { watched.contains($0.id) }
-        for title in titles { for genre in Set(title.genres) { counts[genre, default: 0] += 1 } }
+        let titles = watchedTitles
+        for title in titles {
+            let names = Set(title.genres.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+            for genre in names.isEmpty ? ["Uncategorized"] : Array(names) { counts[genre, default: 0] += 1 }
+        }
         return counts.map { Genre(name: $0.key, count: $0.value, percent: Int((Double($0.value) / Double(max(1, titles.count)) * 100).rounded())) }.sorted { $0.count == $1.count ? $0.name < $1.name : $0.count > $1.count }
     }
 }

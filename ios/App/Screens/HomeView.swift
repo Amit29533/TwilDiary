@@ -3,6 +3,7 @@ import TwilDiaryCore
 
 struct HomeView: View {
     @Environment(DiaryStore.self) private var store
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
     @Environment(AppRouter.self) private var router
     @State private var showSearch = false
     @State private var pick: MediaTitle?
@@ -43,7 +44,7 @@ struct HomeView: View {
                                     Text("Pick for me").font(.system(size: 15, weight: .semibold))
                                     Text(overview.planned.isEmpty ? "Add a planned movie or show to get a pick" : "Choose from \(overview.planned.count) unwatched planned titles").font(.system(size: 12)).foregroundStyle(.secondary)
                                 }; Spacer(minLength: 0)
-                            }.padding(14).background(Color.accentColor.opacity(0.13), in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.accentColor.opacity(0.28)))
+                            }.padding(14).background(theme.accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(theme.accent.opacity(0.28)))
                         }.buttonStyle(.plain).disabled(overview.planned.isEmpty)
                         LazyVGrid(columns: columns, spacing: 12) {
                             ForEach(overview.planned.prefix(3)) { title in
@@ -103,15 +104,16 @@ struct HomeView: View {
                 NavigationLink { HistoryView(initialDay: day.date) } label: {
                     VStack(spacing: 6) {
                         Text(day.date, format: .dateTime.weekday(.narrow)).font(.system(size: 10)).foregroundStyle(.secondary)
-                        Text(day.date, format: .dateTime.day()).font(.system(size: 13, weight: .semibold))
-                        VStack { Spacer(minLength: 0); Capsule().fill(day.minutes > 0 ? Color.accentColor : .white.opacity(0.12)).frame(width: 7, height: day.minutes > 0 ? max(4, 20 * CGFloat(day.minutes) / CGFloat(max(1, overview.days.map(\.minutes).max() ?? 0))) : 2) }.frame(height: 20)
+                        Text(day.date, format: .dateTime.day()).font(.system(size: 16, weight: .semibold)).foregroundStyle(DiaryDate.calendar().isDate(day.date, inSameDayAs: store.now) ? theme.accent : .primary)
+                        VStack { Spacer(minLength: 0); RoundedRectangle(cornerRadius: 3).fill(day.minutes > 0 ? theme.accent : .white.opacity(0.12)).frame(width: 10, height: day.minutes > 0 ? max(4, 30 * CGFloat(day.minutes) / CGFloat(max(1, overview.days.map(\.minutes).max() ?? 0))) : 2) }.frame(height: 30)
                     }.frame(maxWidth: .infinity).foregroundStyle(.primary).opacity(day.future ? 0.4 : 1)
                 }.buttonStyle(.plain).disabled(day.future).accessibilityLabel("\(day.date.formatted(date: .abbreviated, time: .omitted)), \(day.count) watches")
             } }
+            if overview.unknownDates > 0 || overview.missingRuntime > 0 { Text("Dated watches only. Missing runtimes are excluded from watch time.").font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(3) }
         }.diaryPanel()
     }
     private func metric(_ value: String, _ label: String, accent: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 3) { Text(value).font(.system(size: 22, weight: .bold)).tracking(-0.7).foregroundStyle(accent ? Color.accentColor : .primary).lineLimit(1).minimumScaleFactor(0.7); Text(label).font(.system(size: 11)).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 3) { Text(value).font(.system(size: 22, weight: .bold)).tracking(-0.7).foregroundStyle(accent ? theme.accent : .primary).lineLimit(1).minimumScaleFactor(0.7); Text(label).font(.system(size: 11)).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

@@ -15,6 +15,11 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5)); capture("Home")
         app.buttons["tab-library"].tap()
         XCTAssertTrue(app.buttons["Search library"].waitForExistence(timeout: 5)); capture("Library")
+        XCTAssertEqual(app.tabBars.count, 0, "The custom capsule must be the only tab bar")
+        let first = app.buttons["title-after-rain"].frame, second = app.buttons["title-again"].frame, third = app.buttons["title-frieren"].frame
+        XCTAssertLessThan(first.maxX, second.minX)
+        XCTAssertLessThan(second.maxX, third.minX)
+        XCTAssertLessThanOrEqual(third.maxX, app.frame.width - 10)
         app.buttons["title-again"].tap()
         XCTAssertTrue(app.staticTexts["Episodes"].waitForExistence(timeout: 5)); capture("Title detail")
         app.navigationBars.buttons.element(boundBy: 0).tap()
@@ -52,6 +57,18 @@ import XCTest
         let explore = app.buttons["explore-shortcut"]
         XCTAssertTrue(explore.waitForExistence(timeout: 5)); explore.tap()
         XCTAssertTrue(app.buttons["catalog-tv:900002"].waitForExistence(timeout: 10)); capture("Explore")
+    }
+    func testHomeStatsUsesTodayAndKeepsTheOriginalRangeBar() {
+        let app = launch(); app.buttons["tab-stats"].tap()
+        XCTAssertTrue(app.buttons["30D"].waitForExistence(timeout: 5))
+        app.buttons["1Y"].tap()
+        capture("Stats year")
+        app.buttons["tab-home"].tap()
+        app.buttons["home-stats"].tap()
+        XCTAssertTrue(app.staticTexts["Today"].exists || app.buttons.containing(NSPredicate(format: "label CONTAINS 'Today'")).firstMatch.exists)
+        XCTAssertTrue(app.buttons["7D"].exists)
+        XCTAssertTrue(app.buttons["90D"].exists)
+        capture("Stats from Home")
     }
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

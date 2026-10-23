@@ -19,14 +19,20 @@ public struct HomeOverview: Sendable {
     public let minutes: Int
     public let watches: Int
     public let streak: Int
+    public let unknownDates: Int
+    public let missingRuntime: Int
     public let planned: [MediaTitle]
     public let upcoming: [Upcoming]
 
     public init(workspace: Workspace, now: Date, calendar: Calendar = DiaryDate.calendar()) {
+        var calendar = calendar
+        calendar.firstWeekday = 2; calendar.minimumDaysInFirstWeek = 4
         let today = calendar.startOfDay(for: now)
         let start = calendar.dateInterval(of: .weekOfYear, for: now)!.start
         let active = workspace.activeEvents
         let titles = Dictionary(uniqueKeysWithValues: workspace.activeTitles.map { ($0.id, $0) })
+        unknownDates = active.filter { DiaryDate.parse($0.watchedAt) == nil }.count
+        missingRuntime = active.filter { DiaryDate.parse($0.watchedAt) != nil && (titles[$0.titleId]?.runtimeMinutes ?? 0) <= 0 }.count
         var counts: [Date: Int] = [:], runtimes: [Date: Int] = [:]
         for event in active {
             guard let date = DiaryDate.parse(event.watchedAt), date <= now else { continue }

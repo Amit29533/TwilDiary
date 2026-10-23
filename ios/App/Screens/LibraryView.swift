@@ -3,6 +3,7 @@ import TwilDiaryCore
 
 struct LibraryView: View {
     @Environment(DiaryStore.self) private var store
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
     @Environment(AppRouter.self) private var router
     @AppStorage("publicRatingSource") private var ratingSource = PublicRatingSource.tmdb
     @State private var category = LibraryCategory.all
@@ -14,6 +15,7 @@ struct LibraryView: View {
     @State private var list = false
     @State private var genreRows = false
     @State private var sort = "library"
+    @State private var appliedShortcutRevision = 0
     var body: some View {
         VStack(spacing: 0) {
             PageHeader(name: "Library", count: String(store.workspace.activeTitles.count), onSearch: { showSearch.toggle() })
@@ -40,8 +42,8 @@ struct LibraryView: View {
                 Text(filtered.count == store.workspace.activeTitles.count ? "All titles" : "\(filtered.count) titles").font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
                 Spacer(minLength: 0)
                 Menu {
-                    Picker("Order", selection: $sort) { Text("Library order").tag("library"); Text("Title A–Z").tag("name"); Text("Rating").tag("rating") }
-                } label: { HStack(spacing: 5) { DiaryIcon(name: "arrow-down-up", size: 15); Text(sort == "library" ? "Library order" : sort == "name" ? "Title A–Z" : "Rating"); DiaryIcon(name: "chevron-down", size: 12) }.font(.system(size: 12, weight: .semibold)).fixedSize().padding(.horizontal, 5).frame(height: 38) }.buttonStyle(.plain)
+                    Picker("Order", selection: $sort) { Text("Library order").tag("library"); Text("Title A–Z").tag("name"); Text("Rating").tag("rating"); Text("Year").tag("year") }
+                } label: { HStack(spacing: 5) { DiaryIcon(name: "arrow-down-up", size: 15); Text(sort == "library" ? "Library order" : sort == "name" ? "Title A–Z" : sort == "year" ? "Year" : "Rating"); DiaryIcon(name: "chevron-down", size: 12) }.font(.system(size: 12, weight: .semibold)).fixedSize().padding(.horizontal, 5).frame(height: 38) }.buttonStyle(.plain)
                 Button { list = false; genreRows = false } label: { layoutIcon("layout-grid", selected: !list && !genreRows) }.accessibilityLabel("Grid layout")
                 Button { list = true; genreRows = false } label: { layoutIcon("rows-3", selected: list && !genreRows) }.accessibilityLabel("List layout")
                 Button { genreRows.toggle(); list = false } label: { layoutIcon("list-video", selected: genreRows) }.accessibilityLabel("Genre sections")
@@ -66,10 +68,14 @@ struct LibraryView: View {
                 if filtered.isEmpty { ContentUnavailableView("No matching titles", systemImage: "books.vertical", description: Text("Change your filters or search.")) }
             }.refreshable { await store.refresh() }
         }.task(id: filtered.map(\.id).joined(separator: ",") + ratingSource.rawValue) { await store.loadPublicRatings(filtered, source: ratingSource) }
-            .onChange(of: router.libraryRevision) { _, _ in
-                category = .all; search = ""; genre = ""; drive = ""; status = "all"
-                switch router.libraryShortcut { case "queue": status = "queue"; case "planned": status = "planned"; case "disk": drive = "mapped"; default: break }
-            }
+            .onChange(of: router.libraryRevision) { _, _ in applyShortcut() }
+            .onAppear { applyShortcut() }
+    }
+    private func applyShortcut() {
+        guard router.libraryRevision > appliedShortcutRevision else { return }
+        appliedShortcutRevision = router.libraryRevision
+        category = .all; search = ""; genre = ""; drive = ""; status = "all"
+        switch router.libraryShortcut { case "queue": status = "queue"; case "planned": status = "planned"; case "disk": drive = "mapped"; default: break }
     }
     private func poster(_ title: MediaTitle) -> some View {
         NavigationLink(value: title.id) { PosterCard(title: title) }.buttonStyle(.plain).accessibilityIdentifier("title-" + title.id)
@@ -80,18 +86,19 @@ struct LibraryView: View {
             }
     }
     private func filterChip(_ label: String, selected: Bool) -> some View {
-        HStack(spacing: 7) { Text(label).lineLimit(1); DiaryIcon(name: "chevron-down", size: 13) }.font(.system(size: 13, weight: .semibold)).padding(.horizontal, 15).frame(height: 38).background(selected ? Color.accentColor.opacity(0.16) : Color(webHex: "#111115"), in: Capsule()).overlay(Capsule().strokeBorder(selected ? Color.accentColor.opacity(0.7) : .white.opacity(0.14)))
+        HStack(spacing: 7) { Text(label).lineLimit(1); DiaryIcon(name: "chevron-down", size: 13) }.font(.system(size: 13, weight: .semibold)).padding(.horizontal, 15).frame(height: 38).background(selected ? theme.accent.opacity(0.16) : Color(webHex: "#111115"), in: Capsule()).overlay(Capsule().strokeBorder(selected ? theme.accent.opacity(0.7) : .white.opacity(0.14)))
     }
     private func layoutIcon(_ name: String, selected: Bool) -> some View { DiaryIcon(name: name, size: 18).frame(width: 32, height: 38).background(selected ? Color(webHex: "#211c30") : .clear, in: RoundedRectangle(cornerRadius: 11)) }
     private var genres: [String] { Set(store.workspace.activeTitles.flatMap(\.genres)).sorted() }
     private var drives: [String] { Set(store.workspace.locations.map(\.driveLetter)).sorted() }
     private var filtered: [MediaTitle] {
         let selected = store.workspace.activeTitles.filter { title in
-            let locations = store.workspace.locations.filter { $0.titleId == title.id && $0.evidence == "present" }
+            let locations = store.workspace.locations.filter { $0.titleId == title.id }
             let diskMatches = drive.isEmpty || (drive == "mapped" ? !locations.isEmpty : drive == "unmapped" ? locations.isEmpty : locations.contains { $0.driveLetter == drive })
             return category.includes(title) && (status == "all" || (status == "queue" ? title.queued == true : title.status == status)) && (genre.isEmpty || title.genres.contains(genre)) && (search.isEmpty || title.name.localizedCaseInsensitiveContains(search)) && diskMatches
         }
         if sort == "name" { return selected.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending } }
+        if sort == "year" { return selected.sorted { ($0.year ?? 0) == ($1.year ?? 0) ? $0.name < $1.name : ($0.year ?? 0) > ($1.year ?? 0) } }
         if sort == "rating" { return selected.sorted { let left = store.publicScore($0, source: ratingSource) ?? 0, right = store.publicScore($1, source: ratingSource) ?? 0; return left == right ? $0.name < $1.name : left > right } }
         return selected
     }
