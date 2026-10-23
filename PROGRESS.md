@@ -1,52 +1,39 @@
 # Native TwilDiary progress
 
-Updated: 23 October 2026 (Asia/Kolkata). Branch: `ios-native`.
+Updated: 23 October 2026. Branch: ios-native. Web source: b43454e.
 
-## Current step
+## Current work
 
-Step 1: Foundation and CI. Environment gate passed; minimal pipeline proof is next. Step 0 source audit is being recorded alongside the pipeline proof, before product Swift implementation. No product screen is accepted yet.
+The user asked to move past the procedural foundation gates and build the actual app. The 10-step ROADMAP remains a parity checklist, not a claim that those steps passed. Reused the earlier native client without changing that separate repository. Existing web source and deploy workflows are untouched.
 
-## Verified state
+## Implemented in this batch
 
-- Git 2.53.0, Node 24.21.0 and authenticated GitHub CLI (Amit29533, HTTPS, workflow permission).
-- `TwilDiary` Actions enabled with all actions allowed. No previous `ios-native` run.
-- Web baseline `b43454e`; no existing web files changed. Separate native repo remains clean at `5d9cc2e`.
-- Separate preview CI run `39988206745` actually completed successfully: simulator/device builds, 7 core + 7 session + 2 UI tests. This does not establish parity or the new `/ios` pipeline.
-- Read primary runner-image documentation: macOS 26 includes Xcode 26.6 at `/Applications/Xcode_26.6.app`. The first new run will print actual versions/devices before pinning the simulator runtime.
-- Existing native code requires iOS 26 and has partial functionality; reuse only after iOS 17 availability and parity review. Do not replace the audited web UI with its approximations.
+- Swift 6, iOS 26+, XcodeGen and the existing secure Access sign-in/session client.
+- Native app shell, separate tab navigation, web vector icons, six accent themes, compact poster/public-rating badges, fixed headers, contained search focus and compact progress cards.
+- Home carousel, shortcuts routed to the main tabs, weekly time/count/streak/day bars, planned picks, upcoming episodes and history.
+- Library category/status/genre/disk filters, Queue, grid/list/genre sections, public TMDB/Trakt preference and restoration from Trash.
+- Catalog search/discovery/review/import, manual add, cast profiles and filmography. Release paths use the real authenticated API; synthetic data is only selected by Debug --ui-testing.
+- Title cast/recommendations below the episode list; compact episode window with expansion, notes/location collapsed. Existing watch/status/Undo operations preserved.
+- Source inventory, isolated Playwright references at 390x844, extracted design assets and image-comparison tooling under ios/tools and ios/docs.
 
-## In progress / exact next action
+## CI truth
 
-The iOS 17-compatible verification app, restricted endpoint unit test, launch/interaction XCUITest, XcodeGen project and artifact-producing workflow are written and self-reviewed. Push this coherent `step 1:` commit, watch with GitHub CLI, fix all diagnostics, download/verify screenshot and unsigned IPA artifacts. While CI runs, finish the route/API/component/schema/test audit and prepare isolated web references. AppIntents SDK is explicitly linked for all bundles so Xcode's metadata extraction can inspect the framework without its missing-dependency warning; no third-party Swift dependency is added.
+Latest completed run: 39995573162, commit c184642. Simulator and device compilation, unit/UI tests, screenshot export and all artifact uploads passed. Overall failure came from two UIRequiresFullScreen deprecation warnings. That plist key is removed in the current batch. Actual pinned toolchain: macOS 26, Xcode 26.6, iPhone 17 Pro / iOS 26.5 / arm64.
 
-## Last CI
+The new actual-app batch has not compiled yet. Exact next action: commit/push, inspect compiler/test diagnostics, fix and rerun, download the actual-app screenshots and unsigned IPA, inspect them and share screenshots. Do not call the actual app green based on the earlier hello-world run.
 
-First branch run: `39993797967` for `80aca05`. Simulator/device compilation, unit/UI tests, screenshot export and IPA succeeded; whole run failed because upload-artifact excluded the hidden `.artifacts` parent for the multi-path logs/results upload. `gh run download` retrieved IPA and both screenshots. Fix: include hidden files only for the explicit artifact allowlist. Actual toolchain: Xcode 26.6, iPhone 17 Pro, iOS 26.5; pin runtime and arm64 destination to remove Xcode's duplicate-destination warning. Prior separate-repo run: `39988206745`, success.
+## Remaining parity work
 
-## Decisions / boundaries
+- Stats old rolling bar/collision synchronization, full streak/backlog and chart drilldown coverage.
+- Complete per-episode actions, watch date editing/rewatches, spoiler controls, progress slider and title transaction edge cases.
+- Complete native Trakt setup/review/apply, scanner mismatch and backup/export management screens.
+- Durable protected offline snapshot/outbox; current complete-snapshot reload preserves in-memory data on read failure, but is not durable offline support.
+- Full multi-size/accessibility/empty/error/loading regression and real-phone haptics/scroll/gesture checks.
+- Reference capture: initial run 69/70; corrected loading and duplicate history-state cases reran successfully, but full manifest must be regenerated before declaring all-state coverage.
+- Visual parity is unfinished. Windows Chromium reference font metrics differ from iOS. Each screen still requires simulator comparison and refinement.
 
-- All new app/project/tooling lives in `/ios`; workflow `.github/workflows/ios.yml`; never hand-write `.pbxproj`.
-- SwiftUI, Swift 6 strict concurrency, Observation, iOS 26+, iPhone-only, portrait first. The user subsequently confirmed their phone runs iOS 27 and waived older-iOS support; use iOS 26 Liquid Glass directly. The original iOS 17 proof compiled, but the target is now 26. CI-only Swift compilation/simulators.
-- Native project is now in the requested web repo branch; preserve the earlier separate native repo unchanged.
-- Existing Cloudflare backend is authoritative. No deployment, hosted D1 access/migration, provider-account mutation or Access-policy change is authorized. Any proposed backend addition requires explicit deployment approval.
-- Local fixture/reference tooling must isolate all API writes and never export owner credentials/data.
-- `gh.exe` is installed at `C:/Program Files/GitHub CLI/gh.exe`; this running process needs that directory prepended to PATH for each CLI invocation.
+## Boundaries / build
 
-## Discrepancies / known issues
+No deploys, hosted D1 mutations, provider-account writes or secrets. Test only fixtures/local data. Existing Cloudflare backend is authoritative. No Mac/Swift execution on Windows. All compile, XCTest and XCUITest runs happen in GitHub Actions; core Swift tests run there too. No pbxproj is handwritten.
 
-- README and older docs describe separate preview/diary implementations, older navigation, deferred features and historical test counts. Current `/preview` routes/controller and schema win; the audit will list exact discrepancies.
-- Browser tool last reported disabled; user explicitly requested Playwright, so isolated Playwright reference tooling may run through the terminal. No native Swift execution is attempted on Windows.
-- Prior physical sign-in failure was D1 quota exhaustion; source already contains database-independent `/api/session`. This branch may consume that existing endpoint without deploying anything.
-- Source inventory generation read and hashed 336 source/doc/migration/test files: 18 screens, 44 API handlers, 1,600 relevant CSS declarations and 349 test cases. Detailed semantic audit and state references remain in progress.
-- Disposable reference workspace is `%TEMP%/twildiary-ios-reference-b43454e`, port 5193, fresh local D1 only; sample fixture has 6 titles/66 episodes/28 events/3 mappings. No owner configuration was copied. Browser fixtures block external traffic and use fictional provider responses.
-- Windows Git Bash is not at the assumed `C:/Program Files/Git/bin/bash.exe`; no local bash syntax-check result is claimed. Actual CI executed all script stages successfully; only upload failed.
-
-## BLOCKED
-
-None for the foundation. Later native system-browser auth may need an additive callback endpoint/configuration; design/test locally and document any explicit approval needed. Real-device haptics/scroll/gesture evaluation belongs in `ios/docs/DEVICE-CHECKS.md`.
-
-## Build/test/resume
-
-At every resume: read ROADMAP/PROGRESS, `git status`, `git log -20`, `gh run list --branch ios-native --limit 10`, inspect latest real CI/artifacts. Continue the first unchecked gate; do not trust prose alone.
-
-Windows: `git --version`, `node -v`, `gh auth status`. Mac tools run only in Actions. Intended CI: XcodeGen → simulator build-for-testing → test-without-building/xcresult → device Release build → unsigned IPA → artifact download and visual review. Detailed commands are added with the workflow.
+GitHub CLI: prepend C:/Program Files/GitHub CLI to PATH. Push only ios-native. Workflow: .github/workflows/ios.yml; project: ios/project.yml. Download with gh run download RUN_ID; keep screenshot evidence and label synthetic UI fixtures honestly. Separate TwilDiary-iOS repository remains unchanged.

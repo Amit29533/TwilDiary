@@ -1,0 +1,90 @@
+[
+  {
+    "id": "history-no-matches",
+    "path": "/preview/recently-watched",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 844,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Date filters",
+        "value": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": "Search watch history",
+        "value": "No matching reference title"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Any date",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Today",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Last 7 days",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "This month",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Clear filters",
+        "value": ""
+      }
+    ],
+    "file": "history-no-matches.png",
+    "sha256": "bd9a4b0de7f2efcf4afac14bd730c01f98c34ca2e5de3188cae9c260df1fe498",
+    "passed": true
+  },
+  {
+    "id": "workspace-loading",
+    "path": "/preview/home",
+    "scenario": "loading",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 844,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [],
+    "file": "workspace-loading.png",
+    "sha256": "75a0bd4ead73f761505842deebd68ba16fc2f0ba801d56ffe5c9113db05718bf",
+    "passed": true
+  }
+]
