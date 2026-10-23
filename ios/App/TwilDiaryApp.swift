@@ -6,6 +6,7 @@ import TwilDiaryCore
     @State private var store = DiaryStore()
     @State private var router = AppRouter()
     @AppStorage("theme") private var theme = DiaryTheme.twilight
+    init() { UITabBar.appearance().isHidden = true }
     var body: some Scene {
         WindowGroup { RootView().environment(store).environment(router).preferredColorScheme(.dark).tint(theme.accent) }
     }
@@ -39,6 +40,7 @@ struct RootView: View {
     @State private var showSignIn = false
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     var body: some View {
+        @Bindable var router = router
         Group {
             if store.needsSignIn {
                 VStack(spacing: 22) {
@@ -67,11 +69,13 @@ struct RootView: View {
                     }
                 }.padding(28).frame(maxWidth: .infinity, maxHeight: .infinity).background(.black)
             } else {
-                ZStack {
-                    ForEach(AppTab.allCases, id: \.self) { tab in
-                        PersistentTab(selected: router.selectedTab == tab) { diaryStack(tab) { screen(tab) } }
-                    }
-                }
+                TabView(selection: $router.selectedTab) {
+                    Tab("Home", systemImage: "house", value: AppTab.home) { diaryStack(.home) { HomeView() } }
+                    Tab("Library", systemImage: "books.vertical", value: AppTab.library) { diaryStack(.library) { LibraryView() } }
+                    Tab("Glance", systemImage: "eye", value: AppTab.glance) { diaryStack(.glance) { GlanceView() } }
+                    Tab("Stats", systemImage: "chart.bar", value: AppTab.stats) { diaryStack(.stats) { StatsView() } }
+                    Tab("More", systemImage: "ellipsis", value: AppTab.more) { diaryStack(.more) { SettingsView() } }
+                }.toolbar(.hidden, for: .tabBar)
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         VStack(spacing: 8) {
                             if let label = store.undoLabel {
@@ -103,31 +107,15 @@ struct RootView: View {
             }
         }.padding(4).background(.ultraThinMaterial, in: Capsule()).overlay(Capsule().strokeBorder(.white.opacity(0.16)))
     }
-    @ViewBuilder private func screen(_ tab: AppTab) -> some View {
-        switch tab { case .home: HomeView(); case .library: LibraryView(); case .glance: GlanceView(); case .stats: StatsView(); case .more: SettingsView() }
-    }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {
-            content().background(tab == .library ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).accessibilityHidden(router.selectedTab != tab).onAppear { router.detailTabs.remove(tab) }
-                .navigationDestination(for: String.self) { TitleDetailView(id: $0).accessibilityHidden(router.selectedTab != tab).onAppear { router.detailTabs.insert(tab) } }
-                .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).accessibilityHidden(router.selectedTab != tab).onAppear { router.detailTabs.insert(tab) } }
-                .navigationDestination(for: PersonRoute.self) { PersonView(id: $0.id).accessibilityHidden(router.selectedTab != tab).onAppear { router.detailTabs.insert(tab) } }
+            content().background(tab == .library ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
+                .navigationDestination(for: String.self) { TitleDetailView(id: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
+                .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
+                .navigationDestination(for: PersonRoute.self) { PersonView(id: $0.id).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: AppDestination.self) { destination in
-                    Group { switch destination { case .explore: ExploreView(); case .history: HistoryView(); case .files: FilesView(); case .trash: TrashView() } }.accessibilityHidden(router.selectedTab != tab).onAppear { router.detailTabs.remove(tab) }
+                    Group { switch destination { case .explore: ExploreView(); case .history: HistoryView(); case .files: FilesView(); case .trash: TrashView() } }.toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
                 }
-        }
-    }
-}
-
-/// Mount each stack on its first visit and retain it thereafter, without a second system tab bar.
-private struct PersistentTab<Content: View>: View {
-    let selected: Bool
-    @ViewBuilder var content: Content
-    @State private var mounted = false
-    init(selected: Bool, @ViewBuilder content: () -> Content) { self.selected = selected; self.content = content() }
-    var body: some View {
-        Group { if mounted || selected { content } }
-            .opacity(selected ? 1 : 0).allowsHitTesting(selected).accessibilityHidden(!selected)
-            .onChange(of: selected, initial: true) { _, value in if value { mounted = true } }
+        }.toolbar(.hidden, for: .tabBar)
     }
 }
