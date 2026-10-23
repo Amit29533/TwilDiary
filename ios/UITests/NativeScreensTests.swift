@@ -76,8 +76,8 @@ import UIKit
         XCTAssertTrue(app.buttons["30D"].waitForExistence(timeout: 5))
         app.buttons["1Y"].tap()
         XCTAssertTrue(app.buttons["1Y"].isSelected)
-        assertRangeHighlight(app.buttons["1Y"], app: app)
         capture("Stats year")
+        assertRangeHighlight(app.buttons["1Y"], app: app)
         app.buttons["tab-home"].tap()
         app.buttons["home-stats"].tap()
         XCTAssertTrue(app.staticTexts["Today"].exists || app.buttons.containing(NSPredicate(format: "label CONTAINS 'Today'")).firstMatch.exists)
@@ -120,15 +120,10 @@ import UIKit
     private func assertRangeHighlight(_ button: XCUIElement, app: XCUIApplication) {
         guard let source = XCUIScreen.main.screenshot().image.cgImage else { XCTFail("Missing screenshot"); return }
         let scale = CGFloat(source.width) / app.frame.width
-        let point = CGPoint(x: button.frame.midX, y: button.frame.minY + 5)
-        guard let pixel = source.cropping(to: CGRect(x: floor(point.x * scale), y: floor(point.y * scale), width: 1, height: 1)) else { XCTFail("Missing range sample"); return }
-        var bytes = [UInt8](repeating: 0, count: 4)
-        let rendered = bytes.withUnsafeMutableBytes { buffer -> Bool in
-            guard let context = CGContext(data: buffer.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
-            context.draw(pixel, in: CGRect(x: 0, y: 0, width: 1, height: 1)); return true
-        }
-        XCTAssertTrue(rendered)
-        XCTAssertGreaterThan(Int(bytes[0]), 120, "The selected range must visibly use the accent fill")
-        XCTAssertGreaterThan(Int(bytes[2]), 180, "A selected accessibility trait alone is insufficient")
+        // Sample the clear left side of the segment, away from label glyphs and borders.
+        let point = CGPoint(x: button.frame.minX + button.frame.width * 0.15, y: button.frame.midY)
+        let bytes = sample(source, at: point, scale: scale)
+        XCTAssertGreaterThan(bytes[0], 120, "The selected range must visibly use the accent fill")
+        XCTAssertGreaterThan(bytes[2], 180, "A selected accessibility trait alone is insufficient")
     }
 }
