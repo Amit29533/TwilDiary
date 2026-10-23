@@ -2,14 +2,14 @@
 
 Product source: the web app under /preview at b43454e. Active native source: Amit29533/TwilDiary, ios-native, ios/. No hosted backend changes are deployed by this work.
 
-This is an interim gap list, not final parity acceptance. Run 40012507026 passed 11 core, 8 endpoint/session and 5 browsing UI tests with zero warnings. Screenshot review confirms the corrected single bar, poster bounds and theme colors. The follow-up runs verify actual Stats range fill and the series episode pieces. Debug fixtures are read-only for mutations; these UI tests establish navigation/browsing, not complete write-flow coverage.
+This is an interim gap list, not final parity acceptance. Run 40020975007 passed 13 core, 8 endpoint/session and 5 browsing UI tests with zero warnings. Screenshot review confirms the corrected single bar, poster bounds, theme colors, Stats range fill and series episode pieces; movie progress remains continuous. The title comparison still shows broader layout differences. Build-9 cache/concurrency work is awaiting CI. Debug fixtures are read-only for mutations; these UI tests establish navigation/browsing, not complete write-flow coverage.
 
 | Screen / area | Native work present | Remaining parity / validation |
 | --- | --- | --- |
 | Shell | Fixed native headers, web vector icons, five native tab navigation stacks, six accents, single custom capsule | Reduced transparency, gestures and physical-device timing |
 | Home | Continue cards, shortcuts, week metrics/day links, planned random pick, upcoming air dates, recent history | Full long-text/empty/error states and watch/Undo interaction tests; lower-page spacing review |
 | Library | Categories, status/genre/disk search, public ratings, grid/list/genre layouts, Queue shortcut, Trash link | Bulk selection, independent composed Queue/favorite filters, shelf ordering/unclassified rows, provider-rating failures and all-size review |
-| Title movie/show/anime | Clear art, personal/public ratings, status transactions, quick watch, season selection, per-episode segmented series track, episode window/expansion, collapsed notes and locations | Verify segment screenshot test; interactive individual episode rows, spoiler reveal policy, date/rewatch editing, range editing and transaction UI regression |
+| Title movie/show/anime | Clear art, personal/public ratings, status transactions, quick watch, season selection, screenshot-tested per-episode pieces, episode window/expansion, collapsed notes and locations | Interactive individual episode rows, spoiler reveal policy, date/rewatch editing, range editing, full header/panel layout alignment and transaction UI regression |
 | Catalog review | Authenticated browse, allowed category choice, import, existing/trashed identity handling | Season preview and fixture-backed import/retry/conflict UI coverage |
 | Explore | Discover type/sort, paged grid and online search | Source shelves, complete provider filters, genre discovery and surprise-pick parity |
 | Cast/person | Cast scroller, person biography and searchable typed filmography | Remaining filters/shelf layout, loading/error/empty visual states |

@@ -4,7 +4,9 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary â†’ ios-native â†
 
 ## Current request and exact next action
 
-Build 8, source fe17ea6, run **40017058735**, is in progress. The current request replaces the continuous show/anime detail progress track with the web's per-episode pieces. Implementation is committed/pushed; wait for CI, read any failures, download screenshots/logs/IPA, visually inspect Title detail and Stats year, verify the IPA and publish the passed-build screenshot. Do not offer a failed or unreviewed build as accepted.
+Build 8, source a15b103, run **40020975007**, passed: 13 core + 8 endpoint/session + 5 UI tests, zero warnings. Downloaded/verified 16 screenshots and the unsigned arm64 IPA. Visually reviewed the contact sheet, episode pieces, continuous movie track and Stats selection. Full layout parity remains unfinished (see the committed web/native title comparison). The passed-build title screenshot has been shared in chat; IPA is copied to D:/Downloads/TwilDiary-native-build8.ipa with SHA-256 sidecar.
+
+Build 9, source af0c8cd, run **40024110462**, is queued. It adds encrypted cached snapshots, late-response/session guards, reviewed editor/watch checks, selected-season response guards and a no-reflow Undo overlay. Exact next action: inspect this run, fix any compile/test errors, download/review its artifacts, then resume the first unfinished parity item. No full step is claimed complete.
 
 The track uses the source SVG's 12-unit slots, 9-unit rounded pieces, 3-unit gaps, a 12pt drawing in a 44pt row, accent watched fill, 36.08% accent for Up next and #ffffff20 unwatched fill. Episode identities preserve holes in watch history and unloaded manifest slots. Movies retain continuous progress. Two core tests cover holes, ordering, unloaded/empty slots and stale-next precedence. The UI test checks all 16 pieces/gaps, eight filled episodes, and the separate continuous movie track. Interactive range editing remains an explicitly tracked parity gap.
 
@@ -17,9 +19,11 @@ The track uses the source SVG's 12-unit slots, 9-unit rounded pieces, 3-unit gap
 | 40009671759 | 55828e4 | Builds/core/session passed; 4/5 UI passed. Remaining failure: hidden cached stacks exposed duplicate Search controls. |
 | 40012507026 | 07673eb | 11 core + 8 endpoint/session + 5 UI tests passed; zero warnings; single native tab lifecycle/custom bar and poster hit geometry verified. Stats selected accessibility trait passed but visual fill was missing. |
 | 40014507822 | d952cb9 | Builds/core/session passed; 4/5 UI passed, zero warnings. Stats fill now visibly correct in downloaded screenshot/video. Color assertion accidentally sampled label glyphs; corrected to the empty left interior in build 8. |
-| 40017058735 | fe17ea6 | In progress: build 8, episode pieces + movie regression + corrected Stats pixel sampling. |
+| 40017058735 | fe17ea6 | Builds/core/session passed; 4/5 UI passed. Episode pieces rendered correctly, but gap sampling used accessibility ink bounds as padded bounds. |
+| 40020975007 | a15b103 | 13 core + 8 endpoint/session + 5 UI tests passed; zero warnings. Actual rendered episode runs/gaps, movie continuity and Stats fill verified. |
+| 40024110462 | af0c8cd | Queued: build 9 reliability/cache tests and no-reflow Undo. |
 
-Build-6 artifacts are downloaded under .local/ios-app-build-40012507026. Its arm64 IPA SHA-256 is 8bf20602033c21d5d1262b91a02217a5e1124719a58561beaa1133bef380d240. The currently uncommitted step-8 screenshots still come from build 6; replace them with verified build-8 evidence before committing that directory. No new IPA has yet been copied to Downloads in this batch.
+Build-8 artifacts are downloaded under .local/ios-app-build-40020975007; accepted scoped screenshot evidence is in ios/docs/screenshots/step-8. Its arm64 IPA SHA-256 is 82b1de7adcdd32127cfac3321e7153e9f6297ff9ac42928ad2b4bfac5e2ab96b. This is an unfinished native preview, not a release/parity acceptance claim.
 
 ## Work present (not full parity acceptance)
 
