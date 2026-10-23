@@ -39,13 +39,14 @@ import Testing
     #expect(workspace.activeEvents.isEmpty)
 }
 
-@Test func calendarPeriodsRespectLocalMidnightAndExcludeFuture() throws {
+@Test func calendarPeriodsRespectLocalMidnightAndExcludeFutureDays() throws {
     let now = try #require(DiaryDate.parse("2026-10-23T01:00:00Z"))
     let before = try #require(DiaryDate.parse("2026-10-22T19:30:00Z"))
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = try #require(TimeZone(identifier: "Asia/Kolkata"))
     #expect(Period.today.contains(before, now: now, calendar: calendar))
-    #expect(!Period.all.contains(now.addingTimeInterval(1), now: now, calendar: calendar))
+    #expect(Period.all.contains(now.addingTimeInterval(1), now: now, calendar: calendar))
+    #expect(!Period.all.contains(now.addingTimeInterval(86_400), now: now, calendar: calendar))
     #expect(DiaryDate.day(before, timeZone: calendar.timeZone) == "2026-10-23")
     #expect(!Period.year.contains(before, now: now, calendar: calendar, year: 2025))
     #expect(DiaryDate.parse(nil) == nil)
@@ -67,4 +68,16 @@ import Testing
     calendar.firstWeekday = 1
     #expect(Period.week.contains(monday, now: now, calendar: calendar))
     #expect(!Period.week.contains(previousSunday, now: now, calendar: calendar))
+}
+
+@Test func dateParserKeepsFractionalOffsetsAndDSTCalendarDays() throws {
+    let fractional = try #require(DiaryDate.parse("2026-10-23T17:30:00.123+05:30"))
+    let utc = try #require(DiaryDate.parse("2026-10-23T12:00:00.123Z"))
+    #expect(abs(fractional.timeIntervalSince(utc)) < 0.001)
+    #expect(DiaryDate.parse("not-a-date") == nil)
+    #expect(DiaryDate.parse("2026-02-30T12:00:00Z") == nil)
+    #expect(DiaryDate.parse("2026-10-23T12:00:00Z") != nil)
+    let newYork = try #require(TimeZone(identifier: "America/New_York"))
+    #expect(DiaryDate.day(try #require(DiaryDate.parse("2026-03-08T06:59:59Z")), timeZone: newYork) == "2026-03-08")
+    #expect(DiaryDate.day(try #require(DiaryDate.parse("2026-03-08T07:00:00Z")), timeZone: newYork) == "2026-03-08")
 }

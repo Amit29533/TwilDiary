@@ -74,7 +74,7 @@ struct StatsView: View {
     private var heatmap: [(date: Date, count: Int)] {
         let calendar = DiaryDate.calendar(), today = DiaryDate.calendar().startOfDay(for: store.now)
         var counts: [Date: Int] = [:]
-        for event in store.workspace.activeEvents { if let date = DiaryDate.parse(event.watchedAt), date <= store.now { counts[calendar.startOfDay(for: date), default: 0] += 1 } }
+        for event in store.workspace.activeEvents { if let date = DiaryDate.parse(event.watchedAt), calendar.startOfDay(for: date) <= today { counts[calendar.startOfDay(for: date), default: 0] += 1 } }
         // Column-major order: twelve weeks across, Monday to Sunday down.
         let monday = calendar.dateInterval(of: .weekOfYear, for: store.now)!.start
         return (0..<84).map { index in

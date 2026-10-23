@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build-test-artifacts:
     runs-on: macos-26-intel
-    timeout-minutes: 35
+    timeout-minutes: 50
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       HOMEBREW_NO_AUTO_UPDATE: '1'
@@ -58,8 +58,11 @@ jobs:
             ios/.artifacts/TwilDiary-unsigned.ipa.sha256
           if-no-files-found: error
           retention-days: 14
-      - name: Run unit and UI tests
+      - name: Wait for simulator readiness
         timeout-minutes: 15
+        run: bash ios/scripts/ci.sh boot
+      - name: Run unit and UI tests
+        timeout-minutes: 25
         run: bash ios/scripts/ci.sh test
       - name: Export screenshots
         if: always()

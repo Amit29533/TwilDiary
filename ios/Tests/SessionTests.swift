@@ -33,8 +33,15 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
             self.handler = handler; requests = []
         }
         func reply(_ request: URLRequest) -> Reply {
-            lock.lock(); requests.append(request); let handler = handler; lock.unlock()
-            return handler(request)
+            var recorded = request
+            if recorded.httpBody == nil, let stream = recorded.httpBodyStream {
+                stream.open(); defer { stream.close() }
+                var data = Data(), buffer = [UInt8](repeating: 0, count: 4096)
+                while stream.hasBytesAvailable { let count = stream.read(&buffer, maxLength: buffer.count); if count <= 0 { break }; data.append(contentsOf: buffer.prefix(count)) }
+                recorded.httpBody = data
+            }
+            lock.lock(); requests.append(recorded); let handler = handler; lock.unlock()
+            return handler(recorded)
         }
         func recorded() -> [URLRequest] {
             lock.lock(); defer { lock.unlock() }; return requests
@@ -236,5 +243,99 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertEqual(store.workspace.titles.first?.name, "Newer confirmed title")
         XCTAssertTrue(store.hasLoadedWorkspace)
         XCTAssertNil(store.error)
+    }
+    func testEpisodeToggleUsesEpisodeIdentityAndRetainsUndoReceipt() async throws {
+        let workspace = PreviewData.workspace
+        let title = try XCTUnwrap(workspace.titles.first { $0.id == "again" })
+        let episode = try XCTUnwrap(workspace.episodes.first { $0.titleId == title.id && $0.number == 9 })
+        let date = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-23T12:00:00Z"))
+        let event: [String: Any] = ["id": "fixture-new-watch", "operationId": "fixture-operation", "titleId": title.id, "episodeId": episode.id, "watchedAt": date.ISO8601Format(), "recordedAt": date.ISO8601Format(), "revokedAt": NSNull(), "origin": "manual", "version": 1]
+        let receipt = String(decoding: try JSONSerialization.data(withJSONObject: ["event": event, "added": true]), as: UTF8.self)
+        let pages = try workspacePages(workspace)
+        StubProtocol.state.reset { request in
+            if request.httpMethod == "POST" { return .init(receipt) }
+            if request.httpMethod == "PATCH" { return .init(receipt) }
+            return .init(pages[request.url?.query ?? ""] ?? #"{"items":[],"next":null}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = workspace; store.hasLoadedWorkspace = true
+        let success = await store.recordViewing(title, episode: episode, watchedAt: date)
+        XCTAssertTrue(success); XCTAssertEqual(store.undoLabel, "Watch marked")
+        let write = try XCTUnwrap(StubProtocol.state.recorded().first { $0.httpMethod == "POST" })
+        let body = try bodyObject(write)
+        XCTAssertEqual(body["episodeId"] as? String, episode.id)
+        XCTAssertEqual(body["rewatch"] as? Bool, false)
+        await store.undo()
+        XCTAssertNil(store.undoLabel)
+        XCTAssertEqual(StubProtocol.state.recorded().filter { $0.httpMethod == "PATCH" }.map { $0.url?.path }, ["/api/watch-events/fixture-new-watch"])
+    }
+    func testUncertainViewingRetryKeepsItsOperationIdentityAndOriginalDate() async throws {
+        let workspace = PreviewData.workspace, title = try XCTUnwrap(PreviewData.workspace.titles.first { !$0.isSeries })
+        let date = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-23T12:00:00Z"))
+        let event: [String: Any] = ["id": "fixture-viewing", "operationId": "fixture-operation", "titleId": title.id, "episodeId": NSNull(), "watchedAt": date.ISO8601Format(), "recordedAt": date.ISO8601Format(), "revokedAt": NSNull(), "origin": "manual", "version": 1]
+        let receipt = String(decoding: try JSONSerialization.data(withJSONObject: ["event": event, "added": true]), as: UTF8.self)
+        let pages = try workspacePages(workspace)
+        StubProtocol.state.reset { request in
+            if request.httpMethod == "POST" {
+                return StubProtocol.state.recorded().filter { $0.httpMethod == "POST" }.count == 1 ? .init(503, #"{"error":{"message":"Response uncertain"}}"#) : .init(receipt)
+            }
+            return .init(pages[request.url?.query ?? ""] ?? #"{"items":[],"next":null}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = workspace; store.hasLoadedWorkspace = true
+        let first = await store.recordViewing(title, rewatch: true, watchedAt: date)
+        XCTAssertFalse(first)
+        let second = await store.recordViewing(title, rewatch: true, watchedAt: date.addingTimeInterval(1))
+        XCTAssertTrue(second)
+        let writes = StubProtocol.state.recorded().filter { $0.httpMethod == "POST" }
+        XCTAssertEqual(writes.count, 2)
+        let firstBody = try bodyObject(writes[0]), secondBody = try bodyObject(writes[1])
+        XCTAssertEqual(firstBody["operationId"] as? String, secondBody["operationId"] as? String)
+        XCTAssertEqual(firstBody["watchedAt"] as? String, secondBody["watchedAt"] as? String)
+        XCTAssertEqual(secondBody["rewatch"] as? Bool, true)
+    }
+    func testRemovingLatestRejectsChangedDisplayedEventBeforeAnyWrite() async throws {
+        let workspace = PreviewData.workspace, title = try XCTUnwrap(PreviewData.workspace.titles.first { $0.id == "again" })
+        let displayed = PreviewData.card(title, workspace: workspace).previous
+        StubProtocol.state.reset { _ in .init(#"{"progress":{"watched":9,"total":16},"previous":{"id":"different-watch","version":1,"episodeId":"different-episode","number":9},"next":null,"season":null}"#) }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = workspace; store.hasLoadedWorkspace = true
+        await store.removeLatest(title, expected: displayed)
+        XCTAssertTrue(store.error?.contains("history changed") == true)
+        XCTAssertFalse(StubProtocol.state.recorded().contains { $0.httpMethod == "PATCH" })
+    }
+    func testTraktWireContractCarriesEveryExplicitDirectionChoice() async throws {
+        let url = try XCTUnwrap(Bundle.main.url(forResource: "trakt-sync", withExtension: "json"))
+        let response = try String(contentsOf: url, encoding: .utf8)
+        StubProtocol.state.reset { _ in .init(response) }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let service = LiveTraktService(store: DiaryStore(api: api(storage)))
+        for choice in [TraktChoice.apply, .local, .trakt, .skip] {
+            _ = try await service.apply(id: "fixture-run", change: "fixture-change", choice: choice)
+        }
+        let writes = StubProtocol.state.recorded()
+        XCTAssertEqual(writes.count, 4)
+        let bodies = try writes.map(bodyObject)
+        XCTAssertEqual(bodies.map { $0["choice"] as? String }, ["apply", "local", "trakt", "skip"])
+        XCTAssertTrue(writes.allSatisfy { $0.url?.path == "/api/trakt/sync/fixture-run/apply" && $0.httpMethod == "POST" })
+        XCTAssertTrue(bodies.allSatisfy { $0["changeId"] as? String == "fixture-change" })
+    }
+    private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
+        let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
+                                       "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),
+                                       "events": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.events)),
+                                       "locations": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.locations))]
+        return try Dictionary(uniqueKeysWithValues: sections.map { key, value in
+            ("section=" + key, String(decoding: try JSONSerialization.data(withJSONObject: ["items": value, "next": NSNull()]), as: UTF8.self))
+        })
+    }
+    private func bodyObject(_ request: URLRequest) throws -> [String: Any] {
+        var data = request.httpBody ?? Data()
+        if data.isEmpty, let stream = request.httpBodyStream {
+            stream.open(); defer { stream.close() }
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            while stream.hasBytesAvailable { let size = stream.read(&buffer, maxLength: buffer.count); if size <= 0 { break }; data.append(contentsOf: buffer.prefix(size)) }
+        }
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 }

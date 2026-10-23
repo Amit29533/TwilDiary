@@ -11,6 +11,7 @@ public struct MediaTitle: Codable, Identifiable, Hashable, Sendable {
     public let communityScore: Double?
     public let tmdbId: Int?
     public let genres: [String]
+    public let tags: [String]?
     public let runtimeMinutes: Int?
     public var status: String
     public var favorite: Bool
@@ -31,6 +32,7 @@ public struct Season: Codable, Hashable, Sendable {
     public let name: String
     public let expectedEpisodes: Int?
     public let metadataLoadedAt: String?
+    public let metadataVersion: Int?
 }
 
 public struct Episode: Codable, Identifiable, Hashable, Sendable {
@@ -43,6 +45,7 @@ public struct Episode: Codable, Identifiable, Hashable, Sendable {
     public let airedOn: String?
     public let still: String?
     public let hidden: Bool?
+    public let communityScore: Double?
     public let skipped: Bool?
 }
 
@@ -62,12 +65,16 @@ public struct FileLocation: Codable, Identifiable, Hashable, Sendable {
     public let id: String
     public let titleId: String
     public let deviceName: String
+    public let deviceId: String?
+    public let volumeId: String?
     public let driveLetter: String
     public let root: String
     public let relativePath: String
     public let season: Int?
     public let fileCount: Int
     public let evidence: String
+    public let sizeBytes: Int64?
+    public let checkedAt: String?
     public var path: String { root + relativePath }
 }
 
@@ -103,23 +110,20 @@ public struct WatchCard: Decodable, Sendable {
 }
 
 public enum DiaryDate {
+    private static let fractional = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+    private static let wholeSeconds = Date.ISO8601FormatStyle(includingFractionalSeconds: false)
     public static func calendar(timeZone: TimeZone = .current) -> Calendar {
         var value = Calendar(identifier: .gregorian)
         value.timeZone = timeZone; value.firstWeekday = 2; value.minimumDaysInFirstWeek = 4
         return value
     }
     public static func parse(_ value: String?) -> Date? {
-        guard let value else { return nil }
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: value) { return date }
-        formatter.formatOptions = [.withInternetDateTime]
-        return formatter.date(from: value)
+        guard let value, value.count >= 20, SeasonAdjustment.validDay(String(value.prefix(10))) else { return nil }
+        return (try? fractional.parse(value)) ?? (try? wholeSeconds.parse(value))
     }
     public static func day(_ date: Date = .now, timeZone: TimeZone = .current) -> String {
-        let f = DateFormatter(); f.calendar = Calendar(identifier: .gregorian)
-        f.locale = Locale(identifier: "en_US_POSIX"); f.timeZone = timeZone
-        f.dateFormat = "yyyy-MM-dd"; return f.string(from: date)
+        let parts = calendar(timeZone: timeZone).dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
     }
     public static func duration(_ minutes: Int) -> String {
         if minutes < 60 { return "\(minutes)m" }
@@ -152,7 +156,7 @@ public enum Period: String, CaseIterable, Identifiable, Sendable {
     public var id: Self { self }
     public var label: String { switch self { case .today: "Today"; case .week: "This Week"; case .month: "This Month"; case .ninetyDays: "Last 90 Days"; case .year: "This Year"; case .all: "All time" } }
     public func contains(_ date: Date, now: Date, calendar: Calendar, year: Int? = nil) -> Bool {
-        guard date <= now else { return false }
+        guard calendar.startOfDay(for: date) <= calendar.startOfDay(for: now) else { return false }
         switch self {
         case .today: return calendar.isDate(date, inSameDayAs: now)
         case .week:
@@ -160,7 +164,10 @@ public enum Period: String, CaseIterable, Identifiable, Sendable {
             return week.dateInterval(of: .weekOfYear, for: now)?.contains(date) == true
         case .month: return calendar.isDate(date, equalTo: now, toGranularity: .month)
         case .ninetyDays: return date >= calendar.date(byAdding: .day, value: -89, to: calendar.startOfDay(for: now))!
-        case .year: return calendar.component(.year, from: date) == (year ?? calendar.component(.year, from: now))
+        case .year:
+            let current = calendar.component(.year, from: now)
+            let selected = year.flatMap { $0 >= 1900 && $0 <= current ? $0 : nil } ?? current
+            return calendar.component(.year, from: date) == selected
         case .all: return true
         }
     }

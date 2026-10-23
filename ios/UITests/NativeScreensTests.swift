@@ -23,7 +23,7 @@ import UIKit
         XCTAssertLessThanOrEqual(third.maxX, app.frame.width - 10)
         app.buttons["title-again"].tap()
         XCTAssertTrue(app.staticTexts["Episodes"].waitForExistence(timeout: 5))
-        let track = app.otherElements["episode-progress"]
+        let track = app.sliders["episode-progress"]
         XCTAssertTrue(track.waitForExistence(timeout: 5))
         XCTAssertEqual(track.value as? String, "8 of 16 episodes watched")
         capture("Title detail")
@@ -37,7 +37,7 @@ import UIKit
         app.buttons["tab-stats"].tap()
         XCTAssertTrue(app.staticTexts["Watch time"].waitForExistence(timeout: 5)); capture("Stats")
         app.buttons["tab-more"].tap()
-        XCTAssertTrue(app.staticTexts["Appearance"].waitForExistence(timeout: 5)); capture("More")
+        XCTAssertTrue(app.staticTexts["Appearance & region"].waitForExistence(timeout: 5)); capture("More")
     }
     func testLibrarySearchAndSelectionPersistAcrossTabs() {
         let app = launch()
@@ -85,6 +85,27 @@ import UIKit
         XCTAssertTrue(app.buttons["90D"].exists)
         XCTAssertFalse(app.buttons["1Y"].isSelected)
         capture("Stats from Home")
+    }
+    func testTraktReviewAppliesSafeChangesThenRequiresAnExplicitConflictChoice() {
+        let app = launch(); app.buttons["tab-more"].tap()
+        XCTAssertTrue(app.buttons["settings-trakt-summary"].waitForExistence(timeout: 5))
+        app.buttons["settings-trakt-summary"].tap()
+        XCTAssertTrue(app.staticTexts["Review changes"].waitForExistence(timeout: 10))
+        capture("Trakt review")
+        let filter = app.segmentedControls["trakt-kind"]
+        if !filter.isHittable { app.swipeUp() }
+        filter.buttons["Ratings"].tap()
+        XCTAssertTrue(app.staticTexts["Showing 3 of 3 loaded changes"].waitForExistence(timeout: 5))
+        capture("Trakt ratings")
+        filter.buttons["All"].tap()
+        let ready = app.buttons["trakt-apply-ready"]
+        XCTAssertTrue(ready.waitForExistence(timeout: 5)); ready.tap()
+        XCTAssertTrue(app.staticTexts["1 remaining"].waitForExistence(timeout: 5))
+        let useTrakt = app.buttons["trakt-trakt-change-2"]
+        for _ in 0..<8 { if useTrakt.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(useTrakt.isHittable); useTrakt.tap()
+        XCTAssertTrue(app.staticTexts["You’re up to date"].waitForExistence(timeout: 5))
+        capture("Trakt applied")
     }
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

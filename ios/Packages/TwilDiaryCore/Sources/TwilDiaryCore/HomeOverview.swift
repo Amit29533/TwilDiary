@@ -35,7 +35,7 @@ public struct HomeOverview: Sendable {
         missingRuntime = active.filter { DiaryDate.parse($0.watchedAt) != nil && (titles[$0.titleId]?.runtimeMinutes ?? 0) <= 0 }.count
         var counts: [Date: Int] = [:], runtimes: [Date: Int] = [:]
         for event in active {
-            guard let date = DiaryDate.parse(event.watchedAt), date <= now else { continue }
+            guard let date = DiaryDate.parse(event.watchedAt), calendar.startOfDay(for: date) <= today else { continue }
             let day = calendar.startOfDay(for: date)
             counts[day, default: 0] += 1
             runtimes[day, default: 0] += max(0, titles[event.titleId]?.runtimeMinutes ?? 0)

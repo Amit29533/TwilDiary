@@ -2,7 +2,8 @@ import SwiftUI
 import TwilDiaryCore
 
 @MainActor @Observable final class DiaryStore {
-    var workspace = Workspace()
+    var workspace = Workspace() { didSet { indexTitles() } }
+    private var titleIndex: [String: MediaTitle] = [:]
     var loading = false
     var busy = false
     var needsSignIn = true
@@ -20,6 +21,7 @@ import TwilDiaryCore
     private var pendingWatches: [String: [String: Any]] = [:]
     private var pendingProgress: [String: [String: Any]] = [:]
     private var pendingRemovals: [String: WatchCard.Previous] = [:]
+    var pendingSeasonAdjustments: [String: SeasonEditTransaction] = [:]
     let isPreview: Bool
     var now: Date { isPreview ? DiaryDate.parse("2026-10-23T12:00:00Z")! : .now }
     init(api: DiaryAPI? = nil, cache: (any WorkspaceCaching)? = nil) {
@@ -37,6 +39,7 @@ import TwilDiaryCore
             needsSignIn = self.api.credential == nil
             restoreCachedWorkspace()
         }
+        indexTitles()
     }
     func connect(_ credential: AccessCredential) async {
         let generation = UUID(); sessionGeneration = generation; snapshotGeneration = UUID()
@@ -53,6 +56,7 @@ import TwilDiaryCore
         do { try cache.removeAll(); cacheWarning = nil }
         catch { cacheWarning = "The saved diary could not be removed. It remains encrypted on this device." }
         pendingWatches.removeAll(); pendingProgress.removeAll(); pendingRemovals.removeAll(); undoAction = nil; undoLabel = nil
+        pendingSeasonAdjustments.removeAll()
         needsSignIn = true
     }
     func refresh() async {
@@ -84,7 +88,9 @@ import TwilDiaryCore
         workspace = snapshot.workspace; hasLoadedWorkspace = true
         showingCachedSnapshot = true; lastRefreshedAt = snapshot.savedAt
     }
-    func title(_ id: String) -> MediaTitle? { workspace.titles.first { $0.id == id } }
+    private func indexTitles() { titleIndex = Dictionary(workspace.titles.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest }) }
+    func title(_ id: String) -> MediaTitle? { titleIndex[id] }
+    func browserCredential() -> AccessCredential? { api.credential }
     func read<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> T {
         let generation = sessionGeneration
         do {
@@ -176,13 +182,20 @@ import TwilDiaryCore
     private func changeEvent(_ event: WatchEvent, action: String) async throws {
         let _: EventReceipt = try await api.request("/api/watch-events/\(event.id)", method: "PATCH", body: ["action": action, "expectedVersion": event.version ?? 1])
     }
+    func pendingViewing(key: String, episode: String?, date: Date, rewatch: Bool) -> [String: Any] {
+        if pendingWatches[key] == nil { pendingWatches[key] = ["operationId": UUID().uuidString, "episodeId": episode as Any? ?? NSNull(), "watchedAt": date.ISO8601Format(), "rewatch": rewatch] }
+        return pendingWatches[key]!
+    }
+    func clearPendingViewing(key: String) { pendingWatches.removeValue(forKey: key) }
+    func rejectPendingViewing(key: String, error: Error) { if Self.definitivelyRejected(error) { pendingWatches.removeValue(forKey: key) } }
+    func rejectPendingSeason(key: String, error: Error) { if Self.definitivelyRejected(error) { pendingSeasonAdjustments.removeValue(forKey: key) } }
     @discardableResult func patch(_ title: MediaTitle, values: [String: Any], expectedVersion: Int? = nil) async -> Bool {
         await perform {
             var body = values; body["expectedVersion"] = expectedVersion ?? title.version
             let _: EmptyResponse = try await self.api.request("/api/titles/\(title.id)", method: "PATCH", body: body)
         }
     }
-    func setStatus(_ title: MediaTitle, status: String) async {
+    func setStatus(_ title: MediaTitle, status: String, watchedAt: Date? = nil) async {
         if status != "planned" && status != "completed" { await patch(title, values: ["status": status]); return }
         await perform {
             // Completing a series must load the catalogue before the transaction.
@@ -193,12 +206,15 @@ import TwilDiaryCore
             }
             let key = title.id + ":" + status
             if self.pendingProgress[key] == nil {
-                self.pendingProgress[key] = ["operationId": UUID().uuidString, "items": [["id": title.id, "expectedVersion": title.version ?? 1]], "status": status, "watchedAt": Date.now.ISO8601Format(), "today": DiaryDate.day()]
+                self.pendingProgress[key] = ["operationId": UUID().uuidString, "items": [["id": title.id, "expectedVersion": title.version ?? 1]], "status": status, "watchedAt": (watchedAt ?? Date.now).ISO8601Format(), "today": DiaryDate.day()]
             }
             let receipt: ProgressReceipt
             do { receipt = try await self.api.request("/api/progress/status", method: "POST", body: self.pendingProgress[key]) }
             catch { if Self.definitivelyRejected(error) { self.pendingProgress.removeValue(forKey: key) }; throw error }
             self.pendingProgress.removeValue(forKey: key)
+            self.pendingWatches = self.pendingWatches.filter { $0.key != title.id && !$0.key.hasPrefix("viewing:" + title.id + ":") }
+            self.pendingSeasonAdjustments = self.pendingSeasonAdjustments.filter { !$0.key.hasPrefix(title.id + ":") }
+            self.pendingRemovals.removeValue(forKey: title.id)
             self.undoLabel = status == "planned" ? "Progress reset" : "Marked completed"
             let undoBody: [String: Any] = ["operationId": UUID().uuidString, "undoOf": receipt.operationId]
             self.undoAction = {
@@ -211,7 +227,18 @@ import TwilDiaryCore
         await perform { try await action(); self.undoAction = nil; self.undoLabel = nil }
     }
     func dismissUndo() { undoLabel = nil; undoAction = nil }
-    @discardableResult private func perform(_ action: () async throws -> Void) async -> Bool {
+    func installUndo(_ actions: [(event: WatchEvent, action: String)], label: String) {
+        guard !actions.isEmpty else { return }
+        undoLabel = label
+        var remaining = actions
+        undoAction = {
+            while let next = remaining.first {
+                try await self.changeEvent(next.event, action: next.action)
+                remaining.removeFirst()
+            }
+        }
+    }
+    @discardableResult func perform(_ action: () async throws -> Void) async -> Bool {
         guard !busy, !isPreview else { return false }
         let generation = sessionGeneration
         snapshotGeneration = UUID()
@@ -221,7 +248,14 @@ import TwilDiaryCore
             guard generation == sessionGeneration else { return false }
             try await reload(); error = nil; return true
         } catch is CancellationError { return false }
-        catch { if generation == sessionGeneration { fail(error) }; return false }
+        catch {
+            if generation == sessionGeneration {
+                let failure = error
+                if case APIError.signIn = failure { fail(failure) }
+                else { try? await reload(); if generation == sessionGeneration { fail(failure) } }
+            }
+            return false
+        }
     }
     private func fail(_ cause: Error) {
         if case APIError.signIn = cause { needsSignIn = true }

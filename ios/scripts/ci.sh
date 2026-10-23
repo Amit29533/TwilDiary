@@ -27,6 +27,8 @@ print('Selected simulator:', json.dumps(record))
 with open(os.environ['GITHUB_ENV'], 'a') as file:
     file.write('SIMULATOR_ID=' + device['udid'] + '\n')
 PY
+    SIM_ID=$(python3 -c 'import json; print(json.load(open("ios/.artifacts/simulator.json"))["udid"])')
+    xcrun simctl boot "$SIM_ID" || true
     ;;
   build-simulator)
     xcodebuild build-for-testing "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
@@ -42,13 +44,17 @@ PY
     (cd "$ARTIFACTS/package" && ditto -c -k --keepParent Payload ../TwilDiary-unsigned.ipa)
     (cd "$ARTIFACTS" && shasum -a 256 TwilDiary-unsigned.ipa > TwilDiary-unsigned.ipa.sha256)
     ;;
-  test)
+  boot)
     xcrun simctl bootstatus "$SIMULATOR_ID" -b 2>&1 | tee "$ARTIFACTS/logs/simulator-boot.log"
+    ;;
+  test)
     xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -parallel-testing-enabled NO -derivedDataPath "$PWD/ios/.derived/simulator" \
       -resultBundlePath "$ARTIFACTS/Tests.xcresult" 2>&1 | tee "$ARTIFACTS/logs/tests.log"
     ;;
   screenshots)
+    mkdir -p "$ARTIFACTS/screenshots"
+    xcrun simctl io "$SIMULATOR_ID" screenshot "$ARTIFACTS/screenshots/final-screen.png" || true
     if [ -f "$ARTIFACTS/Tests.xcresult/Info.plist" ]; then
       xcrun xcresulttool export attachments --path "$ARTIFACTS/Tests.xcresult" --output-path "$ARTIFACTS/screenshots"
     fi
@@ -62,6 +68,9 @@ for path in sorted((folder / 'logs').glob('*.log')):
         if re.search(r'\b(?:error:|Test Case .* failed)', line): errors.append(f'{path.name}: {line}')
         if 'build' in path.name and re.search(r'\bwarning:', line, re.I): warnings.append(f'{path.name}: {line}')
         if re.search(r'Executed \d+ tests|\*\* TEST .* \*\*', line): tests.append(line)
+test_log = folder / 'logs' / 'tests.log'
+if not test_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in test_log.read_text(errors='replace'):
+    errors.append('tests.log: Unit/UI execution did not finish successfully; inspect the job timeout and xcresult before accepting this build.')
 summary = '\n'.join(['## iOS build diagnostics', f'Build warnings: {len(warnings)}', f'Errors/failures: {len(errors)}',
                      *errors[:20], *warnings[:20], *tests[-12:]]) + '\n'
 print(summary)
