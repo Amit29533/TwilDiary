@@ -22,7 +22,17 @@ import UIKit
         XCTAssertLessThan(second.maxX, third.minX)
         XCTAssertLessThanOrEqual(third.maxX, app.frame.width - 10)
         app.buttons["title-again"].tap()
-        XCTAssertTrue(app.staticTexts["Episodes"].waitForExistence(timeout: 5)); capture("Title detail")
+        XCTAssertTrue(app.staticTexts["Episodes"].waitForExistence(timeout: 5))
+        let track = app.otherElements["episode-progress"]
+        XCTAssertTrue(track.waitForExistence(timeout: 5))
+        XCTAssertEqual(track.value as? String, "8 of 16 episodes watched")
+        assertEpisodePieces(track, app: app)
+        capture("Title detail")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["title-quiet-orbit"].tap()
+        XCTAssertTrue(app.progressIndicators["movie-progress"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.otherElements["episode-progress"].exists)
+        capture("Movie detail")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["tab-stats"].tap()
         XCTAssertTrue(app.staticTexts["Watch time"].waitForExistence(timeout: 5)); capture("Stats")
@@ -79,6 +89,33 @@ import UIKit
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+    }
+    private func assertEpisodePieces(_ track: XCUIElement, app: XCUIApplication) {
+        guard let image = XCUIScreen.main.screenshot().image.cgImage else { XCTFail("Missing episode screenshot"); return }
+        let scale = CGFloat(image.width) / app.frame.width
+        let slot = track.frame.width / 16
+        for index in 0..<16 {
+            let piece = sample(image, at: CGPoint(x: track.frame.minX + (CGFloat(index) + 5.5 / 12) * slot, y: track.frame.midY), scale: scale)
+            let gap = sample(image, at: CGPoint(x: track.frame.minX + (CGFloat(index) + 11.0 / 12) * slot, y: track.frame.midY), scale: scale)
+            XCTAssertLessThan(gap[0], 35, "Each episode must have a visible gap after it")
+            if index < 8 {
+                XCTAssertGreaterThan(piece[0], 120, "Each watched episode must have its own filled piece")
+                XCTAssertGreaterThan(piece[2], 180)
+            } else {
+                XCTAssertGreaterThan(piece[2], gap[2] + 10, "Unwatched pieces must remain visible")
+                XCTAssertLessThan(piece[0], 120, "Unwatched episodes must not appear filled")
+            }
+        }
+    }
+    private func sample(_ image: CGImage, at point: CGPoint, scale: CGFloat) -> [Int] {
+        guard let pixel = image.cropping(to: CGRect(x: floor(point.x * scale), y: floor(point.y * scale), width: 1, height: 1)) else { XCTFail("Missing pixel sample"); return [0, 0, 0, 0] }
+        var bytes = [UInt8](repeating: 0, count: 4)
+        let rendered = bytes.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(data: buffer.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.draw(pixel, in: CGRect(x: 0, y: 0, width: 1, height: 1)); return true
+        }
+        XCTAssertTrue(rendered)
+        return bytes.map(Int.init)
     }
     private func assertRangeHighlight(_ button: XCUIElement, app: XCUIApplication) {
         guard let source = XCUIScreen.main.screenshot().image.cgImage else { XCTFail("Missing screenshot"); return }

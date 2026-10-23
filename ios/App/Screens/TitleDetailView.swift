@@ -101,7 +101,13 @@ struct TitleDetailView: View {
             }
             if let card {
                 HStack { Text(title.isSeries ? "Episode \(card.progress.watched) of \(card.progress.total)" : card.progress.watched > 0 ? "Watched" : "Ready to watch").font(.title3.bold()); Spacer(); Text("\(percent)%").foregroundStyle(.tint).font(.title3.bold()) }
-                ProgressView(value: Double(percent), total: 100)
+                if title.isSeries {
+                    EpisodeProgressTrack(segments: EpisodeSegment.make(episodes: episodes, total: card.progress.total,
+                                                                       watched: watched, nextID: card.next?.id), season: season)
+                } else {
+                    ProgressView(value: Double(percent), total: 100)
+                        .accessibilityIdentifier("movie-progress")
+                }
                 if let next = card.next { HStack { Image(systemName: "eye.slash").frame(width: 55, height: 46).background(.black.opacity(0.25), in: RoundedRectangle(cornerRadius: 10)); VStack(alignment: .leading) { Text("UP NEXT").font(.caption2.bold()).foregroundStyle(.tint); Text("Episode \(next.number)").font(.subheadline.bold()) }; Spacer() }.padding(12).background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 16)) }
                 Button { Task { await store.markNext(title, season: season); await loadCard(title) } } label: {
                     Label(card.next.map { "Mark E\($0.number) watched" } ?? "Mark watched", systemImage: "checkmark").font(.subheadline.bold()).frame(maxWidth: .infinity).padding(.vertical, 8)
