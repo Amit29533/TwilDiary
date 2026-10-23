@@ -9,52 +9,90 @@ import TwilDiaryCore
     var hasLoadedWorkspace = false
     var error: String?
     var undoLabel: String?
+    private(set) var showingCachedSnapshot = false
+    private(set) var lastRefreshedAt: Date?
+    private(set) var cacheWarning: String?
     private var undoAction: (() async throws -> Void)?
     private let api: DiaryAPI
+    private let cache: any WorkspaceCaching
+    private var sessionGeneration = UUID()
+    private var snapshotGeneration = UUID()
     private var pendingWatches: [String: [String: Any]] = [:]
     private var pendingProgress: [String: [String: Any]] = [:]
     private var pendingRemovals: [String: WatchCard.Previous] = [:]
     let isPreview: Bool
     var now: Date { isPreview ? DiaryDate.parse("2026-10-23T12:00:00Z")! : .now }
-    init(api: DiaryAPI? = nil) {
+    init(api: DiaryAPI? = nil, cache: (any WorkspaceCaching)? = nil) {
         self.api = api ?? DiaryAPI()
+        if let cache { self.cache = cache }
+        else if api == nil { self.cache = ProtectedWorkspaceCache() }
+        else { self.cache = MemoryWorkspaceCache() }
         #if DEBUG
         isPreview = ProcessInfo.processInfo.arguments.contains("--ui-testing")
         #else
         isPreview = false
         #endif
         if isPreview { workspace = PreviewData.workspace; needsSignIn = false; hasLoadedWorkspace = true }
-        else { needsSignIn = self.api.credential == nil }
+        else {
+            needsSignIn = self.api.credential == nil
+            restoreCachedWorkspace()
+        }
     }
     func connect(_ credential: AccessCredential) async {
+        let generation = UUID(); sessionGeneration = generation; snapshotGeneration = UUID()
         do {
             try await api.authenticate(credential)
-            needsSignIn = false; error = nil; await refresh()
-        } catch { fail(error) }
+            guard generation == sessionGeneration else { return }
+            needsSignIn = false; error = nil; restoreCachedWorkspace(); await refresh()
+        } catch { if generation == sessionGeneration { fail(error) } }
     }
     func signOut() {
+        sessionGeneration = UUID(); snapshotGeneration = UUID()
         api.signOut(); workspace = Workspace(); publicRatings = [:]; hasLoadedWorkspace = false; error = nil
+        showingCachedSnapshot = false; lastRefreshedAt = nil; loading = false; busy = false
+        do { try cache.removeAll(); cacheWarning = nil }
+        catch { cacheWarning = "The saved diary could not be removed. It remains encrypted on this device." }
         pendingWatches.removeAll(); pendingProgress.removeAll(); pendingRemovals.removeAll(); undoAction = nil; undoLabel = nil
         needsSignIn = true
     }
     func refresh() async {
         guard !isPreview, !loading, !needsSignIn else { return }
-        loading = true; defer { loading = false }
-        do { try await reload(); error = nil } catch { fail(error) }
+        let session = sessionGeneration
+        loading = true; defer { if session == sessionGeneration { loading = false } }
+        do { try await reload(); if session == sessionGeneration { error = nil } }
+        catch is CancellationError { }
+        catch { if session == sessionGeneration { fail(error) } }
     }
     func reload() async throws {
+        let session = sessionGeneration, revision = UUID()
+        snapshotGeneration = revision
         // Publish only a complete snapshot. A failed page cannot replace good data with a partial diary.
         let titles = try await api.allPages("titles", as: MediaTitle.self)
         let episodes = try await api.allPages("episodes", as: Episode.self)
         let events = try await api.allPages("events", as: WatchEvent.self)
         let locations = try await api.allPages("locations", as: FileLocation.self)
-        workspace = Workspace(titles: titles, episodes: episodes, events: events, locations: locations)
-        hasLoadedWorkspace = true
+        guard session == sessionGeneration, revision == snapshotGeneration, !needsSignIn else { throw CancellationError() }
+        let snapshot = Workspace(titles: titles, episodes: episodes, events: events, locations: locations)
+        workspace = snapshot; hasLoadedWorkspace = true; showingCachedSnapshot = false; lastRefreshedAt = .now
+        if let scope = api.credential?.cacheScope {
+            do { try cache.save(snapshot, scope: scope, at: .now); cacheWarning = nil }
+            catch { cacheWarning = "Your diary is loaded, but its protected offline copy could not be updated." }
+        }
+    }
+    private func restoreCachedWorkspace() {
+        guard let credential = api.credential, credential.isValid, let snapshot = cache.load(scope: credential.cacheScope) else { return }
+        workspace = snapshot.workspace; hasLoadedWorkspace = true
+        showingCachedSnapshot = true; lastRefreshedAt = snapshot.savedAt
     }
     func title(_ id: String) -> MediaTitle? { workspace.titles.first { $0.id == id } }
     func read<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> T {
-        do { return try await api.request(path, method: method, body: body) }
-        catch { if case APIError.signIn = error { fail(error) }; throw error }
+        let generation = sessionGeneration
+        do {
+            let value: T = try await api.request(path, method: method, body: body)
+            guard generation == sessionGeneration else { throw CancellationError() }
+            return value
+        }
+        catch { if generation == sessionGeneration, case APIError.signIn = error { fail(error) }; throw error }
     }
     @discardableResult func trash(_ title: MediaTitle) async -> Bool {
         await perform {
@@ -118,11 +156,12 @@ import TwilDiaryCore
             }
         }
     }
-    func removeLatest(_ title: MediaTitle, season: Int? = nil) async {
+    func removeLatest(_ title: MediaTitle, season: Int? = nil, expected: WatchCard.Previous? = nil) async {
         await perform {
             if self.pendingRemovals[title.id] == nil {
                 let card = try await self.card(title, season: season)
                 guard let previous = card.previous else { return }
+                if let expected, previous != expected { throw APIError.message("Watch history changed. Refresh this title before removing a watch.") }
                 self.pendingRemovals[title.id] = previous
             }
             let event = self.pendingRemovals[title.id]!
@@ -137,9 +176,9 @@ import TwilDiaryCore
     private func changeEvent(_ event: WatchEvent, action: String) async throws {
         let _: EventReceipt = try await api.request("/api/watch-events/\(event.id)", method: "PATCH", body: ["action": action, "expectedVersion": event.version ?? 1])
     }
-    func patch(_ title: MediaTitle, values: [String: Any]) async {
+    @discardableResult func patch(_ title: MediaTitle, values: [String: Any], expectedVersion: Int? = nil) async -> Bool {
         await perform {
-            var body = values; body["expectedVersion"] = title.version
+            var body = values; body["expectedVersion"] = expectedVersion ?? title.version
             let _: EmptyResponse = try await self.api.request("/api/titles/\(title.id)", method: "PATCH", body: body)
         }
     }
@@ -171,11 +210,18 @@ import TwilDiaryCore
         guard let action = undoAction else { return }
         await perform { try await action(); self.undoAction = nil; self.undoLabel = nil }
     }
+    func dismissUndo() { undoLabel = nil; undoAction = nil }
     @discardableResult private func perform(_ action: () async throws -> Void) async -> Bool {
         guard !busy, !isPreview else { return false }
-        busy = true; defer { busy = false }
-        do { try await action(); try await reload(); error = nil; return true }
-        catch { fail(error); return false }
+        let generation = sessionGeneration
+        snapshotGeneration = UUID()
+        busy = true; defer { if generation == sessionGeneration { busy = false } }
+        do {
+            try await action()
+            guard generation == sessionGeneration else { return false }
+            try await reload(); error = nil; return true
+        } catch is CancellationError { return false }
+        catch { if generation == sessionGeneration { fail(error) }; return false }
     }
     private func fail(_ cause: Error) {
         if case APIError.signIn = cause { needsSignIn = true }

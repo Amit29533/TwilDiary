@@ -95,7 +95,7 @@ public struct WatchCard: Decodable, Sendable {
     public struct Progress: Decodable, Sendable { public let watched: Int; public let total: Int }
     public struct Season: Decodable, Sendable { public let number: Int; public let name: String; public let metadataLoadedAt: String? }
     public struct Next: Decodable, Sendable { public let id: String; public let number: Int }
-    public struct Previous: Decodable, Sendable { public let id: String; public let version: Int; public let episodeId: String?; public let number: Int? }
+    public struct Previous: Decodable, Equatable, Sendable { public let id: String; public let version: Int; public let episodeId: String?; public let number: Int? }
     public let progress: Progress
     public let season: Season?
     public let next: Next?

@@ -10,7 +10,7 @@ enum AppConfiguration {
 struct AccessCredential: Codable {
     let token: String
     let expires: Date?
-    var isValid: Bool { expires.map { $0 > .now } ?? true }
+    var isValid: Bool { !token.isEmpty && (expires.map { $0 > .now } ?? true) }
 }
 
 @MainActor protocol SessionStoring {
@@ -82,6 +82,7 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
     var credential: AccessCredential?
     private let session: URLSession
     private let storage: any SessionStoring
+    private var sessionGeneration = UUID()
     init(configuration: URLSessionConfiguration = .ephemeral, storage: any SessionStoring = KeychainSessionStorage()) {
         self.storage = storage
         let config = configuration
@@ -92,24 +93,28 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
         credential = storage.read()
     }
     func authenticate(_ value: AccessCredential) async throws {
+        let generation = UUID(); sessionGeneration = generation
         let previous = credential
         credential = value
         do {
             let session: SessionResponse = try await request("/api/session")
+            guard generation == sessionGeneration else { throw CancellationError() }
             guard session.authenticated else { throw APIError.signIn }
             try storage.save(value)
         } catch {
-            credential = previous
+            if generation == sessionGeneration { credential = previous }
             throw error
         }
     }
     func signOut() {
+        sessionGeneration = UUID()
         storage.delete()
         credential = nil
     }
     func request<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> T {
+        let generation = sessionGeneration
         guard path.hasPrefix("/api/"), let url = URL(string: path, relativeTo: AppConfiguration.backend)?.absoluteURL,
-              url.host == AppConfiguration.backend.host, url.scheme == "https" else { throw APIError.message("Invalid diary request.") }
+              BackendEndpoint.isPrivateAPI(url) else { throw APIError.message("Invalid diary request.") }
         guard let credential, credential.isValid else { throw APIError.signIn }
         var request = URLRequest(url: url)
         request.httpMethod = method
@@ -121,6 +126,7 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
             if let body { request.httpBody = try JSONSerialization.data(withJSONObject: body) }
         }
         let (data, response) = try await session.data(for: request)
+        guard generation == sessionGeneration else { throw CancellationError() }
         guard let http = response as? HTTPURLResponse else { throw APIError.message("No response from the diary.") }
         guard http.statusCode != 401 && http.statusCode != 403 && !(300..<400).contains(http.statusCode) else { throw APIError.signIn }
         let isJSON = http.value(forHTTPHeaderField: "Content-Type")?.lowercased().contains("application/json") == true

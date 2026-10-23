@@ -9,10 +9,13 @@ struct TitleDetailView: View {
     @State private var showNotes = false
     @State private var showLocation = false
     @State private var notes = ""
+    @State private var notesVersion: Int?
+    @State private var ratingVersion: Int?
     @State private var rating = 7.0
     @State private var showRating = false
     @State private var resetConfirmation = false
     @State private var card: WatchCard?
+    @State private var cardRequest = UUID()
     @State private var showAllEpisodes = false
     var body: some View {
         Group {
@@ -42,7 +45,7 @@ struct TitleDetailView: View {
                             DisclosureGroup("Notes", isExpanded: $showNotes) {
                                 VStack(alignment: .leading, spacing: 12) {
                                     TextEditor(text: $notes).frame(minHeight: 110).scrollContentBackground(.hidden)
-                                    Button("Save notes") { Task { await store.patch(title, values: ["notes": notes]) } }.disabled(store.busy || notes == title.notes || notes.count > 20_000)
+                                    Button("Save notes") { Task { if await store.patch(title, values: ["notes": notes], expectedVersion: notesVersion) { notesVersion = store.title(id)?.version } } }.disabled(store.busy || notes == title.notes || notes.count > 20_000)
                                 }.padding(.top, 12)
                             }
                             Divider()
@@ -65,7 +68,7 @@ struct TitleDetailView: View {
                             } label: { Image(systemName: "ellipsis") }
                         }
                     }
-                    .task { notes = title.notes; rating = title.score ?? 7; await loadCard(title); if let selected = card?.season?.number { season = selected } }
+                    .task { notes = title.notes; notesVersion = title.version; rating = title.score ?? 7; await loadCard(title); if let selected = card?.season?.number { season = selected } }
                     .task(id: season) { await loadCard(title) }
                     .sheet(isPresented: $showRating) { ratingSheet(title) }
                     .confirmationDialog("Reset progress to 0? Logged watches will be removed, with Undo available.", isPresented: $resetConfirmation, titleVisibility: .visible) {
@@ -82,7 +85,7 @@ struct TitleDetailView: View {
                 Text([title.year.map(String.init), title.categoryName, title.runtimeMinutes.map { "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
                 HStack(spacing: 8) {
                     if let rating = title.communityScore { Label(rating.formatted(.number.precision(.fractionLength(1))), systemImage: "star.fill").foregroundStyle(.yellow) }
-                    Button { showRating = true } label: { Label(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "Your rating —", systemImage: "star") }.font(.caption)
+                    Button { openRating(title) } label: { Label(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "Your rating —", systemImage: "star") }.font(.caption)
                 }.font(.subheadline)
             }.padding(.bottom, 4)
         }.padding(.top, 105)
@@ -109,11 +112,11 @@ struct TitleDetailView: View {
                         .accessibilityIdentifier("movie-progress")
                 }
                 if let next = card.next { HStack { Image(systemName: "eye.slash").frame(width: 55, height: 46).background(.black.opacity(0.25), in: RoundedRectangle(cornerRadius: 10)); VStack(alignment: .leading) { Text("UP NEXT").font(.caption2.bold()).foregroundStyle(.tint); Text("Episode \(next.number)").font(.subheadline.bold()) }; Spacer() }.padding(12).background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 16)) }
-                Button { Task { await store.markNext(title, season: season); await loadCard(title) } } label: {
+                Button { let expected = card.next?.id; Task { await store.markNext(title, season: season, expectedEpisode: expected); await loadCard(title) } } label: {
                     Label(card.next.map { "Mark E\($0.number) watched" } ?? "Mark watched", systemImage: "checkmark").font(.subheadline.bold()).frame(maxWidth: .infinity).padding(.vertical, 8)
                 }.buttonStyle(.borderedProminent).disabled(store.busy || (title.isSeries && card.next == nil) || (!title.isSeries && card.progress.watched > 0))
-                HStack { Label("Watched today", systemImage: "calendar").font(.caption).foregroundStyle(.secondary); Spacer(); Button(title.isSeries ? "Rate show" : "Rate movie") { showRating = true }.font(.caption.bold()) }
-                if card.previous != nil { Button("Remove latest watch") { Task { await store.removeLatest(title, season: title.isSeries ? season : nil); await loadCard(title) } }.font(.caption).disabled(store.busy) }
+                HStack { Label("Watched today", systemImage: "calendar").font(.caption).foregroundStyle(.secondary); Spacer(); Button(title.isSeries ? "Rate show" : "Rate movie") { openRating(title) }.font(.caption.bold()) }
+                if let reviewed = card.previous { Button("Remove latest watch") { Task { await store.removeLatest(title, season: title.isSeries ? season : nil, expected: reviewed); await loadCard(title) } }.font(.caption).disabled(store.busy) }
             } else { ProgressView("Loading progress…") }
         }.diaryPanel()
     }
@@ -125,16 +128,17 @@ struct TitleDetailView: View {
                         Text(rating, format: .number.precision(.fractionLength(1)))
                     }
                     Button("Save rating") {
-                        Task { await store.patch(title, values: ["score": rating]); showRating = false }
+                        Task { if await store.patch(title, values: ["score": rating], expectedVersion: ratingVersion) { showRating = false } }
                     }
                     Button("Clear rating") {
-                        Task { await store.patch(title, values: ["score": NSNull()]); showRating = false }
+                        Task { if await store.patch(title, values: ["score": NSNull()], expectedVersion: ratingVersion) { showRating = false } }
                     }
                 }
             }
                 .navigationTitle(title.isSeries ? "Rate show" : "Rate movie").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showRating = false } } }
         }.presentationDetents([.medium])
     }
+    private func openRating(_ title: MediaTitle) { rating = title.score ?? 7; ratingVersion = title.version; showRating = true }
     private var episodes: [Episode] { store.workspace.episodes.filter { $0.titleId == id && $0.season == season }.sorted { $0.number < $1.number } }
     private var visibleEpisodes: [Episode] {
         if showAllEpisodes { return episodes }
@@ -148,7 +152,13 @@ struct TitleDetailView: View {
     private var percent: Int { guard let card, card.progress.total > 0 else { return 0 }; return Int((Double(card.progress.watched) / Double(card.progress.total) * 100).rounded()) }
     private func remaining(_ title: MediaTitle) -> Int? { title.isSeries ? SeasonProgress.calculate(title: title, workspace: store.workspace, season: season).remainingMinutes : title.runtimeMinutes.map { card?.progress.watched == 1 ? 0 : $0 } }
     private func loadCard(_ title: MediaTitle) async {
-        do { card = try await store.card(title, season: title.isSeries ? season : nil) }
-        catch { store.error = error.localizedDescription }
+        let request = UUID(), requestedSeason = season
+        cardRequest = request
+        do {
+            let loaded = try await store.card(title, season: title.isSeries ? requestedSeason : nil)
+            guard cardRequest == request, requestedSeason == season, !Task.isCancelled else { return }
+            card = loaded
+        } catch is CancellationError { }
+        catch { if cardRequest == request, !Task.isCancelled { store.error = error.localizedDescription } }
     }
 }

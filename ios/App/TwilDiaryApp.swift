@@ -77,17 +77,21 @@ struct RootView: View {
                     Tab("More", systemImage: "ellipsis", value: AppTab.more) { diaryStack(.more) { SettingsView() } }
                 }.toolbar(.hidden, for: .tabBar)
                     .safeAreaInset(edge: .bottom, spacing: 0) {
-                        VStack(spacing: 8) {
-                            if let label = store.undoLabel {
-                                HStack { DiaryIcon(name: "check", size: 18).foregroundStyle(.mint); Text(label); Spacer(); Button("Undo") { Task { await store.undo() } }.disabled(store.busy) }
-                                    .font(.system(size: 13, weight: .semibold)).padding(14).glassEffect(in: RoundedRectangle(cornerRadius: 18)).padding(.horizontal, 14)
-                            }
-                            if showNavigation { navigation.padding(.horizontal, 12).padding(.bottom, 10) }
+                        if showNavigation { navigation.padding(.horizontal, 12).padding(.bottom, 10) }
+                    }.overlay(alignment: .bottom) {
+                        if let label = store.undoLabel {
+                            HStack { DiaryIcon(name: "check", size: 18).foregroundStyle(.mint); Text(label); Spacer(); Button("Undo") { Task { await store.undo() } }.disabled(store.busy); Button("Dismiss undo", systemImage: "xmark") { store.dismissUndo() }.labelStyle(.iconOnly) }
+                                .font(.system(size: 13, weight: .semibold)).padding(14).glassEffect(in: RoundedRectangle(cornerRadius: 18)).padding(.horizontal, 14).padding(.bottom, showNavigation ? 84 : 14)
                         }
                     }.overlay(alignment: .top) {
                         if let error = store.error {
                             HStack { Text(error).font(.caption); Button("Dismiss", systemImage: "xmark") { store.error = nil }.labelStyle(.iconOnly) }
                                 .padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding()
+                        } else if store.showingCachedSnapshot {
+                            HStack { Text("Saved diary").font(.caption.bold()); if let date = store.lastRefreshedAt { Text(date, style: .relative).font(.caption) }; Spacer(); Button("Refresh") { Task { await store.refresh() } }.disabled(store.loading) }
+                                .padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding()
+                        } else if let warning = store.cacheWarning {
+                            Text(warning).font(.caption).padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding()
                         }
                     }
             }

@@ -1,4 +1,5 @@
 import XCTest
+import TwilDiaryCore
 @testable import TwilDiary
 
 @MainActor private final class MemorySessionStorage: SessionStoring {
@@ -17,6 +18,7 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         let status: Int
         let contentType: String
         let body: String
+        var delay: TimeInterval = 0
         init(_ body: String) { self.init(200, body) }
         init(_ status: Int, _ body: String, contentType: String = "application/json") {
             self.status = status; self.body = body; self.contentType = contentType
@@ -43,6 +45,11 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         let reply = Self.state.reply(request)
+        if reply.delay > 0 {
+            DispatchQueue.global().asyncAfter(deadline: .now() + reply.delay) { self.deliver(reply) }
+        } else { deliver(reply) }
+    }
+    private func deliver(_ reply: Reply) {
         let response = HTTPURLResponse(url: request.url!, statusCode: reply.status, httpVersion: nil,
                                        headerFields: ["Content-Type": reply.contentType])!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -151,5 +158,83 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         } catch APIError.message(let message) {
             XCTAssertTrue(message.contains("unexpected response"))
         } catch { XCTFail("Unexpected error: \(error)") }
+    }
+    func testCachedDiaryRestoresOnlyForCurrentSessionAndSignOutErasesIt() async throws {
+        let cache = MemoryWorkspaceCache()
+        try cache.save(PreviewData.workspace, scope: credential.cacheScope, at: .now)
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage), cache: cache)
+        XCTAssertTrue(store.hasLoadedWorkspace); XCTAssertTrue(store.showingCachedSnapshot)
+        XCTAssertEqual(store.workspace.titles.count, PreviewData.workspace.titles.count)
+        StubProtocol.state.reset { _ in .init(503, "Offline", contentType: "text/plain") }
+        await store.refresh()
+        XCTAssertTrue(store.showingCachedSnapshot)
+        XCTAssertFalse(store.workspace.titles.isEmpty)
+        store.signOut()
+        XCTAssertTrue(store.workspace.titles.isEmpty)
+        XCTAssertNil(cache.load(scope: credential.cacheScope))
+    }
+    func testSignOutWhileLoadingCannotResurrectSessionOrDiary() async throws {
+        StubProtocol.state.reset { _ in
+            var reply = StubProtocol.Reply(#"{"items":[],"next":null}"#); reply.delay = 0.15; return reply
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let cache = MemoryWorkspaceCache(), store = DiaryStore(api: api(storage), cache: cache)
+        let refresh = Task { await store.refresh() }
+        for _ in 0..<100 {
+            if !StubProtocol.state.recorded().isEmpty { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTAssertFalse(StubProtocol.state.recorded().isEmpty)
+        store.signOut(); await refresh.value
+        XCTAssertTrue(store.needsSignIn)
+        XCTAssertFalse(store.hasLoadedWorkspace)
+        XCTAssertTrue(store.workspace.titles.isEmpty)
+        XCTAssertNil(cache.load(scope: credential.cacheScope))
+        XCTAssertNil(storage.credential)
+    }
+    func testSignOutDuringAuthenticationCannotSaveALateCredential() async throws {
+        StubProtocol.state.reset { _ in
+            var reply = StubProtocol.Reply(#"{"authenticated":true}"#); reply.delay = 0.15; return reply
+        }
+        let storage = MemorySessionStorage(), store = DiaryStore(api: api(storage))
+        let connection = Task { await store.connect(credential) }
+        for _ in 0..<100 {
+            if !StubProtocol.state.recorded().isEmpty { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        store.signOut(); await connection.value
+        XCTAssertTrue(store.needsSignIn)
+        XCTAssertNil(storage.credential)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+    }
+    func testSlowerRefreshCannotOverwriteNewerCompleteSnapshot() async throws {
+        let original = PreviewData.workspace.titles
+        var edited = original; edited[0].name = "Newer confirmed title"
+        func page(_ titles: [MediaTitle]) throws -> String {
+            let items = try JSONSerialization.jsonObject(with: JSONEncoder().encode(titles))
+            return String(decoding: try JSONSerialization.data(withJSONObject: ["items": items, "next": NSNull()]), as: UTF8.self)
+        }
+        let oldPage = try page(original), newPage = try page(edited)
+        StubProtocol.state.reset { request in
+            if request.url?.query == "section=titles" {
+                let first = StubProtocol.state.recorded().filter { $0.url?.query == "section=titles" }.count == 1
+                var reply = StubProtocol.Reply(first ? oldPage : newPage)
+                if first { reply.delay = 0.2 }
+                return reply
+            }
+            return .init(#"{"items":[],"next":null}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage))
+        let earlier = Task { await store.refresh() }
+        for _ in 0..<100 {
+            if !StubProtocol.state.recorded().isEmpty { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        try await store.reload(); await earlier.value
+        XCTAssertEqual(store.workspace.titles.first?.name, "Newer confirmed title")
+        XCTAssertTrue(store.hasLoadedWorkspace)
+        XCTAssertNil(store.error)
     }
 }
