@@ -2,6 +2,8 @@
 
 A new personal media diary for iPhone and desktop. Built around quick episode updates, an artwork-led library, and Windows drive mapping.
 
+The native SwiftUI app is developed separately in [TwilDiary-iOS](https://github.com/Amit29533/TwilDiary-iOS). This repository remains the web app and shared Cloudflare backend.
+
 ## Development status
 
 The polished `/preview` workspace is now the only application, backed by the real D1 APIs. The former `/diary` URLs redirect to it. Home, Library, Glance, Stats/history, Locations, Explore, More and title screens share one controller and design. The existing sample library was migrated once into D1 and remains marked as demo data so it is excluded from Trakt exports. Existing real titles and history are preserved.
