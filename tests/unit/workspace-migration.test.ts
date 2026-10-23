@@ -10,6 +10,28 @@ import { workspacePage } from '../../src/lib/server/workspace.ts';
 import { addManualTitle } from '../../src/lib/server/library.ts';
 import { GET } from '../../src/routes/api/workspace/+server.ts';
 import { ApiError } from '../../src/lib/server/api.ts';
+import { database } from '../../src/lib/server/db/index.ts';
+
+test('workspace spoiler checks use indexed watch lookups rather than scanning all history for each episode', async (t) => {
+  const f = d1Fixture();
+  t.after(f.close);
+  let query = '';
+  const binding = new Proxy(f.binding, {
+    get(target, property, receiver) {
+      if (property === 'prepare')
+        return (sql: string) => {
+          query = sql;
+          return target.prepare(sql);
+        };
+      return Reflect.get(target, property, receiver);
+    }
+  });
+  await workspacePage(database(binding), new URLSearchParams('section=episodes'));
+  const plan = f.sqlite.prepare('EXPLAIN QUERY PLAN ' + query).all('', 251);
+  const details = plan.map((row) => String(row.detail)).join('\n');
+  assert.match(details, /SEARCH w USING COVERING INDEX watch_title_progress/);
+  assert.doesNotMatch(details, /SCAN w\b/);
+});
 
 test('preview import retains artwork, history, Queue and mappings while preserving existing diary data', async (t) => {
   const f = d1Fixture();

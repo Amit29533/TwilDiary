@@ -1,5 +1,6 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { database } from './db/index.ts';
+import { databaseQuotaFailure } from './database-failure.ts';
 
 export class ApiError extends Error {
   status: number;
@@ -65,6 +66,13 @@ export async function ownerApi(context: ApiContext, action: () => Promise<unknow
   } catch (error) {
     if (error instanceof ApiError)
       return privateJson({ error: { code: error.code, message: error.message } }, error.status);
+    const quota = databaseQuotaFailure(error);
+    if (quota) {
+      const { retryAfter, ...detail } = quota;
+      const response = privateJson({ error: detail }, 503);
+      response.headers.set('Retry-After', String(retryAfter));
+      return response;
+    }
     return privateJson(
       {
         error: {

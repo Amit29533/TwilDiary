@@ -106,7 +106,7 @@ export async function workspacePage(db: Db, params: URLSearchParams) {
         number: episodes.number,
         airedOn: episodes.airedOn,
         skipped: episodes.skipped,
-        watched: sql<number>`EXISTS(SELECT 1 FROM watch_events w WHERE w.episode_id=${episodes.id} AND w.revoked_at IS NULL)`,
+        watched: sql<number>`EXISTS(SELECT 1 FROM watch_events w WHERE w.title_id=${episodes.titleId} AND w.revoked_at IS NULL AND w.episode_id=${episodes.id})`,
         name: episodes.name,
         overview: episodes.overview,
         stillPath: episodes.stillPath,
