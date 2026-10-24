@@ -3,7 +3,7 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false, slowWrites: Bool = false, slowMetadata: Bool = false, communityUnavailable: Bool = false) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false, slowWrites: Bool = false, slowMetadata: Bool = false, communityUnavailable: Bool = false, cachedSnapshot: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
         if scanner { app.launchArguments.append("--ui-scanner") }
@@ -15,9 +15,27 @@ import UIKit
         if slowWrites { app.launchArguments.append("--ui-slow-writes") }
         if slowMetadata { app.launchArguments.append("--ui-slow-metadata") }
         if communityUnavailable { app.launchArguments.append("--ui-community-unavailable") }
+        if cachedSnapshot { app.launchArguments.append("--ui-cached-snapshot") }
         if let traktScenario { app.launchArguments.append("--ui-trakt=" + traktScenario) }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
+    }
+    func testCachedDiaryStatusDoesNotCoverScreensAndRemainsAvailableInSettings() {
+        let app = launch(cachedSnapshot: true)
+        let warning = "Your diary is loaded, but its protected offline copy could not be updated."
+        for tab in ["home", "library", "glance", "stats"] {
+            app.buttons["tab-" + tab].tap()
+            XCTAssertFalse(app.staticTexts["Saved diary"].exists)
+            XCTAssertFalse(app.staticTexts[warning].exists)
+        }
+        app.buttons["tab-glance"].tap(); capture("Glance without saved-diary status overlay")
+        app.buttons["tab-more"].tap()
+        let storage = app.buttons["settings-refresh-diary"]
+        for _ in 0..<10 { if storage.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(storage.isHittable)
+        XCTAssertTrue(storage.label.contains("Saved copy"))
+        XCTAssertTrue(app.staticTexts["settings-cache-warning"].exists)
+        capture("Cache information contained in Settings")
     }
     func testNativeTabsAndTitleNavigation() {
         let app = launch()

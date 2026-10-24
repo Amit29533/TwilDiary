@@ -94,6 +94,10 @@ import TwilDiaryCore
             if ProcessInfo.processInfo.arguments.contains("--ui-empty") { workspace = Workspace() }
             if ProcessInfo.processInfo.arguments.contains("--ui-title-metadata") { workspace = PreviewData.metadataWorkspace }
             if ProcessInfo.processInfo.arguments.contains("--ui-upcoming") { workspace = PreviewData.upcomingWorkspace }
+            if ProcessInfo.processInfo.arguments.contains("--ui-cached-snapshot") {
+                showingCachedSnapshot = true; lastRefreshedAt = now.addingTimeInterval(-600)
+                cacheWarning = "Your diary is loaded, but its protected offline copy could not be updated."
+            }
             #endif
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--ui-mutations") { fixture = FixtureDiaryBackend(workspace: workspace, scanner: ProcessInfo.processInfo.arguments.contains("--ui-scanner")) }

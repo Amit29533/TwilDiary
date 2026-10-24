@@ -149,11 +149,6 @@ struct RootView: View {
                         } else if let error = store.error {
                             HStack { Text(error).font(.caption); Button("Dismiss", systemImage: "xmark") { store.error = nil }.labelStyle(.iconOnly) }
                                 .padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding()
-                        } else if store.showingCachedSnapshot {
-                            HStack { Text("Saved diary").font(.caption.bold()); if let date = store.lastRefreshedAt { Text(date, style: .relative).font(.caption) }; Spacer(); Button("Refresh") { Task { await store.refresh() } }.disabled(store.loading) }
-                                .padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding()
-                        } else if let warning = store.cacheWarning {
-                            Text(warning).font(.caption).padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding()
                         }
                     }
             }

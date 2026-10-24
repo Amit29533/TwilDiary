@@ -52,7 +52,13 @@ struct SettingsView: View {
                     settingsSection("Data & backup") {
                         Button { exportDiary() } label: { settingsRow("download", "Export diary", subtitle: "Titles, progress, notes and file mappings", disclosure: true) }
                         Divider().padding(.leading, 58)
-                        settingsRow("shield-check", "Diary storage", subtitle: "Your diary is saved to your workspace", value: store.busy ? "Saving…" : store.showingCachedSnapshot ? "Saved copy" : "Ready")
+                        Button { Task { await store.refresh() } } label: {
+                            settingsRow("shield-check", "Diary storage", subtitle: storageDetail, value: store.loading ? "Refreshing…" : store.busy ? "Saving…" : store.showingCachedSnapshot ? "Saved copy" : "Ready")
+                        }.disabled(store.loading || store.busy).accessibilityIdentifier("settings-refresh-diary").accessibilityHint("Refresh your diary from the server")
+                    }
+                    if let warning = store.cacheWarning {
+                        Text(warning).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 4).accessibilityIdentifier("settings-cache-warning")
                     }
                     settingsSection("About") {
                         NavigationLink(value: AppDestination.about) { settingsRow("info", "About TwilDiary", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.0.0", disclosure: true) }.accessibilityIdentifier("settings-about")
@@ -62,11 +68,16 @@ struct SettingsView: View {
                     Text("This product uses the TMDB API but is not endorsed or certified by TMDB.").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 4)
                     Button("Sign out", role: .destructive) { confirmSignOut = true }.font(.subheadline).frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 44).disabled(store.busy)
                 }.buttonStyle(.plain).padding(.horizontal, 14).padding(.bottom, 24)
-            }.refreshable { await summary?.refresh() }
+            }.refreshable { await store.refresh(); await summary?.refresh() }
         }.confirmationDialog("Sign out on this device? Your hosted diary stays saved.", isPresented: $confirmSignOut, titleVisibility: .visible) { Button("Sign out", role: .destructive) { store.signOut() } }
             .task(id: store.sessionRevision) { summary = TraktController(service: makeTraktService(store: store)); await summary?.refresh() }
             .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await summary?.refresh() } } }
             .fileExporter(isPresented: $showExport, document: exportDocument, contentType: .json, defaultFilename: "TwilDiary-\(DiaryDate.day(store.now))") { result in if case .failure(let error) = result { store.error = error.localizedDescription } }
+    }
+    private var storageDetail: String {
+        let detail = store.showingCachedSnapshot ? "Using the saved copy on this device. Tap to refresh." : "Your diary is saved to your workspace. Tap to refresh."
+        guard let date = store.lastRefreshedAt else { return detail }
+        return detail + " Last updated " + date.formatted(date: .abbreviated, time: .shortened) + "."
     }
     private var traktSummary: some View {
         let value = TraktOverview(status: summary?.status, sync: summary?.sync, checked: summary?.status != nil || summary?.error != nil, unavailable: summary?.error != nil)
