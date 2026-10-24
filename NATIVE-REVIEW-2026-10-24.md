@@ -1,5 +1,17 @@
 # Verification of the second native review
 
+## Runtime reconciliation — build 30, 24 October
+
+The table below records the original build25 findings; it must not be read as the current fix status. Source548afbf, run40115623427 attempt2, passes Core56/56 and native unit119/119 with zero simulator/test-bundle build warnings. Exact attempt2 logs/results are saved locally under .local/ios-app-build-40115623427-attempt2/results. The overall run still fails two navigation UI cases, so this is scoped logic evidence, not release acceptance.
+
+- **Duplicate identities: fixed and tested.** SessionTests.testDuplicateSectionsNeverReplaceOrCacheThePreviousCompleteDiary and WorkspaceCacheTests.testDuplicateSnapshotsCannotReplaceACacheAndLegacyDuplicatesCannotLoad pass. The Core projection guards also pass, while the original qualification about backend keyset pagination remains valid.
+- **Saved-season reveal: fixed and tested.** SavedEpisodeDetailsTests.testSwitchingSeasonsStartsTheNewRevealWhileTheOldOneIsStillPending and testSessionResetIgnoresAnOldRevealEvenWhenItsTransportIgnoresCancellation pass. Consent remains episode-specific; no blanket spoiler reveal.
+- **Rating authentication versus provider outage: fixed and tested.** SessionTests.testPublicRatingAuthenticationFailureRequiresSignInWithoutCachingProviderFailure, testPublicRatingProviderFailureDoesNotExpireThePrivateSession and testOldRatingAuthenticationFailureCannotExpireANewerSignedInSession pass. A late old-session failure cannot expire a newer session.
+- **Trakt filter/scan/apply isolation: fixed and tested.** All three TraktReviewInterleavingTests pass: filters avoid redundant connection-status reads and cannot replace an in-progress scan/apply with an older review. This does not yet solve the separately requested shared recommendation cache.
+- **Still open:** field-safe notes/rating conflict handling, recoverable Access-browser completion, slider external-update/tracking semantics, derived-projection and decode/cache performance, explicit existing-item Keychain policy, release fixture hygiene and controlled parser/calendar hardening. Existing passing tests do not establish those fixes.
+
+Build31/source d8a8476/run40120123169 is now validating longer, content-anchored native Back gestures and download retry handling. No findings above authorize hosted writes, automatic overwrite of remote edits, or deployment. The full device-feedback/follow-on scope remains in PROGRESS.md; it includes the bottom navigation bar, not just top-header styling.
+
 Reviewed 24 October 2026 against native source 6130cdf (build 25), web baseline b43454e and the downloaded unsigned build-25 IPA. This is source/artifact verification, not a claim that the listed races were reproduced on an iPhone. No product changes were made from this review. The active device-feedback build continues independently: run 40098826990. Simulator/device compile and early watch/slider/Undo/movie gate pass; full unit/UI/all-phone acceptance is pending.
 
 ## Follow-up prepared after build 27 started
