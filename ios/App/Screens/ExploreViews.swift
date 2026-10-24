@@ -7,14 +7,18 @@ struct ExploreView: View {
     @State private var showSearch = false
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Explore", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "explore-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     ExploreContent(store: store)
                 }.padding(.horizontal, 14).padding(.top, 2).padding(.bottom, 100)
             }
-        }.background(.black).toolbar(.hidden, for: .navigationBar)
+        }.background(.black).navigationTitle("Explore").navigationBarTitleDisplayMode(.inline)
+            .toolbar(.visible, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { Button { showSearch.toggle() } label: { DiaryIcon(name: "search", size: 22) }.accessibilityLabel("Search").accessibilityIdentifier("search-explore") }
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("explore-done") }
+            }
     }
 }
 

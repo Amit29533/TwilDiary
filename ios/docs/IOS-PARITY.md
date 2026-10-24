@@ -35,3 +35,5 @@ Primary references: reference/chromium-win32 (99 passing states, 390×844; all i
 ## User-requested native improvements prepared for build 24
 
 The latest device feedback explicitly overrides PWA parity for full-content native Back gestures, active-tab return to root, shared Library+TMDB search (Glance remains current-watch-only), a compact expiring Undo toast, useful Glance menus, content-sized surprise and full-width expanded descriptions. Glass/press transitions use first-party SwiftUI effects. These changes await CI/UI/screenshot acceptance and physical timing checks; they are not accepted differences merely because the implementation exists.
+
+Explore now uses the system navigation bar with Back/search/Done instead of a hidden bar plus a second custom header. This is an intentional response to the native-navigation request. The public [content-pop gesture API](https://developer.apple.com/documentation/uikit/uinavigationcontroller/interactivecontentpopgesturerecognizer/) remains owned by UIKit; no private transition/delegate/KVC implementation is used. The episode control suppresses it only during active tracking. CI/device swipe checks remain required.
