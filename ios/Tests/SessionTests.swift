@@ -14,11 +14,30 @@ import TwilDiaryCore
 }
 
 private final class StubProtocol: URLProtocol, @unchecked Sendable {
+    /// URLProtocol callbacks are synchronous. The lock protects held completions across its queues.
+    final class ResponseGate: @unchecked Sendable {
+        private let lock = NSLock()
+        private var completions: [@Sendable () -> Void] = []
+        private var released = false
+        func submit(_ completion: @escaping @Sendable () -> Void) {
+            lock.lock()
+            if released { lock.unlock(); completion() }
+            else { completions.append(completion); lock.unlock() }
+        }
+        func release() {
+            lock.lock()
+            released = true
+            let pending = completions; completions.removeAll()
+            lock.unlock()
+            for completion in pending { completion() }
+        }
+    }
     struct Reply: Sendable {
         let status: Int
         let contentType: String
         let body: String
         var delay: TimeInterval = 0
+        var gate: ResponseGate? = nil
         init(_ body: String) { self.init(200, body) }
         init(_ status: Int, _ body: String, contentType: String = "application/json") {
             self.status = status; self.body = body; self.contentType = contentType
@@ -52,7 +71,9 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
         let reply = Self.state.reply(request)
-        if reply.delay > 0 {
+        if let gate = reply.gate {
+            gate.submit { self.deliver(reply) }
+        } else if reply.delay > 0 {
             DispatchQueue.global().asyncAfter(deadline: .now() + reply.delay) { self.deliver(reply) }
         } else { deliver(reply) }
     }
@@ -149,8 +170,10 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertEqual(api.credential?.token, credential.token)
         XCTAssertTrue(store.error?.contains("daily database limit") == true)
         let requests = StubProtocol.state.recorded()
-        XCTAssertEqual(requests.map { $0.url?.path }, ["/api/session", "/api/workspace"])
-        XCTAssertEqual(requests.last?.url?.query, "section=titles")
+        XCTAssertEqual(requests.first?.url?.path, "/api/session")
+        XCTAssertTrue(requests.dropFirst().allSatisfy { $0.url?.path == "/api/workspace" })
+        XCTAssertTrue((1...4).contains(requests.count - 1))
+        XCTAssertTrue(requests.contains { $0.url?.query == "section=titles" })
         XCTAssertEqual(requests.first?.value(forHTTPHeaderField: "Cookie"), "CF_Authorization=synthetic-test-session")
     }
 
@@ -209,6 +232,30 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
             let encoder = JSONEncoder(); encoder.outputFormatting = .sortedKeys
             XCTAssertEqual(try encoder.encode(cached.workspace), try encoder.encode(workspace), section)
         }
+    }
+    func testWorkspaceSectionsStartTogetherAndPublishOnlyAfterTheResponsesComplete() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace; store.hasLoadedWorkspace = true
+        let original = store.workspace.titles, gate = StubProtocol.ResponseGate()
+        StubProtocol.state.reset { _ in
+            var reply = StubProtocol.Reply(#"{"items":[],"next":null}"#)
+            reply.gate = gate
+            return reply
+        }
+        let pending = Task { await store.refresh() }
+        guard await waitForRegressionCondition({ StubProtocol.state.recorded().count == 4 }) else {
+            gate.release(); await pending.value
+            XCTFail("All four workspace sections must start without waiting for an earlier response")
+            return
+        }
+        XCTAssertEqual(Set(StubProtocol.state.recorded().compactMap { $0.url?.query }),
+                       Set(["section=titles", "section=episodes", "section=events", "section=locations"]))
+        XCTAssertEqual(store.workspace.titles, original)
+        XCTAssertTrue(store.loading)
+        gate.release(); await pending.value
+        XCTAssertTrue(store.workspace.titles.isEmpty); XCTAssertTrue(store.workspace.episodes.isEmpty)
+        XCTAssertTrue(store.workspace.events.isEmpty); XCTAssertTrue(store.workspace.locations.isEmpty)
+        XCTAssertTrue(store.hasLoadedWorkspace); XCTAssertFalse(store.loading); XCTAssertNil(store.error)
     }
     func testWorkspacePaginationEscapesTheCursorAndKeepsTheSameAuthenticatedSection() async throws {
         let storage = MemorySessionStorage(); storage.credential = credential
@@ -370,9 +417,8 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         let storage = MemorySessionStorage(); storage.credential = credential
         let store = DiaryStore(api: api(storage))
         let earlier = Task { await store.refresh() }
-        for _ in 0..<100 {
-            if !StubProtocol.state.recorded().isEmpty { break }
-            try await Task.sleep(for: .milliseconds(5))
+        guard await waitForRegressionCondition({ StubProtocol.state.recorded().contains { $0.url?.query == "section=titles" } }) else {
+            earlier.cancel(); await earlier.value; XCTFail("The delayed title section did not start"); return
         }
         try await store.reload(); await earlier.value
         XCTAssertEqual(store.workspace.titles.first?.name, "Newer confirmed title")
@@ -433,8 +479,12 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         let workspace = PreviewData.workspace
         let title = try XCTUnwrap(workspace.titles.first { !$0.isSeries })
         let date = try XCTUnwrap(DiaryDate.parse("2026-10-23T12:00:00Z"))
-        let event = try JSONDecoder().decode(WatchEvent.self, from: Data(#"{"id":"confirmed-rewatch","operationId":"confirmed-operation","titleId":"TITLE","episodeId":null,"watchedAt":"2026-10-23T12:00:00Z","recordedAt":"2026-10-23T12:00:00Z","revokedAt":null,"origin":"manual","version":1}"#.replacingOccurrences(of: "TITLE", with: title.id).utf8))
-        let eventObject = try JSONSerialization.jsonObject(with: JSONEncoder().encode(event))
+        let eventObject: [String: Any] = [
+            "id": "confirmed-rewatch", "operationId": "confirmed-operation", "titleId": title.id,
+            "episodeId": NSNull(), "watchedAt": "2026-10-23T12:00:00Z", "recordedAt": "2026-10-23T12:00:00Z",
+            "revokedAt": NSNull(), "origin": "manual", "version": 1
+        ]
+        let event = try JSONDecoder().decode(WatchEvent.self, from: JSONSerialization.data(withJSONObject: eventObject))
         let receipt = String(decoding: try JSONSerialization.data(withJSONObject: ["event": eventObject, "added": true]), as: UTF8.self)
         StubProtocol.state.reset { request in
             if request.httpMethod == "POST" { return .init(receipt) }
@@ -452,7 +502,10 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertFalse(repeated)
         await store.undo()
         XCTAssertEqual(StubProtocol.state.recorded().filter { $0.httpMethod != "GET" }.count, 1)
-        XCTAssertEqual(StubProtocol.state.recorded().filter { $0.url?.path == "/api/workspace" }.count, 1, "Do not silently retry the refresh after acknowledging a confirmed write")
+        let refreshes = StubProtocol.state.recorded().filter { $0.url?.path == "/api/workspace" }
+        XCTAssertTrue((1...4).contains(refreshes.count))
+        XCTAssertEqual(Set(refreshes.compactMap { $0.url?.query }).count, refreshes.count,
+                       "Do not silently repeat any section after acknowledging a confirmed write")
         var reconciled = workspace; reconciled.events.append(event)
         let pages = try workspacePages(reconciled)
         StubProtocol.state.reset { request in
@@ -478,7 +531,9 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         let saved = await store.patch(title, values: ["favorite": !title.favorite])
         XCTAssertTrue(saved); XCTAssertTrue(store.needsSignIn); XCTAssertTrue(store.needsMutationRefresh)
         XCTAssertNotNil(store.mutationRefreshNotice); XCTAssertFalse(store.busy)
-        XCTAssertEqual(StubProtocol.state.recorded().map(\.httpMethod), ["PATCH", "GET"])
+        XCTAssertEqual(StubProtocol.state.recorded().first?.httpMethod, "PATCH")
+        XCTAssertTrue(StubProtocol.state.recorded().dropFirst().allSatisfy { $0.httpMethod == "GET" })
+        XCTAssertTrue((2...5).contains(StubProtocol.state.recorded().count))
         store.signOut()
         XCTAssertFalse(store.needsMutationRefresh); XCTAssertNil(store.mutationRefreshNotice)
         XCTAssertNil(store.undoLabel); XCTAssertTrue(store.workspace.titles.isEmpty)

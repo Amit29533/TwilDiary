@@ -127,10 +127,12 @@ import TwilDiaryCore
         let session = sessionGeneration, revision = UUID()
         snapshotGeneration = revision
         // Publish only a complete snapshot. A failed page cannot replace good data with a partial diary.
-        let titles = try await api.allPages("titles", as: MediaTitle.self)
-        let episodes = try await api.allPages("episodes", as: Episode.self)
-        let events = try await api.allPages("events", as: WatchEvent.self)
-        let locations = try await api.allPages("locations", as: FileLocation.self)
+        async let titlePages = api.allPages("titles", as: MediaTitle.self)
+        async let episodePages = api.allPages("episodes", as: Episode.self)
+        async let eventPages = api.allPages("events", as: WatchEvent.self)
+        async let locationPages = api.allPages("locations", as: FileLocation.self)
+        let (titles, episodes, events, locations) = try await (titlePages, episodePages, eventPages, locationPages)
+        try Task.checkCancellation()
         guard session == sessionGeneration, revision == snapshotGeneration, !needsSignIn else { throw CancellationError() }
         let snapshot = Workspace(titles: titles, episodes: episodes, events: events, locations: locations)
         workspace = snapshot; hasLoadedWorkspace = true; showingCachedSnapshot = false; lastRefreshedAt = .now
