@@ -30,8 +30,9 @@ jobs:
         with:
           path: ios/.spm
           key: spm-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/**/Package.resolved', 'ios/**/Package.swift', 'ios/project.yml') }}
-      - name: Cache core regression build
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+      - name: Restore core regression build
+        id: core-cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ios/Packages/TwilDiaryCore/.build
           key: core-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/Packages/TwilDiaryCore/Package.swift', 'ios/Packages/TwilDiaryCore/Sources/**', 'ios/Packages/TwilDiaryCore/Tests/**') }}
@@ -45,6 +46,12 @@ jobs:
           "$RUNNER_TEMP/twildiary-tools/xcodegen/bin/xcodegen" generate --spec ios/project.yml
       - name: Test core calculations and catalog contracts
         run: swift test --package-path ios/Packages/TwilDiaryCore 2>&1 | tee ios/.artifacts/logs/core-tests.log
+      - name: Save passing core regression build
+        if: ${{ success() && steps.core-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ios/Packages/TwilDiaryCore/.build
+          key: core-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/Packages/TwilDiaryCore/Package.swift', 'ios/Packages/TwilDiaryCore/Sources/**', 'ios/Packages/TwilDiaryCore/Tests/**') }}
       - name: Compile simulator and test bundles
         id: simulator
         run: bash ios/scripts/ci.sh build-simulator
