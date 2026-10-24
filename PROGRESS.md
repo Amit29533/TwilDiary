@@ -1,5 +1,17 @@
 # Native TwilDiary progress
 
+## Next user-requested batch — only after the preceding bug-fix batch is verified
+
+New24Oct device references f7536327 /4e7a07b4 /7100f25e /cc8340c4 queue these changes after build29 and its repairs:
+- Keep Library's Trash button, but make Trash a distinct destination/presentation rather than the archived Library/filter wrapper; preserve restore/permanent-delete safety and grid/list controls.
+- Add a title information icon/panel for genuine Trakt community statistics and sentiment, matching the stats/positive-negative reference. Verify official API availability and existing backend contracts first; no invented summaries, bundled credentials or unapproved hosted deployment. Small additive backend source/tests may be prepared but not deployed.
+- Glance menu: remove Open title, rename current-season completion to Mark complete without changing its current-season semantics.
+- Profile/fix navigation-bar stutter; use native back/swipe navigation, remove redundant Explore Done controls, add a compact artwork/title scrolled header like the reference.
+- Audit rounded corners and theme colors for all actionable controls; use native Liquid Glass where it fits, with a blurred artwork/dominant-color backdrop in Glass theme, respecting contrast and reduced transparency/motion.
+- Reduce repeated Trakt recommendation loading through a session-scoped cache, background refresh and generation guards; preserve truthful loading/outage/connection states.
+
+Do not start implementation of this follow-on while the previous requested fixes remain unverified. First finish active run40113092136 and all repairs, then work through this new batch with functional tests, screenshots and phone checks.
+
 ## Current continuation — build 29 pushed and awaiting CI
 
 Repo **Amit29533/TwilDiary**, branch **ios-native**, source reference web main b43454e. No main push, hosted write, backend change or deployment. The separate iOS repo is not the active build source.
