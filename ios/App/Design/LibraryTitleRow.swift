@@ -10,7 +10,7 @@ struct LibraryTitleRow: View {
 
     var body: some View {
         let score = store.publicScore(title, source: ratingSource)
-        let present = !archived && store.workspace.locations.contains { $0.titleId == title.id && $0.evidence == "present" }
+        let present = !archived && store.hasPresentLocation(title.id)
         HStack(spacing: 14) {
             Artwork(path: title.poster, title: title.name).frame(width: 72, height: 108)
                 .clipShape(RoundedRectangle(cornerRadius: 8))

@@ -237,7 +237,7 @@ struct PosterCard: View {
         }.contentShape(Rectangle()).accessibilityElement(children: .ignore).accessibilityLabel(title.name).accessibilityValue(accessibleDetails)
     }
     private var displayedScore: Double? { personalRating ? title.score : store.publicScore(title, source: ratingSource) }
-    private var present: Bool { !archived && store.workspace.locations.contains { $0.titleId == title.id && $0.evidence == "present" } }
+    private var present: Bool { !archived && store.hasPresentLocation(title.id) }
     private var accessibleDetails: String {
         [title.categoryName, archived ? "In Trash" : title.status.capitalized, displayedScore.map { "Rating " + $0.formatted(.number.precision(.fractionLength(1))) }, title.status != "completed" && progress > 0 ? "\(Int((progress * 100).rounded())) percent watched" : nil, title.queued == true ? "In Queue" : nil, !personalRating && present ? "On your PC" : nil].compactMap { $0 }.joined(separator: ", ")
     }
@@ -265,7 +265,7 @@ struct PosterCard: View {
         }
     }
     private var progress: Double {
-        LibraryProgress.fraction(title: title, workspace: store.workspace)
+        store.libraryProgress(title)
     }
 }
 

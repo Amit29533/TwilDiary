@@ -192,6 +192,29 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertFalse(store.hasLoadedWorkspace)
         XCTAssertNil(storage.credential)
     }
+    func testLibraryPresentationIndexReconcilesHistoryLocationsAndSignOutWithTheWorkspace() throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage))
+        var workspace = PreviewData.workspace
+        let title = try XCTUnwrap(workspace.titles.first { $0.id == "again" })
+        store.workspace = workspace
+        XCTAssertEqual(store.libraryProgress(title), 0.5)
+        XCTAssertTrue(store.hasPresentLocation("frieren"))
+        XCTAssertFalse(store.hasPresentLocation("again"))
+        let repeated = workspace.events
+        workspace.events.append(contentsOf: repeated)
+        store.workspace = workspace
+        XCTAssertEqual(store.libraryProgress(title), 0.5, "Repeated viewings must not inflate episode progress")
+        workspace.events = []; workspace.locations = []
+        workspace.titles[0].name = "Reconciled title"
+        store.workspace = workspace
+        XCTAssertEqual(store.libraryProgress(title), 0)
+        XCTAssertFalse(store.hasPresentLocation("frieren"))
+        XCTAssertEqual(store.title(workspace.titles[0].id)?.name, "Reconciled title")
+        store.signOut()
+        XCTAssertNil(store.title(title.id)); XCTAssertEqual(store.libraryProgress(title), 0)
+        XCTAssertFalse(store.hasPresentLocation("frieren"))
+    }
 
     func testFailedRefreshPreservesPreviouslyLoadedDiaryAndSession() async {
         StubProtocol.state.reset { _ in .init(503, "Service temporarily unavailable", contentType: "text/plain") }

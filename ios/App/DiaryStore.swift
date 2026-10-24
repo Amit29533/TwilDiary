@@ -2,8 +2,10 @@ import SwiftUI
 import TwilDiaryCore
 
 @MainActor @Observable final class DiaryStore {
-    var workspace = Workspace() { didSet { indexTitles() } }
+    var workspace = Workspace() { didSet { indexWorkspace() } }
     private var titleIndex: [String: MediaTitle] = [:]
+    private var progressIndex: [String: Double] = [:]
+    private var presentTitleIDs = Set<String>()
     var cachedPeople: [Int: (at: Date, value: PersonResponse)] = [:]
     var loading = false
     var busy = false
@@ -66,7 +68,7 @@ import TwilDiaryCore
             needsSignIn = self.api.credential == nil
             restoreCachedWorkspace()
         }
-        indexTitles()
+        indexWorkspace()
     }
     func connect(_ credential: AccessCredential) async {
         let previousScope = api.credential?.cacheScope
@@ -147,8 +149,18 @@ import TwilDiaryCore
         workspace = snapshot.workspace; hasLoadedWorkspace = true
         showingCachedSnapshot = true; lastRefreshedAt = snapshot.savedAt
     }
-    private func indexTitles() { titleIndex = Dictionary(workspace.titles.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest }) }
+    private func indexWorkspace() {
+        titleIndex = Dictionary(workspace.titles.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
+        let events = Dictionary(grouping: workspace.activeEvents, by: \.titleId)
+        let episodes = Dictionary(grouping: workspace.episodes, by: \.titleId)
+        progressIndex = titleIndex.mapValues { title in
+            LibraryProgress.fraction(title: title, episodes: episodes[title.id] ?? [], activeEvents: events[title.id] ?? [])
+        }
+        presentTitleIDs = Set(workspace.locations.filter { $0.evidence == "present" }.map(\.titleId))
+    }
     func title(_ id: String) -> MediaTitle? { titleIndex[id] }
+    func libraryProgress(_ title: MediaTitle) -> Double { progressIndex[title.id] ?? 0 }
+    func hasPresentLocation(_ titleID: String) -> Bool { presentTitleIDs.contains(titleID) }
     func browserCredential() -> AccessCredential? { api.credential }
     func read<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> T {
         #if DEBUG
