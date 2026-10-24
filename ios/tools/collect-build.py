@@ -35,7 +35,15 @@ for name in ['simulator-build.log', 'device-build.log', 'core-tests.log']:
         raise SystemExit('Build warnings are present in ' + name)
     if name != 'core-tests.log' and '** BUILD SUCCEEDED **' not in value and '** TEST BUILD SUCCEEDED **' not in value:
         raise SystemExit('Compilation did not complete: ' + name)
-passed = re.findall(r"Test Case '-\[(\S+) ([^]]+)\]' passed", text)
+unit_text = ""
+unit_log = logs / 'unit-tests.log'
+if unit_log.exists():
+    unit_text = unit_log.read_text(encoding='utf-8', errors='replace')
+    if '** TEST EXECUTE SUCCEEDED **' not in unit_text or re.search(r"Test Case .* failed", unit_text):
+        raise SystemExit('Native unit tests did not complete successfully.')
+elif int(args.build) >= 30:
+    raise SystemExit('Missing the required native unit-test stage.')
+passed = re.findall(r"Test Case '-\[(\S+) ([^]]+)\]' passed", text + "\n" + unit_text)
 unit = len({(suite, name) for suite, name in passed if suite.startswith('TwilDiaryTests.')})
 ui = len({(suite, name) for suite, name in passed if suite.startswith('TwilDiaryUITests.')})
 if not unit or not ui:

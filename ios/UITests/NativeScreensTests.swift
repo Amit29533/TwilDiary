@@ -739,7 +739,7 @@ import UIKit
         XCTAssertTrue(app.buttons["catalog-add"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.keyboards.firstMatch.exists)
         // A short edge gesture cancels the interactive pop; the old search keyboard stays dismissed.
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.3)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.3)))
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.01, dy: 0.3)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.3)), withVelocity: .slow, thenHoldForDuration: 0.7)
         XCTAssertTrue(app.buttons["catalog-add"].exists); XCTAssertFalse(app.keyboards.firstMatch.exists)
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(field.waitForExistence(timeout: 5)); XCTAssertEqual(field.value as? String, "Clockmaker")
@@ -842,8 +842,9 @@ import UIKit
             XCTAssertTrue(entry.isHittable, entryID); entry.tap()
             let done = app.buttons[doneID]
             XCTAssertTrue(done.waitForExistence(timeout: 10), doneID); done.tap()
-            XCTAssertFalse(done.exists, "Done must pop exactly the page that owns it")
             XCTAssertTrue(app.buttons["settings-trakt-summary"].waitForExistence(timeout: 5))
+            wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: done)], timeout: 5)
+            XCTAssertTrue(entry.exists, "Done must return to the same settings stack")
         }
         capture("All settings Done destinations return")
     }

@@ -66,6 +66,9 @@ jobs:
       - name: Wait for simulator readiness
         timeout-minutes: 15
         run: bash ios/scripts/ci.sh boot
+      - name: Run native unit tests before UI regressions
+        timeout-minutes: 20
+        run: bash ios/scripts/ci.sh test-unit
       - name: Verify progress, navigation and recent device regressions before Release
         timeout-minutes: 20
         run: bash ios/scripts/ci.sh test-progress
@@ -85,18 +88,18 @@ jobs:
             ios/.artifacts/TwilDiary-unsigned.ipa.sha256
           if-no-files-found: error
           retention-days: 14
-      - name: Save compiled native targets
-        if: ${{ success() && steps.native-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
-        with:
-          path: ios/.derived
-          key: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/App/**', 'ios/Tests/**', 'ios/UITests/**', 'ios/Packages/**/Sources/**', 'ios/Packages/**/Tests/**', 'ios/Packages/**/Package.swift', 'ios/project.yml', 'ios/scripts/ci.sh') }}
-      - name: Run unit and UI tests
+      - name: Run complete primary iPhone UI regression
         timeout-minutes: 60
         run: bash ios/scripts/ci.sh test
       - name: Run compact and large iPhone layout regression
         timeout-minutes: 25
         run: bash ios/scripts/ci.sh test-layouts
+      - name: Save compiled native targets
+        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.native-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ios/.derived
+          key: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/App/**', 'ios/Tests/**', 'ios/UITests/**', 'ios/Packages/**/Sources/**', 'ios/Packages/**/Tests/**', 'ios/Packages/**/Package.swift', 'ios/project.yml', 'ios/scripts/ci.sh') }}
       - name: Export screenshots
         if: always()
         run: bash ios/scripts/ci.sh screenshots

@@ -53,6 +53,12 @@ PY
   boot)
     xcrun simctl bootstatus "$SIMULATOR_ID" -b 2>&1 | tee "$ARTIFACTS/logs/simulator-boot.log"
     ;;
+  test-unit)
+    xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
+      -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 180 \
+      -only-testing:TwilDiaryTests -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/UnitTests.xcresult" \
+      2>&1 | tee "$ARTIFACTS/logs/unit-tests.log"
+    ;;
   test-progress)
     xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 360 \
@@ -70,7 +76,7 @@ PY
       2>&1 | tee "$ARTIFACTS/logs/progress-tests.log"
     ;;
   test)
-    xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
+    xcodebuild test-without-building -only-testing:TwilDiaryUITests "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 360 -derivedDataPath "$PWD/ios/.derived/simulator" \
       -resultBundlePath "$ARTIFACTS/Tests.xcresult" 2>&1 | tee "$ARTIFACTS/logs/tests.log"
     ;;
@@ -114,6 +120,9 @@ for path in sorted((folder / 'logs').glob('*.log')):
 progress_log = folder / 'logs' / 'progress-tests.log'
 if progress_log.exists() and '** TEST EXECUTE SUCCEEDED **' not in progress_log.read_text(errors='replace'):
     errors.append('Progress drag/Undo preflight did not complete successfully; inspect ProgressGate.xcresult.')
+unit_log = folder / 'logs' / 'unit-tests.log'
+if not unit_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in unit_log.read_text(errors='replace'):
+    errors.append('Native unit execution did not finish successfully; inspect UnitTests.xcresult.')
 test_log = folder / 'logs' / 'tests.log'
 if not test_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in test_log.read_text(errors='replace'):
     errors.append('tests.log: Unit/UI execution did not finish successfully; inspect the job timeout and xcresult before accepting this build.')
