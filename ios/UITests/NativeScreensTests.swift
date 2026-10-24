@@ -133,8 +133,17 @@ import UIKit
     func testRandomPickKeepsPlannedScopeAndLogoRerollsWithoutRepeating() {
         let app = launch(); app.buttons["tab-home"].tap()
         let planned = app.buttons["home-pick-planned"]
-        for _ in 0..<8 { if planned.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(planned.isHittable); planned.tap()
+        func revealPlanned() {
+            // A partially visible row can be AX-hittable while its lower part
+            // sits beneath the floating navigation bar. Reveal the whole action.
+            for _ in 0..<8 {
+                if planned.isHittable && planned.frame.minY > 120 && planned.frame.maxY < app.buttons["tab-home"].frame.minY - 8 { break }
+                if planned.exists && planned.frame.minY < 120 { app.swipeDown() } else { app.swipeUp() }
+            }
+            XCTAssertTrue(planned.isHittable)
+            XCTAssertLessThan(planned.frame.maxY, app.buttons["tab-home"].frame.minY - 8)
+        }
+        revealPlanned(); planned.tap()
         let name = app.staticTexts["random-picked-name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5)); XCTAssertEqual(name.label, "A Quiet Orbit")
         let dialog = app.descendants(matching: .any)["random-pick-dialog"]
@@ -146,7 +155,7 @@ import UIKit
         XCTAssertTrue(app.buttons["random-pick-open"].exists, "A background tap must keep Surprise open")
         dialog.swipeUp()
         XCTAssertFalse(app.buttons["Close random pick"].exists)
-        planned.tap(); XCTAssertTrue(name.waitForExistence(timeout: 5))
+        revealPlanned(); planned.tap(); XCTAssertTrue(name.waitForExistence(timeout: 5))
         app.descendants(matching: .any)["random-pick-dialog"].swipeDown()
         XCTAssertFalse(app.buttons["Close random pick"].exists)
         let logo = app.buttons["random-pick-logo"]

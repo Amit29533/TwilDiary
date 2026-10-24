@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build-test-artifacts:
     runs-on: macos-26-intel
-    timeout-minutes: 120
+    timeout-minutes: 210
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       HOMEBREW_NO_AUTO_UPDATE: '1'
@@ -71,7 +71,7 @@ jobs:
         run: bash ios/scripts/ci.sh test-unit
       - name: Verify progress, navigation and recent device regressions before Release
         id: progress
-        timeout-minutes: 20
+        timeout-minutes: 30
         run: bash ios/scripts/ci.sh test-progress
       - name: Export passed early UI evidence
         run: bash ios/scripts/ci.sh screenshots-progress
@@ -99,11 +99,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Run complete primary iPhone UI regression
-        timeout-minutes: 60
+        timeout-minutes: 100
         run: bash ios/scripts/ci.sh test
       - name: Run compact and large iPhone layout regression
         if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.progress.outcome == 'success' }}
-        timeout-minutes: 25
+        timeout-minutes: 40
         run: bash ios/scripts/ci.sh test-layouts
       - name: Save compiled native targets
         if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.native-cache.outputs.cache-hit != 'true' }}

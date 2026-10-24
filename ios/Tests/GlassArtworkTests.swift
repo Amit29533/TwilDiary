@@ -10,9 +10,11 @@ final class GlassArtworkTests: XCTestCase {
     }
     func testDominantSamplingUsesTheMostFrequentColorAndIgnoresLetterboxAndTransparency() {
         let green: [UInt8] = [32, 160, 80, 255], red: [UInt8] = [210, 20, 50, 255]
-        let bytes = Array(repeating: green, count: 8).flatMap { $0 } + Array(repeating: red, count: 3).flatMap { $0 }
-            + Array(repeating: [UInt8](arrayLiteral: 0, 0, 0, 255), count: 20).flatMap { $0 }
-            + Array(repeating: [UInt8](arrayLiteral: 255, 255, 255, 0), count: 20).flatMap { $0 }
+        var bytes: [UInt8] = []
+        for _ in 0..<8 { bytes.append(contentsOf: green) }
+        for _ in 0..<3 { bytes.append(contentsOf: red) }
+        for _ in 0..<20 { bytes.append(contentsOf: [0, 0, 0, 255]) }
+        for _ in 0..<20 { bytes.append(contentsOf: [255, 255, 255, 0]) }
         let value = GlassArtworkCache.dominant(bytes)
         XCTAssertEqual(value.0, 32.0 / 255, accuracy: 0.001)
         XCTAssertEqual(value.1, 160.0 / 255, accuracy: 0.001)

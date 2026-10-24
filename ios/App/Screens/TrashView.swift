@@ -65,8 +65,9 @@ struct TrashView: View {
             .onChange(of: category) { _, _ in selected = []; selecting = false }
             .onChange(of: archived.map(\.id)) { _, ids in selected.formIntersection(ids); if ids.isEmpty { selecting = false } }
             .sheet(item: $review) { value in CollectionReviewView(review: value) { selected = []; selecting = false } }
-            .confirmationDialog("Empty Trash?", isPresented: $confirmEmpty, titleVisibility: .visible) {
+            .alert("Empty Trash?", isPresented: $confirmEmpty) {
                 Button("Empty Trash", role: .destructive) { Task { await store.emptyTrash() } }
+                Button("Cancel", role: .cancel) { }
             } message: { Text("This permanently removes every title in Trash and its diary history. Files on your disks stay untouched.") }
     }
     private var archived: [MediaTitle] { store.workspace.titles.filter { $0.deletedAt != nil } }
