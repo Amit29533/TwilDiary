@@ -2145,6 +2145,277 @@
     "passed": true
   },
   {
+    "id": "catalog-revealed-episode",
+    "path": "/preview/discover/tv/900001",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1633,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Back",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Add to Planned",
+        "value": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": "Season 1 episodes watched",
+        "value": "0"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Season",
+        "value": "1"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 1 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 2 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 3 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 4 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Show all 12 episodes",
+        "value": ""
+      }
+    ],
+    "file": "catalog-revealed-episode.png",
+    "sha256": "764d0e06f9271299764525fcedb82230c4b5995bbc7a6d100536e39e8901e4bb",
+    "passed": true
+  },
+  {
+    "id": "catalog-second-season",
+    "path": "/preview/discover/tv/900001",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1603,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Back",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Add to Planned",
+        "value": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": "Season 2 episodes watched",
+        "value": "0"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Season",
+        "value": "2"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 1 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 2 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 3 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 4 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Show all 12 episodes",
+        "value": ""
+      }
+    ],
+    "file": "catalog-second-season.png",
+    "sha256": "117bd9e5c004fc5db58c8abad80ee26cbfceb9e2b2909b3c4cb8a1b362216878",
+    "passed": true
+  },
+  {
+    "id": "catalog-all-episodes",
+    "path": "/preview/discover/tv/900001",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 2275,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Back",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Add to Planned",
+        "value": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": "Season 1 episodes watched",
+        "value": "0"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Season",
+        "value": "1"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 1 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 2 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 3 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 4 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 5 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 6 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 7 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 8 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 9 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 10 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 11 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 12 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Show fewer episodes",
+        "value": ""
+      }
+    ],
+    "file": "catalog-all-episodes.png",
+    "sha256": "a811a4e39f9c63d0ea21b537386d57701563df63aa2b1c46befa64550430f7d6",
+    "passed": true
+  },
+  {
     "id": "person",
     "path": "/preview/person/700001",
     "scenario": "default",

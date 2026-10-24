@@ -1,0 +1,78 @@
+import XCTest
+import TwilDiaryCore
+@testable import TwilDiary
+
+@MainActor final class CatalogEpisodeTests: XCTestCase {
+    private func page(_ number: Int) -> CatalogEpisodesPage {
+        CatalogEpisodesPage(items: [CatalogEpisode(number: number, name: "Chapter", overview: "Summary", airedOn: nil, stillPath: nil, communityScore: nil)])
+    }
+    func testSeasonCacheUpgradesToRevealedAndKeepsItWhenReturning() async {
+        var calls: [String] = []
+        let controller = CatalogEpisodeController { season, reveal in calls.append("\(season):\(reveal)"); return self.page(season) }
+        await controller.load(1); await controller.load(1)
+        await controller.load(1, reveal: true); await controller.load(1)
+        await controller.load(2); await controller.load(1)
+        XCTAssertEqual(calls, ["1:false", "1:true", "2:false"])
+        XCTAssertTrue(controller.revealed); XCTAssertEqual(controller.items.first?.number, 1)
+        await controller.load(1, reveal: true, force: true)
+        XCTAssertEqual(calls.count, 4)
+    }
+    func testLateSeasonCannotReplaceTheSelectedSeason() async {
+        var pending: CheckedContinuation<CatalogEpisodesPage, any Error>?
+        let controller = CatalogEpisodeController { season, _ in
+            if season == 1 { return try await withCheckedThrowingContinuation { pending = $0 } }
+            return self.page(season)
+        }
+        let first = Task { await controller.load(1) }
+        while pending == nil { await Task.yield() }
+        await controller.load(2); pending?.resume(returning: page(1)); await first.value
+        XCTAssertEqual(controller.season, 2); XCTAssertEqual(controller.items.first?.number, 2); XCTAssertFalse(controller.loading)
+    }
+    func testFailedRevealPreservesRowsAndCanRetry() async {
+        var fail = true
+        let controller = CatalogEpisodeController { _, reveal in
+            if reveal && fail { throw APIError.message("Provider unavailable") }
+            return self.page(1)
+        }
+        await controller.load(1); await controller.load(1, reveal: true)
+        XCTAssertEqual(controller.items.count, 1); XCTAssertNotNil(controller.error); XCTAssertFalse(controller.revealed)
+        fail = false; await controller.load(1, reveal: true)
+        XCTAssertNil(controller.error); XCTAssertTrue(controller.revealed)
+    }
+    func testCancelledRevealDoesNotCacheAFalseSuccess() async {
+        var pending: CheckedContinuation<CatalogEpisodesPage, any Error>?
+        let controller = CatalogEpisodeController { _, reveal in
+            if reveal { return try await withCheckedThrowingContinuation { pending = $0 } }
+            return self.page(1)
+        }
+        let task = Task { await controller.load(1, reveal: true) }
+        while pending == nil { await Task.yield() }
+        task.cancel(); pending?.resume(returning: page(1)); await task.value
+        XCTAssertFalse(controller.revealed); XCTAssertFalse(controller.loading); XCTAssertNil(controller.error)
+        await controller.load(1); XCTAssertEqual(controller.items.count, 1)
+    }
+    private struct ImportReceipt: Decodable { let title: MediaTitle; let added: Bool }
+    func testIsolatedImportIsIdempotentAndPreservesPersonalData() throws {
+        let fixture = FixtureDiaryBackend(workspace: PreviewData.workspace)
+        let body: [String: Any] = ["mediaType": "tv", "tmdbId": 900001, "category": "anime", "status": "planned"]
+        let first: ImportReceipt = try fixture.request("/api/metadata/import", method: "POST", body: body)
+        XCTAssertTrue(first.added); XCTAssertEqual(first.title.id, "tmdb-tv-900001"); XCTAssertNil(first.title.score)
+        XCTAssertEqual(first.title.seasons?.count, 2); XCTAssertFalse(fixture.workspace.episodes.contains { $0.titleId == first.title.id })
+        let _: EmptyResponse = try fixture.request("/api/titles/" + first.title.id, method: "PATCH", body: ["expectedVersion": 1, "notes": "Keep this", "score": 8.5])
+        let again: ImportReceipt = try fixture.request("/api/metadata/import", method: "POST", body: body)
+        XCTAssertFalse(again.added); XCTAssertEqual(again.title.notes, "Keep this"); XCTAssertEqual(again.title.score, 8.5)
+        XCTAssertEqual(fixture.workspace.titles.filter { $0.id == first.title.id }.count, 1)
+        let movie: ImportReceipt = try fixture.request("/api/metadata/import", method: "POST", body: ["mediaType": "movie", "tmdbId": 900001, "category": "movie", "status": "planned"])
+        XCTAssertNotEqual(first.title.id, movie.title.id); XCTAssertEqual(movie.title.seasons?.count, 0)
+    }
+    func testIsolatedImportRejectsTrashAndInvalidCategoryAtomically() throws {
+        let fixture = FixtureDiaryBackend(workspace: PreviewData.workspace)
+        let body: [String: Any] = ["mediaType": "tv", "tmdbId": 900001, "category": "anime", "status": "planned"]
+        let first: ImportReceipt = try fixture.request("/api/metadata/import", method: "POST", body: body)
+        let _: EmptyResponse = try fixture.request("/api/titles/" + first.title.id, method: "DELETE", body: ["expectedVersion": first.title.version ?? 1])
+        let count = fixture.workspace.titles.count
+        XCTAssertThrowsError(try fixture.request("/api/metadata/import", method: "POST", body: body) as ImportReceipt)
+        XCTAssertThrowsError(try fixture.request("/api/metadata/import", method: "POST", body: ["mediaType": "tv", "tmdbId": 900003, "category": "movie", "status": "planned"]) as ImportReceipt)
+        XCTAssertEqual(fixture.workspace.titles.count, count)
+    }
+}

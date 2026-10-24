@@ -25,7 +25,23 @@ import TwilDiaryCore
         var response: [String: Any] = [:]
         var purged = Set<String>()
         var resolvedScan: String?
-        if route == "/api/scanner/review", method == "GET" {
+        if route == "/api/metadata/import", method == "POST" {
+            guard let id = body["tmdbId"] as? Int, id > 0, let media = body["mediaType"] as? String, let kind = MediaKind(rawValue: media), let category = body["category"] as? String,
+                  (kind == .tv ? ["show", "anime"] : ["movie", "anime-movie"]).contains(category), body["status"] as? String == "planned" else { throw APIError.rejected(400, "The category must match this movie or series.") }
+            if let existing = workspace.titles.first(where: { $0.tmdbId == id && $0.isSeries == (kind == .tv) }) {
+                guard existing.deletedAt == nil else { throw APIError.rejected(409, "This title is already in Trash. Restore it instead of adding a second copy.") }
+                response = ["title": try object(existing), "added": false]
+            } else {
+                let details = PreviewCatalog.browse(CatalogRoute(kind: kind, id: id)).details
+                let seasonObjects: [[String: Any]]
+                if kind == .tv { seasonObjects = try objects(details.seasons ?? []) } else { seasonObjects = [] }
+                let title: [String: Any] = ["id": "tmdb-\(media)-\(id)", "name": details.name, "category": category, "year": details.year as Any? ?? NSNull(), "overview": details.overview,
+                    "poster": CatalogTools.image(details.posterPath) as Any? ?? NSNull(), "backdrop": CatalogTools.image(details.backdropPath, size: "w780") as Any? ?? NSNull(), "communityScore": details.communityScore as Any? ?? NSNull(), "tmdbId": id,
+                    "genres": details.genres, "tags": [], "runtimeMinutes": details.runtimeMinutes as Any? ?? NSNull(), "status": "planned", "favorite": false, "queued": false, "score": NSNull(), "notes": "", "deletedAt": NSNull(), "version": 1,
+                    "seasons": seasonObjects]
+                titles.append(title); response = ["title": title, "added": true]
+            }
+        } else if route == "/api/scanner/review", method == "GET" {
             response = ["items": scans, "nextCursor": NSNull()]
         } else if parts.count == 5, Array(parts.prefix(3)) == ["api", "scanner", "review"], parts[4] == "resolve", method == "POST" {
             guard let scan = scans.first(where: { $0["id"] as? String == parts[3] }), scan["version"] as? Int == body["expectedVersion"] as? Int,

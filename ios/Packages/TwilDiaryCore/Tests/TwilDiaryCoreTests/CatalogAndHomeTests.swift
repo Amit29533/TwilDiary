@@ -47,3 +47,10 @@ import Testing
     workspace.events.append(workspace.events[0])
     #expect(LibraryProgress.fraction(title: title, workspace: workspace) == 0.5)
 }
+
+@Test func catalogSeasonManifestAndSpoilerSafeEpisodeContractDecode() throws {
+    let details = try JSONDecoder().decode(CatalogDetails.self, from: Data(#"{"id":42,"mediaType":"tv","name":"Example","year":null,"overview":"","posterPath":null,"backdropPath":null,"genres":[],"runtimeMinutes":24,"communityScore":8.4,"suggestedCategory":"anime","seasons":[{"number":0,"name":"Specials","expectedEpisodes":2},{"number":1,"name":"Season 1","expectedEpisodes":28}]}"#.utf8))
+    #expect(details.seasons?.map(\.number) == [0, 1]); #expect(details.seasons?.last?.expectedEpisodes == 28)
+    let page = try JSONDecoder().decode(CatalogEpisodesPage.self, from: Data(#"{"items":[{"number":1,"name":"","overview":"","airedOn":null,"stillPath":null,"communityScore":8.1}],"stale":false}"#.utf8))
+    #expect(page.items.first?.name == ""); #expect(page.items.first?.communityScore == 8.1)
+}

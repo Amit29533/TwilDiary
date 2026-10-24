@@ -36,12 +36,19 @@ extension DiaryStore {
         cachedPeople[id] = (.now, response)
         return response
     }
+    func catalogEpisodes(_ route: CatalogRoute, season: Int, reveal: Bool) async throws -> CatalogEpisodesPage {
+        guard route.kind == .tv, (0...999).contains(season) else { throw APIError.message("Choose a valid series season.") }
+        if isPreview {
+            return CatalogEpisodesPage(items: (1...12).map { CatalogEpisode(number: $0, name: reveal ? "Chapter \($0)" : "", overview: reveal ? "Reference episode summary." : "", airedOn: "2024-01-01", stillPath: reveal ? "/reference_backdrop.jpg" : nil, communityScore: 8.1) })
+        }
+        return try await read(CatalogTools.apiPath("/api/metadata/season", query: ["type": route.kind.rawValue, "id": String(route.id), "season": String(season), "reveal": reveal ? "1" : "0"]))
+    }
     func importTitle(_ details: CatalogDetails, category: String) async -> String? {
-        guard !busy, !isPreview else { return nil }
+        guard !busy, canMutate else { return nil }
         busy = true; defer { busy = false }
         var confirmed = false
         do {
-            let result: ImportedTitle = try await read("/api/metadata/import", method: "POST", body: ["mediaType": details.mediaType.rawValue, "tmdbId": details.id, "category": category, "status": "planned"])
+            let result: ImportedTitle = try await read("/api/metadata/import", method: "POST", body: ["mediaType": details.mediaType.rawValue, "tmdbId": details.id, "category": category, "status": "planned", "score": NSNull()])
             confirmed = true
             try await reload()
             error = nil

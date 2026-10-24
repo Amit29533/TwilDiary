@@ -99,6 +99,37 @@ import UIKit
         XCTAssertTrue(actor.waitForExistence(timeout: 5)); actor.tap()
         XCTAssertTrue(app.staticTexts["Facts & trivia"].waitForExistence(timeout: 10)); capture("Cast profile")
     }
+    func testCatalogSeriesSeasonsSpoilersAndImport() {
+        let app = launch(mutations: true); app.buttons["tab-home"].tap(); app.buttons["search-twildiary"].tap()
+        let search = app.textFields["Search library and online"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5)); search.tap(); search.typeText("Quiet Journey\n")
+        let result = app.buttons["search-tv:900002"]
+        XCTAssertTrue(result.waitForExistence(timeout: 10)); result.tap()
+        XCTAssertTrue(app.buttons["catalog-add"].waitForExistence(timeout: 10)); capture("Catalog series hero")
+        let season = app.buttons["catalog-season"]
+        for _ in 0..<6 { if season.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(season.isHittable)
+        let first = app.buttons["catalog-episode-1"]
+        XCTAssertTrue(first.waitForExistence(timeout: 5)); capture("Catalog spoiler-safe episodes")
+        first.tap(); XCTAssertTrue(app.staticTexts["Reference episode summary."].waitForExistence(timeout: 5)); capture("Catalog revealed episode")
+        season.tap(); app.buttons["Season 2"].tap()
+        XCTAssertTrue(app.buttons["catalog-episode-1"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Reference episode summary."].exists, "Expansion state must reset on season change")
+        capture("Catalog second season")
+        let showAll = app.buttons["Show all 12 episodes"]
+        for _ in 0..<6 { if showAll.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(showAll.isHittable); showAll.tap()
+        let last = app.buttons["catalog-episode-12"]
+        for _ in 0..<8 { if last.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(last.isHittable); capture("Catalog all episodes")
+        let add = app.buttons["catalog-add"]
+        for _ in 0..<12 { if add.isHittable { break }; app.swipeDown() }
+        XCTAssertTrue(add.isHittable); add.tap()
+        XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons["title-personal-rating"].value as? String, "Not rated")
+        XCTAssertTrue(app.buttons["title-watch-status"].exists); capture("Catalog imported title")
+    }
+
     func testExploreAndHomeStatsShortcut() {
         let app = launch(); app.buttons["tab-home"].tap()
         let explore = app.buttons["explore-shortcut"]

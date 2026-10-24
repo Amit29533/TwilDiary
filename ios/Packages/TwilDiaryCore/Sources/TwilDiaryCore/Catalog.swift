@@ -69,6 +69,7 @@ public struct CatalogDetails: Decodable, Sendable {
     public let runtimeMinutes: Int?
     public let communityScore: Double?
     public let suggestedCategory: String
+    public let seasons: [Season]?
 }
 
 public struct CatalogBrowse: Decodable, Sendable {

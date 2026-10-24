@@ -26,6 +26,7 @@ enum PreviewCatalog {
         details["id"] = route.id; details["mediaType"] = route.kind.rawValue
         details["suggestedCategory"] = route.kind == .movie ? "movie" : "anime"
         details["runtimeMinutes"] = route.kind == .movie ? 112 : 24
+        if route.kind == .movie { details["seasons"] = [] }
         value["details"] = details
         return try! JSONDecoder().decode(CatalogBrowse.self, from: JSONSerialization.data(withJSONObject: value))
     }

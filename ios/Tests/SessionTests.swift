@@ -74,6 +74,40 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         return DiaryAPI(configuration: configuration, storage: storage)
     }
 
+    func testCatalogSeasonUsesReadOnlyEndpointAndExplicitSpoilerChoice() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { _ in .init(#"{"items":[{"number":1,"name":"","overview":"","airedOn":null,"stillPath":null,"communityScore":8.1}]}"#) }
+        let store = DiaryStore(api: api(storage))
+        let result = try await store.catalogEpisodes(CatalogRoute(kind: .tv, id: 900001), season: 2, reveal: false)
+        XCTAssertEqual(result.items.first?.name, "")
+        _ = try await store.catalogEpisodes(CatalogRoute(kind: .tv, id: 900001), season: 2, reveal: true)
+        let requests = StubProtocol.state.recorded()
+        XCTAssertEqual(requests.count, 2)
+        for request in requests { XCTAssertEqual(request.httpMethod, "GET"); XCTAssertEqual(request.url?.path, "/api/metadata/season") }
+        let firstQuery = URLComponents(url: try XCTUnwrap(requests.first?.url), resolvingAgainstBaseURL: false)?.queryItems
+        XCTAssertEqual(firstQuery?.first { $0.name == "season" }?.value, "2")
+        XCTAssertEqual(firstQuery?.first { $0.name == "reveal" }?.value, "0")
+        let lastQuery = URLComponents(url: try XCTUnwrap(requests.last?.url), resolvingAgainstBaseURL: false)?.queryItems
+        XCTAssertEqual(lastQuery?.first { $0.name == "reveal" }?.value, "1")
+        do { _ = try await store.catalogEpisodes(CatalogRoute(kind: .movie, id: 900001), season: 1, reveal: false); XCTFail("Movies must not fetch seasons") } catch { }
+        XCTAssertEqual(StubProtocol.state.recorded().count, 2)
+    }
+    func testCatalogImportRefreshFailureKeepsConfirmedIdentityRetrySafe() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { request in
+            if request.url?.path == "/api/metadata/import" { return .init(#"{"title":{"id":"tmdb-tv-900001"}}"#) }
+            return .init(503, #"{"error":{"message":"Synthetic read outage"}}"#)
+        }
+        let store = DiaryStore(api: api(storage)), details = PreviewCatalog.browse(CatalogRoute(kind: .tv, id: 900001)).details
+        let first = await store.importTitle(details, category: details.suggestedCategory)
+        XCTAssertNil(first); XCTAssertFalse(store.busy)
+        XCTAssertTrue(store.error?.contains("a second copy will not be created") == true)
+        let request = try XCTUnwrap(StubProtocol.state.recorded().first)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: try XCTUnwrap(request.httpBody)) as? [String: Any])
+        XCTAssertEqual(request.httpMethod, "POST"); XCTAssertEqual(body["mediaType"] as? String, "tv"); XCTAssertEqual(body["tmdbId"] as? Int, 900001)
+        XCTAssertEqual(body["status"] as? String, "planned"); XCTAssertTrue(body["score"] is NSNull)
+    }
+
     func testSignInSurvivesDatabaseQuotaAndDoesNotProbeWorkspaceForAuthentication() async {
         StubProtocol.state.reset { request in
             if request.url?.path == "/api/session" { return .init(#"{"authenticated":true}"#) }

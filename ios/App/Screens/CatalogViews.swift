@@ -134,60 +134,127 @@ struct CatalogDetailView: View {
     let route: CatalogRoute
     var onImported: ((String) -> Void)? = nil
     @Environment(DiaryStore.self) private var store
+    @Environment(AppRouter.self) private var router
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
     @State private var details: CatalogBrowse?
     @State private var failure: String?
     @State private var loading = false
-    @State private var category = "show"
+    @State private var showOverview = false
     @State private var importedID: String?
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 28) {
                 if let details {
-                    if let saved = details.libraryTitle {
-                        if saved.trashed {
-                            Text("This title is in Trash").font(.title2.bold())
-                            if let title = store.title(saved.id) { Button("Restore to Library") { Task { if await store.restore(title) { accepted(title.id) } } }.buttonStyle(.borderedProminent).disabled(store.busy) }
-                        } else if let onImported { Button("Use this title") { onImported(saved.id) }.buttonStyle(.borderedProminent) }
-                        else { NavigationLink(value: saved.id) { Text("Open in Library →").font(.headline) } }
+                    TitleHero(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), year: details.details.year, category: details.details.suggestedCategory == "anime-movie" ? "Anime movie" : details.details.suggestedCategory.capitalized, runtime: details.details.runtimeMinutes, series: route.kind == .tv, score: details.details.communityScore, summary: details.details.overview, expanded: $showOverview) { EmptyView() }
+                    if details.libraryTitle?.trashed == true {
+                        Button("Restore from Trash") { router.paths[router.selectedTab, default: NavigationPath()].append(AppDestination.trash) }.buttonStyle(.borderedProminent).controlSize(.large)
+                    } else if let saved = details.libraryTitle {
+                        Button("Open in Library") { accepted(saved.id) }.buttonStyle(.borderedProminent).controlSize(.large)
+                    } else {
+                        Button { Task { if let id = await store.importTitle(details.details, category: details.details.suggestedCategory) { accepted(id) } } } label: {
+                            Text(store.busy ? "Adding…" : "Add to Planned").font(.system(size: 15, weight: .semibold)).foregroundStyle(theme.ink).frame(maxWidth: .infinity).frame(minHeight: 48)
+                        }.buttonStyle(.plain).background(theme.accent, in: RoundedRectangle(cornerRadius: 14)).disabled(store.busy || !store.canMutate).accessibilityIdentifier("catalog-add")
                     }
-                    CatalogHero(details: details.details)
-                    Text(details.details.overview).font(.subheadline).foregroundStyle(.secondary).lineSpacing(3)
-                    if details.libraryTitle == nil {
-                        VStack(alignment: .leading, spacing: 16) {
-                            Picker("Category", selection: $category) {
-                                if details.details.mediaType == .movie { Text("Movie").tag("movie"); Text("Anime movie").tag("anime-movie") }
-                                else { Text("Show").tag("show"); Text("Anime").tag("anime") }
-                            }.pickerStyle(.menu)
-                            Button { Task { if let id = await store.importTitle(details.details, category: category) { accepted(id) } } } label: { Label(store.busy ? "Adding…" : "Add to Planned", systemImage: "plus").font(.subheadline.bold()).frame(maxWidth: .infinity).padding(.vertical, 7) }.buttonStyle(.borderedProminent).disabled(store.busy || store.isPreview)
-                        }.diaryPanel()
-                    }
+                    if route.kind == .tv { CatalogSeasonPreview(route: route, details: details.details, store: store) }
                     CastAndRelated(route: route, sourceTitle: details.details.name)
                 } else if loading { ProgressView("Loading title…").frame(maxWidth: .infinity).padding(40) }
                 if let failure { RetryNotice(message: failure) { Task { await load() } } }
-            }.padding(.horizontal, 14).padding(.bottom, 30)
-        }.background(.black).navigationTitle("Title").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
-            .task { await load() }
+            }.padding(.horizontal, 14).padding(.bottom, 32)
+        }.background(alignment: .top) {
+            if let details { TitleArtworkBackdrop(path: CatalogTools.image(details.details.backdropPath, size: "w780"), name: details.details.name) }
+        }.background(.black).background(EdgeSwipeBackOnly()).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+            .task(id: route) { await load() }
             .navigationDestination(item: $importedID) { TitleDetailView(id: $0) }
     }
     private func accepted(_ id: String) { if let onImported { onImported(id) } else { importedID = id } }
     private func load() async {
+        guard details == nil else { return }
         loading = true; failure = nil; defer { loading = false }
-        do { let response = try await store.browse(route); guard !Task.isCancelled else { return }; details = response; category = response.details.suggestedCategory }
+        do {
+            let response = try await store.browse(route); try Task.checkCancellation()
+            if let saved = response.libraryTitle, !saved.trashed {
+                if store.title(saved.id) == nil { await store.refresh() }
+                try Task.checkCancellation()
+                if store.title(saved.id) != nil { accepted(saved.id); return }
+            }
+            details = response
+        } catch is CancellationError { }
         catch { if !Task.isCancelled { failure = error.localizedDescription } }
     }
 }
 
-private struct CatalogHero: View {
+private struct CatalogSeasonPreview: View {
+    let route: CatalogRoute
     let details: CatalogDetails
+    @AppStorage("hideSpoilers") private var hideSpoilers = true
+    @State private var controller: CatalogEpisodeController
+    @State private var selected: Int
+    @State private var showAll = false
+    @State private var expanded = Set<Int>()
+    @State private var revealed = Set<Int>()
+    init(route: CatalogRoute, details: CatalogDetails, store: DiaryStore) {
+        self.route = route; self.details = details
+        _selected = State(initialValue: details.seasons?.first(where: { $0.number > 0 })?.number ?? details.seasons?.first?.number ?? 1)
+        _controller = State(initialValue: CatalogEpisodeController { season, reveal in try await store.catalogEpisodes(route, season: season, reveal: reveal) })
+    }
+    private var total: Int { max(controller.items.count, details.seasons?.first(where: { $0.number == selected })?.expectedEpisodes ?? 0) }
+    private var visible: [CatalogEpisode] { showAll ? controller.items : Array(controller.items.prefix(4)) }
     var body: some View {
-        HStack(alignment: .bottom, spacing: 14) {
-            Artwork(path: CatalogTools.image(details.posterPath), title: details.name).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 12))
-            VStack(alignment: .leading, spacing: 12) {
-                Text(details.name).font(.system(size: 23, weight: .bold)).tracking(-0.6)
-                Text([details.year.map(String.init), details.suggestedCategory.capitalized, details.runtimeMinutes.map { "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
-                if let score = details.communityScore { RatingBadge(score: score) }
+        VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Episode 0").font(.system(size: 20, weight: .bold)); Text("of \(total)").font(.system(size: 15)).foregroundStyle(.secondary)
+                    Spacer(); Text("0%").font(.system(size: 20, weight: .bold)).foregroundStyle(.tint)
+                }
+                EpisodeProgressTrack(segments: Array(repeating: .unwatched, count: total), season: selected)
+            }.padding(.top, 20).padding(.bottom, 8).diaryPanel(padding: 15, radius: 24, accentBorder: true)
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Episodes").font(.system(size: 22, weight: .bold))
+                        Text("\(controller.items.count) episodes").font(.system(size: 12)).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Picker("Season", selection: $selected) {
+                        ForEach(details.seasons ?? [], id: \.number) { season in Text(season.number == 0 ? "Specials" : "Season \(season.number)").tag(season.number) }
+                    }.pickerStyle(.menu).accessibilityIdentifier("catalog-season")
+                }
+                if controller.loading { ProgressView("Loading season…") }
+                if let error = controller.error { RetryNotice(message: error) { Task { await controller.load(selected, reveal: !hideSpoilers || controller.revealed, force: true) } } }
+                if controller.items.isEmpty && !controller.loading && controller.error == nil { ContentUnavailableView("No episode metadata yet", systemImage: "film", description: Text("No episodes are available for this season yet.")) }
+                ForEach(visible) { episode in episodeRow(episode) }
+                if controller.items.count > 4 {
+                    Button(showAll ? "Show fewer episodes" : "Show all \(controller.items.count) episodes") { showAll.toggle() }.font(.system(size: 14)).frame(maxWidth: .infinity).frame(minHeight: 44)
+                }
             }
-        }.padding(.top, 35)
+        }.task(id: selected) { await controller.load(selected, reveal: !hideSpoilers) }
+            .onChange(of: selected) { _, _ in showAll = false; expanded = []; revealed = [] }
+            .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await controller.load(selected, reveal: true) } } }
+    }
+    private func episodeRow(_ episode: CatalogEpisode) -> some View {
+        let hidden = hideSpoilers && !revealed.contains(episode.number)
+        return VStack(alignment: .leading, spacing: 12) {
+            Button {
+                if expanded.contains(episode.number) { expanded.remove(episode.number) }
+                else { expanded.insert(episode.number); revealed.insert(episode.number); Task { await controller.load(selected, reveal: true) } }
+            } label: {
+                HStack(spacing: 12) {
+                    Group {
+                        if hidden { DiaryIcon(name: "eye-off", size: 23).frame(maxWidth: .infinity, maxHeight: .infinity).foregroundStyle(.secondary).background(Color(webHex: "#242030")) }
+                        else { Artwork(path: CatalogTools.image(episode.stillPath) ?? CatalogTools.image(details.backdropPath), title: details.name) }
+                    }.frame(width: 96, height: 54).clipShape(RoundedRectangle(cornerRadius: 10))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(episode.number) · " + (hidden ? "A story for later" : episode.name.isEmpty ? "Episode \(episode.number)" : episode.name)).font(.system(size: 14, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 5) {
+                            Text(episode.airedOn.map { SeasonAdjustment.validDay($0) && $0 <= DiaryDate.day() } == true ? "Not watched" : "Not aired yet").foregroundStyle(.secondary)
+                            if let score = episode.communityScore, score > 0 { Text("★ " + score.formatted(.number.precision(.fractionLength(1))) + " TMDb").foregroundStyle(.yellow) }
+                        }.font(.system(size: 11))
+                    }
+                    Spacer(minLength: 0)
+                }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)
+            }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) details").accessibilityValue(expanded.contains(episode.number) ? "Expanded" : "Collapsed").accessibilityIdentifier("catalog-episode-\(episode.number)")
+            if expanded.contains(episode.number) { Text(controller.loading ? "Loading episode…" : episode.overview.isEmpty ? "No synopsis available yet." : episode.overview).font(.system(size: 13)).foregroundStyle(.secondary).lineSpacing(4) }
+        }
     }
 }
 
