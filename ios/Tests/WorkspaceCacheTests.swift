@@ -42,4 +42,26 @@ import TwilDiaryCore
         XCTAssertEqual(try credential("one", signature: "a").cacheScope, try credential("one", signature: "b").cacheScope)
         XCTAssertNotEqual(try credential("one", signature: "a").cacheScope, try credential("two", signature: "a").cacheScope)
     }
+    func testDuplicateSnapshotsCannotReplaceACacheAndLegacyDuplicatesCannotLoad() throws {
+        let directory = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let key = SymmetricKey(size: .bits256), scope = "synthetic-owner", now = Date.now
+        let original = SampleWorkspace.make()
+        var malformed = original; malformed.events.append(try XCTUnwrap(original.events.first))
+        let cache = ProtectedWorkspaceCache(directory: directory, key: key)
+        try cache.save(original, scope: scope, at: now)
+        XCTAssertThrowsError(try cache.save(malformed, scope: scope, at: now))
+        XCTAssertEqual(cache.load(scope: scope)?.workspace.events, original.events)
+        let memory = MemoryWorkspaceCache()
+        try memory.save(original, scope: scope, at: now)
+        XCTAssertThrowsError(try memory.save(malformed, scope: scope, at: now))
+        XCTAssertEqual(memory.load(scope: scope)?.workspace.events, original.events)
+        // Simulate an older client having persisted a malformed but correctly encrypted snapshot.
+        let snapshot = CachedWorkspace(schema: 1, scope: scope, savedAt: now, workspace: malformed)
+        let plaintext = try JSONEncoder().encode(snapshot)
+        let encrypted = try XCTUnwrap(AES.GCM.seal(plaintext, using: key, authenticating: Data(scope.utf8)).combined)
+        let file = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).first)
+        try encrypted.write(to: file, options: .atomic)
+        XCTAssertNil(cache.load(scope: scope))
+    }
 }

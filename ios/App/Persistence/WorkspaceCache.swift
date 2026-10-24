@@ -20,7 +20,7 @@ struct CachedWorkspace: Codable {
     private var snapshot: CachedWorkspace?
     func load(scope: String) -> CachedWorkspace? { snapshot?.scope == scope ? snapshot : nil }
     func save(_ workspace: Workspace, scope: String, at date: Date) throws {
-        snapshot = CachedWorkspace(schema: 1, scope: scope, savedAt: date, workspace: workspace)
+        snapshot = CachedWorkspace(schema: 1, scope: scope, savedAt: date, workspace: try workspace.validatingIdentities())
     }
     func removeAll() throws { snapshot = nil }
 }
@@ -42,11 +42,12 @@ struct CachedWorkspace: Codable {
             let plaintext = try AES.GCM.open(AES.GCM.SealedBox(combined: encrypted), using: key(create: false), authenticating: Data(scope.utf8))
             let value = try JSONDecoder().decode(CachedWorkspace.self, from: plaintext)
             guard value.schema == 1, value.scope == scope else { return nil }
+            _ = try value.workspace.validatingIdentities()
             return value
         } catch { return nil }
     }
     func save(_ workspace: Workspace, scope: String, at date: Date) throws {
-        let snapshot = CachedWorkspace(schema: 1, scope: scope, savedAt: date, workspace: workspace)
+        let snapshot = CachedWorkspace(schema: 1, scope: scope, savedAt: date, workspace: try workspace.validatingIdentities())
         let plaintext = try JSONEncoder().encode(snapshot)
         guard let encrypted = try AES.GCM.seal(plaintext, using: key(create: true), authenticating: Data(scope.utf8)).combined else {
             throw APIError.message("Could not protect the offline diary.")

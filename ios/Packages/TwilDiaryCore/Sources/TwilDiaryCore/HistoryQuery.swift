@@ -26,9 +26,9 @@ public struct HistoryQuery: Equatable, Codable, Sendable {
     public var filtered: Bool { !query.isEmpty || !from.isEmpty || !to.isEmpty || unknownOnly }
     public var invalidRange: Bool { !from.isEmpty && !to.isEmpty && from > to }
     public func events(in workspace: Workspace, timeZone: TimeZone = .current) -> [WatchEvent] {
-        let titles = Dictionary(uniqueKeysWithValues: workspace.activeTitles.map { ($0.id, $0) })
+        let titles = Dictionary(workspace.activeTitles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let needle = query.precomposedStringWithCompatibilityMapping.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let dated = workspace.events.compactMap { event -> (event: WatchEvent, date: Date?, recorded: Date?)? in
+        let dated = distinctRows(workspace.events).compactMap { event -> (event: WatchEvent, date: Date?, recorded: Date?)? in
             guard event.revokedAt == nil, let title = titles[event.titleId],
                   needle.isEmpty || title.name.precomposedStringWithCompatibilityMapping.lowercased().contains(needle) else { return nil }
             let date = DiaryDate.parse(event.watchedAt)
@@ -47,10 +47,10 @@ public struct HistoryQuery: Equatable, Codable, Sendable {
         }.map { $0.event }
     }
     public func entries(in workspace: Workspace, timeZone: TimeZone = .current) -> [HistoryEntry] {
-        let titles = Dictionary(uniqueKeysWithValues: workspace.activeTitles.map { ($0.id, $0) })
-        let episodes = Dictionary(uniqueKeysWithValues: workspace.episodes.map { ($0.id, $0) })
+        let titles = Dictionary(workspace.activeTitles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let episodes = Dictionary(workspace.episodes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var counts: [String: Int] = [:]
-        for event in workspace.activeEvents { counts[event.episodeId ?? event.titleId, default: 0] += 1 }
+        for event in distinctRows(workspace.activeEvents) { counts[event.episodeId ?? event.titleId, default: 0] += 1 }
         return events(in: workspace, timeZone: timeZone).compactMap { event in
             guard let title = titles[event.titleId] else { return nil }
             return HistoryEntry(event: event, title: title, episode: event.episodeId.flatMap { episodes[$0] }, rewatched: (counts[event.episodeId ?? event.titleId] ?? 0) > 1)

@@ -2,6 +2,10 @@
 
 Reviewed 24 October 2026 against native source 6130cdf (build 25), web baseline b43454e and the downloaded unsigned build-25 IPA. This is source/artifact verification, not a claim that the listed races were reproduced on an iPhone. No product changes were made from this review. The active device-feedback build continues independently: run 40098826990. Simulator/device compile and early watch/slider/Undo/movie gate pass; full unit/UI/all-phone acceptance is pending.
 
+## Follow-up prepared after build 27 started
+
+Two verified items now have local source changes and regression coverage, pending the next CI run: duplicate snapshot validation plus Home/History projection fallbacks, and routing public-rating Access expiry to sign-in without provider-outage caching (including late old-session failure isolation). No passed-runtime claim is made. Build27 remains source0efbc94 and does not include these changes. Remaining findings below are unchanged; the original table records what was verified in build25.
+
 ## Main findings
 
 | Claim | Verdict | Current evidence / qualification |

@@ -979,6 +979,100 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertEqual(retained.progress.watched, 8)
         XCTAssertEqual(StubProtocol.state.recorded().count, 1)
     }
+    func testPublicRatingAuthenticationFailureRequiresSignInWithoutCachingProviderFailure() async throws {
+        for status in [401, 403, 302] {
+            StubProtocol.state.reset { _ in .init(status, "Private sign-in", contentType: "text/html") }
+            let storage = MemorySessionStorage(); storage.credential = credential
+            let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace
+            await store.communityRatings.prepare(["older-score"]) { _ in ["older-score": PublicRating(score: 8.0, state: "rated")] }
+            await store.loadPublicRatings([try XCTUnwrap(store.workspace.titles.first)], source: .trakt)
+            XCTAssertTrue(store.needsSignIn)
+            XCTAssertEqual(store.error, APIError.signIn.localizedDescription)
+            XCTAssertTrue(store.communityRatings.entries.isEmpty)
+            XCTAssertFalse(store.communityRatings.unavailable); XCTAssertFalse(store.communityRatings.loading)
+            XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+        }
+    }
+    func testPublicRatingProviderFailureDoesNotExpireThePrivateSession() async throws {
+        StubProtocol.state.reset { _ in .init(503, "Provider unavailable", contentType: "text/plain") }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace
+        let title = try XCTUnwrap(store.workspace.titles.first)
+        await store.loadPublicRatings([title], source: .trakt)
+        XCTAssertFalse(store.needsSignIn); XCTAssertNil(store.error)
+        XCTAssertEqual(store.communityRatings.entries[title.id]?.state, "unavailable")
+        XCTAssertFalse(store.communityRatings.loading)
+    }
+    func testOldRatingAuthenticationFailureCannotExpireANewerSignedInSession() async throws {
+        let gate = StubProtocol.ResponseGate()
+        StubProtocol.state.reset { request in
+            if request.url?.path == "/api/library/ratings" {
+                var reply = StubProtocol.Reply(403, "Expired", contentType: "text/html"); reply.gate = gate; return reply
+            }
+            if request.url?.path == "/api/session" { return .init(#"{"authenticated":true}"#) }
+            return .init(#"{"items":[],"next":null}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace
+        let title = try XCTUnwrap(store.workspace.titles.first)
+        let old = Task { await store.loadPublicRatings([title], source: .trakt) }
+        guard await waitForRegressionCondition({ StubProtocol.state.recorded().contains { $0.url?.path == "/api/library/ratings" } }) else {
+            old.cancel(); gate.release(); XCTFail("Ratings request did not start"); return
+        }
+        store.signOut()
+        await store.connect(AccessCredential(token: "synthetic-new-session", expires: .distantFuture))
+        XCTAssertFalse(store.needsSignIn); XCTAssertTrue(store.hasLoadedWorkspace)
+        gate.release(); await old.value
+        XCTAssertFalse(store.needsSignIn); XCTAssertNil(store.error)
+        XCTAssertTrue(store.communityRatings.entries.isEmpty); XCTAssertFalse(store.communityRatings.loading)
+        XCTAssertEqual(storage.credential?.token, "synthetic-new-session")
+    }
+    func testDuplicateSectionsNeverReplaceOrCacheThePreviousCompleteDiary() async throws {
+        let original = PreviewData.workspace
+        for section in ["titles", "episodes", "events", "locations"] {
+            var malformed = original
+            switch section {
+            case "titles": malformed.titles.append(try XCTUnwrap(original.titles.first))
+            case "episodes": malformed.episodes.append(try XCTUnwrap(original.episodes.first))
+            case "events": malformed.events.append(try XCTUnwrap(original.events.first))
+            default: malformed.locations.append(try XCTUnwrap(original.locations.first))
+            }
+            let pages = try workspacePages(malformed)
+            StubProtocol.state.reset { request in .init(pages[request.url?.query ?? ""] ?? #"{"items":[],"next":null}"#) }
+            let storage = MemorySessionStorage(); storage.credential = credential
+            let cache = MemoryWorkspaceCache()
+            try cache.save(original, scope: credential.cacheScope, at: .now)
+            let store = DiaryStore(api: api(storage), cache: cache)
+            await store.refresh()
+            XCTAssertNotNil(store.error, "Duplicate \(section) must be rejected")
+            XCTAssertEqual(store.workspace.titles, original.titles); XCTAssertEqual(store.workspace.episodes, original.episodes)
+            XCTAssertEqual(store.workspace.events, original.events); XCTAssertEqual(store.workspace.locations, original.locations)
+            XCTAssertEqual(cache.load(scope: credential.cacheScope)?.workspace.events, original.events)
+            XCTAssertTrue(store.showingCachedSnapshot); XCTAssertFalse(store.loading)
+        }
+    }
+    func testOverlappingPagesAreRejectedInsteadOfPublishingConflictingTitleIdentities() async throws {
+        let original = PreviewData.workspace
+        let first = try XCTUnwrap(original.titles.first)
+        var conflicting = first; conflicting.name = "Conflicting duplicate"
+        func page(_ title: MediaTitle, next: String?) throws -> String {
+            let rows = try JSONSerialization.jsonObject(with: JSONEncoder().encode([title]))
+            return String(decoding: try JSONSerialization.data(withJSONObject: ["items": rows, "next": next as Any? ?? NSNull()]), as: UTF8.self)
+        }
+        let initial = try page(first, next: "synthetic-next"), overlap = try page(conflicting, next: nil)
+        StubProtocol.state.reset { request in
+            let query = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems } ?? []
+            guard query.first(where: { $0.name == "section" })?.value == "titles" else { return .init(#"{"items":[],"next":null}"#) }
+            return .init(query.contains(where: { $0.name == "after" }) ? overlap : initial)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = original; store.hasLoadedWorkspace = true
+        await store.refresh()
+        XCTAssertEqual(store.error, WorkspaceIntegrityError.duplicateIdentity(section: "titles").localizedDescription)
+        XCTAssertEqual(store.workspace.titles, original.titles)
+        XCTAssertEqual(store.workspace.events, original.events)
+        XCTAssertEqual(StubProtocol.state.recorded().filter { $0.url?.query?.contains("section=titles") == true }.count, 2)
+    }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
                                        "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),

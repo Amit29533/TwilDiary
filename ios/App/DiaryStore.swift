@@ -167,7 +167,7 @@ import TwilDiaryCore
         let (titles, episodes, events, locations) = try await (titlePages, episodePages, eventPages, locationPages)
         try Task.checkCancellation()
         guard session == sessionGeneration, revision == snapshotGeneration, !needsSignIn else { throw CancellationError() }
-        let snapshot = Workspace(titles: titles, episodes: episodes, events: events, locations: locations)
+        let snapshot = try Workspace(titles: titles, episodes: episodes, events: events, locations: locations).validatingIdentities()
         workspace = snapshot; hasLoadedWorkspace = true; showingCachedSnapshot = false; lastRefreshedAt = .now
         needsMutationRefresh = false
         if let scope = api.credential?.cacheScope {
@@ -176,7 +176,8 @@ import TwilDiaryCore
         }
     }
     private func restoreCachedWorkspace() {
-        guard let credential = api.credential, credential.isValid, let snapshot = cache.load(scope: credential.cacheScope) else { return }
+        guard let credential = api.credential, credential.isValid, let snapshot = cache.load(scope: credential.cacheScope),
+              (try? snapshot.workspace.validatingIdentities()) != nil else { return }
         workspace = snapshot.workspace; hasLoadedWorkspace = true
         showingCachedSnapshot = true; lastRefreshedAt = snapshot.savedAt
     }
@@ -262,6 +263,7 @@ import TwilDiaryCore
     func loadPublicRatings(_ titles: [MediaTitle], source: PublicRatingSource, retry: Bool = false) async {
         if retry { communityRatings.retryUnavailable() }
         guard source == .trakt, !needsSignIn else { return }
+        let generation = sessionGeneration
         await communityRatings.prepare(titles.map(\.id)) { ids in
             #if DEBUG
             if self.isPreview {
@@ -271,8 +273,17 @@ import TwilDiaryCore
                 })
             }
             #endif
-            let page: PublicRatingsPage = try await self.read(CatalogTools.apiPath("/api/library/ratings", query: ["ids": ids.joined(separator: ",")]), timeout: 8)
-            return page.ratings
+            do {
+                let page: PublicRatingsPage = try await self.read(CatalogTools.apiPath("/api/library/ratings", query: ["ids": ids.joined(separator: ",")]), timeout: 8)
+                guard generation == self.sessionGeneration else { throw CancellationError() }
+                return page.ratings
+            } catch APIError.signIn {
+                guard generation == self.sessionGeneration, !Task.isCancelled else { throw CancellationError() }
+                self.communityRatings.reset()
+                self.fail(APIError.signIn)
+                // Authentication is handled by the app shell, never cached as a provider outage.
+                throw CancellationError()
+            }
         }
     }
     func card(_ title: MediaTitle, season: Int? = nil, fresh: Bool = false) async throws -> WatchCard {

@@ -29,8 +29,8 @@ public struct HomeOverview: Sendable {
         calendar.firstWeekday = 2; calendar.minimumDaysInFirstWeek = 4
         let today = calendar.startOfDay(for: now)
         let start = calendar.dateInterval(of: .weekOfYear, for: now)!.start
-        let active = workspace.activeEvents
-        let titles = Dictionary(uniqueKeysWithValues: workspace.activeTitles.map { ($0.id, $0) })
+        let active = distinctRows(workspace.activeEvents)
+        let titles = Dictionary(workspace.activeTitles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         unknownDates = active.filter { DiaryDate.parse($0.watchedAt) == nil }.count
         missingRuntime = active.filter { DiaryDate.parse($0.watchedAt) != nil && (titles[$0.titleId]?.runtimeMinutes ?? 0) <= 0 }.count
         var counts: [Date: Int] = [:], runtimes: [Date: Int] = [:]

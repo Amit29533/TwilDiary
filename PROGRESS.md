@@ -5,6 +5,14 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native �
 ## Current request and exact next action
 
 
+### Next local hardening batch — do not cancel build 27
+
+While run40107203106 / source0efbc94 continues, prepared two verified review fixes locally: validate unique title/episode/watch/location identities before publishing a complete network snapshot or replacing/restoring its cache; reject ambiguity and retain the previous complete diary. Home/History direct in-memory projections use safe title/episode indices and distinct event identities, preserving genuine rewatches with different IDs. The old weekly-summary rewatch fixture now uses a distinct event/operation ID instead of duplicating the same database event. New Core and URLProtocol/cache regressions cover duplicate sections, cross-page overlap with conflicting title contents, unchanged prior data/cache, malformed legacy encrypted caches and no false rewatch/double counting.
+
+Public-rating reads now route Access 401/403/redirect expiry through the existing sign-in handler, clear that session's public-score cache and avoid provider-unavailable caching. Generation/cancellation guards protect a newer session; new URLProtocol tests cover all three auth statuses, real provider outage retaining sign-in and delayed old-session failure after a new sign-in. Only loopback/mocked transport and synthetic fixtures are involved. Changes are self-reviewed but uncompiled; expected next counts are Core56 and nativeunit105, plus existing40 primaryUI and all-phone layouts. Do not claim they pass. No code from the remaining reveal/editor/Access-webview/Trakt/slider/performance findings is included. Next: let build27 finish, review its current footer/modal results, then batch these changes with any evidence-backed repairs into the next CI run. No hosted writes/deployments. Browser now reports disabled again; CLI build/artifact access continues normally.
+
+
+
 ### Build 27 pushed; latest requested IPA delivered
 
 Build 27 is source **0efbc94**, running **40107203106**, https://github.com/Amit29533/TwilDiary/actions/runs/40107203106. Exact next action: follow simulator compile, all eight early regression cases, device Release/IPA, full native unit/primary UI and compact/large layout gates; review downloaded results, recordings and screenshots before acceptance. Local diff, project YAML (existing .local/validation-tools parser), Python AST and exact eight-selector checks pass. Initial parser lookup used the wrong runtime path; corrected without source changes. Swift remains CI-only. Avoid pushing ios/** until this run completes.

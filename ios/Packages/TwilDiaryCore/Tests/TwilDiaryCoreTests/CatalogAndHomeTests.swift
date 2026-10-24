@@ -29,7 +29,8 @@ import Testing
     var calendar = DiaryDate.calendar(timeZone: TimeZone(secondsFromGMT: 0)!)
     calendar.firstWeekday = 2
     let initial = HomeOverview(workspace: workspace, now: now, calendar: calendar)
-    workspace.events.append(event)
+    workspace.events.append(WatchEvent(id: "intentional-rewatch", operationId: "rewatch-operation", titleId: event.titleId, episodeId: event.episodeId,
+                                      watchedAt: event.watchedAt, recordedAt: event.recordedAt, revokedAt: nil, origin: event.origin, version: event.version))
     let repeated = HomeOverview(workspace: workspace, now: now, calendar: calendar)
     #expect(repeated.watches == initial.watches + 1)
     #expect(repeated.minutes == initial.minutes + (workspace.titles.first { $0.id == event.titleId }?.runtimeMinutes ?? 0))
