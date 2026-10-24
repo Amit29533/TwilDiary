@@ -35,13 +35,19 @@ import XCTest
     }
     func testEveryThemeIsSelectableAndGlassSearchKeepsOneContainedField() {
         let app = launch(); app.buttons["tab-more"].tap(); openThemes(app)
+        let first = app.buttons["theme-twilight"], second = app.buttons["theme-ocean"]
+        XCTAssertTrue(first.waitForExistence(timeout: 5)); XCTAssertTrue(second.exists)
+        XCTAssertLessThan(first.frame.maxX, second.frame.minX)
+        XCTAssertEqual(first.frame.minY, second.frame.minY, accuracy: 1)
+        XCTAssertGreaterThan(app.buttons["theme-jade"].frame.minY, first.frame.maxY)
+        capture("Appearance two-column grid", app: app)
         for theme in ["twilight", "ocean", "jade", "rose", "amber", "glass"] {
             let item = app.buttons["theme-" + theme]
             for _ in 0..<4 { if item.isHittable { break }; app.swipeUp() }
             for _ in 0..<4 { if item.isHittable { break }; app.swipeDown() }
             XCTAssertTrue(item.isHittable); item.tap(); XCTAssertTrue(item.isSelected); capture("Theme " + theme, app: app)
         }
-        app.navigationBars.buttons["Done"].tap(); app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
+        app.buttons["appearance-done"].tap(); app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
         let search = app.textFields["library-search"]
         XCTAssertTrue(search.waitForExistence(timeout: 5)); XCTAssertGreaterThanOrEqual(search.frame.minX, 14); XCTAssertLessThanOrEqual(search.frame.maxX, app.frame.width - 14)
         search.typeText("Frieren\n"); capture("Glass search", app: app)

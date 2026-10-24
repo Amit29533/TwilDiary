@@ -12,6 +12,8 @@ The user resumed native-app development after asking for verification of an atta
 
 **Exact next action:** finish reviewing this coherent local mutation-recovery and transport-regression batch; monitor build 21 to its completed outcome, retrieve failures/artifacts, and fix its actual failures before scheduling the next native push. If 21 passes, download/verify all logs, screenshots and unsigned IPA with ios/tools/collect-build.py; inspect web side-by-sides and share passed-build images. Update the build version only when the next batch is ready. Continue remaining parity gates from ROADMAP.md and IOS-PARITY.md. Full formatting/concurrency/cache/domain restructuring from the pasted proposal has not been started merely because it was attached.
 
+Next local parity correction: Appearance now follows the authoritative ThemePicker.svelte phone grid, miniature app samples, exact six descriptions/strong colors and selection marks instead of the old vertical placeholder cards. It uses the shared fixed header, source search and native Done dismissal. Existing all-theme/UI tests retain identifiers and gain two-column geometry assertions; screenshots and native compilation pending. No web product styles changed.
+
 ## Evidence and pending acceptance
 
 - Latest completed build 20 / 40078903285 / cb16e882980466fefb5df0f7694184ca3f68310e was cancelled by its time limit. Simulator and arm64 Release compiled with zero warnings; 42 Core + 76 native unit tests and 16 UI cases passed before interruption during Person. Remaining UI, including range drag, and both extra-device runs remain unverified. Partial xcresult lacks Info.plist; only final-screen.png exported. Artifacts under .local/ios-app-build-40078903285 are diagnostic only.

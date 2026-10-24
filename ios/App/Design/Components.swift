@@ -6,6 +6,26 @@ enum DiaryTheme: String, CaseIterable, Identifiable {
     case twilight, ocean, jade, rose, amber, glass
     var id: Self { self }
     var name: String { self == .glass ? "Liquid Glass" : rawValue.capitalized }
+    var detail: String {
+        switch self {
+        case .twilight: "The original violet"
+        case .ocean: "Clear, cool blue"
+        case .jade: "A quiet mint glow"
+        case .rose: "Soft pink after dark"
+        case .amber: "Warm cinema gold"
+        case .glass: "Liquid light on pure black"
+        }
+    }
+    var strong: Color {
+        switch self {
+        case .twilight: Color(webHex: "#9d76f4")
+        case .ocean: Color(webHex: "#498de8")
+        case .jade: Color(webHex: "#36ae8c")
+        case .rose: Color(webHex: "#d66d9f")
+        case .amber: Color(webHex: "#ca8e36")
+        case .glass: Color(webHex: "#87bde8")
+        }
+    }
     var ink: Color {
         switch self { case .twilight: Color(webHex: "#21182e"); case .ocean: Color(webHex: "#102039"); case .jade: Color(webHex: "#102820"); case .rose: Color(webHex: "#321622"); case .amber: Color(webHex: "#2c2010"); case .glass: Color(webHex: "#132332") }
     }

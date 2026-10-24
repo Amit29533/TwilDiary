@@ -100,18 +100,6 @@ struct DiaryJSONDocument: FileDocument {
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents: data) }
 }
 
-struct AppearanceView: View {
-    @AppStorage("theme") private var theme = DiaryTheme.twilight
-    @Environment(\.dismiss) private var dismiss
-    var body: some View {
-        ScrollView { VStack(spacing: 14) { ForEach(DiaryTheme.allCases) { item in
-            Button { theme = item } label: {
-                HStack(spacing: 16) { RoundedRectangle(cornerRadius: 16).fill(LinearGradient(colors: [item.accent.opacity(0.6), item.accent.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(width: 70, height: 76).overlay { BrandMark().fill(item.accent).frame(width: 28, height: 28) }; VStack(alignment: .leading, spacing: 5) { Text(item.name).font(.headline); Text(item == .glass ? "Liquid accents on AMOLED black" : "AMOLED dark · \(item.name) accent").font(.caption).foregroundStyle(.secondary) }; Spacer(); if theme == item { Image(systemName: "checkmark.circle.fill").foregroundStyle(item.accent) } }.foregroundStyle(.white).diaryPanel()
-            }.buttonStyle(.plain).accessibilityIdentifier("theme-" + item.rawValue).accessibilityAddTraits(theme == item ? .isSelected : [])
-        } }.padding(16) }.background(.black).navigationTitle("Appearance").navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar).toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
-    }
-}
-
 struct TMDBConnectionView: View {
     @Environment(DiaryStore.self) private var store
     @Environment(\.dismiss) private var dismiss
