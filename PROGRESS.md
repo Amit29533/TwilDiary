@@ -27,7 +27,7 @@ Read-only contract research: official Trakt repository is trakt/trakt-api, maste
 
 Do not start implementation of this follow-on while the previous requested fixes remain unverified. First finish active run40113092136 and all repairs, then work through this new batch with functional tests, screenshots and phone checks.
 
-## Build 29 reviewed; build 30 prepared to complete the previous fixes
+## Build 29 reviewed; build 30 pushed to complete the previous fixes
 
 Run40113092136 / ed2db3f / build29 completes **failure**, Core56 passes and simulator/test bundles compile with **zero warnings**. Early UI **8/10**: new delayed Glance Notes save/reopen and compact Surprise size/backdrop-tap/swipe-up/down/reroll/Open now pass, along with the six prior passing checks. The partial global-search test also proves saved-title content Back, online navigation and absence of the keyboard before its final failed cancellation assertion. Full119 native units, full43 UI, device Release/IPA and extra-phone layouts were skipped; no build29 IPA or release acceptance.
 
@@ -35,7 +35,7 @@ Downloaded all logs/results/screenshots to .local/ios-app-build-40113092136. Vis
 
 Build30 repairs only the test synchronization: await the actual settings page and disappearance of the outgoing Done button; synthesize a genuinely slow short drag with an end hold to test cancellation. Retain all six destination iterations and both cancelled/completed navigation checks. Native119 tests now execute before UI to catch logic/auth/cache issues even when a UI regression stops Release. Full43 UI still runs after the ten-case gate, and all three layout cases run on each extra phone. Collector requires the new unit-stage success for30+, accepts historical green14 unchanged, and still rejects failed/incomplete builds. Cache compiled intermediates after successful compilation even if later UI fails; this is compilation reuse, never release acceptance. Version30; all new runtime verification pending.
 
-Local project/workflow order, Python AST, changed Swift parse and diff checks pass. Collector re-verifies green14 (25Core/32unit/9UI/29screenshots/original arm64 unsigned IPA) without promoting any failed build. Exact next action: commit/push30, follow direct fresh job API/logs, repair each remaining unit/UI/layout error, then start the follow-on requirements above. Avoid relying on stale gh run view step snapshots; direct job endpoint and completed logs provided the actual state. No follow-on feature implementation or backend deployment has started.
+Local project/workflow order, Python AST, changed Swift parse and diff checks pass. Collector re-verifies green14 (25Core/32unit/9UI/29screenshots/original arm64 unsigned IPA) without promoting any failed build. Build30 is source548afbf, run40115623427. Exact next action: follow direct fresh job API/logs, repair each remaining unit/UI/layout error, then start the follow-on requirements above. Avoid relying on stale gh run view step snapshots; direct job endpoint and completed logs provided the actual state. No follow-on feature implementation or backend deployment has started.
 
 ## Current continuation — build 29 pushed and awaiting CI
 
