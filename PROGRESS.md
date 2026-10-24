@@ -4,6 +4,27 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native �
 
 ## Current request and exact next action
 
+### New device feedback — priority for build 24 and following
+
+The user tested build 22 and supplied 18 concrete requests, overriding strict PWA parity where native behavior is preferable. Work through all of them; do not continue the unrelated carousel auto-rotation idea first. No build-24 source change has been made yet.
+
+- [ ] 1. Toast: compact polished glass, explicit dismiss and short automatic expiry; reliable Undo window, no indefinite overlay. Current root undoLabel never expires.
+- [ ] 2. Home/Glance cover art must open the title, while +/-/menu/swipe remain independent.
+- [ ] 3–4. Show loading only on the pressed card/action; other cards must not dim or silently drop taps. Current global busy/writesBlocked dims every card and perform rejects concurrent actions.
+- [ ] 5. Trakt community ratings need a bounded, prompt failure/retry state. Current sequential 24-ID batches continue after errors and use the 30s shared request timeout.
+- [ ] 6. Restore native full-content swipe-back and an obvious return from Explore; tapping the active Home tab should return Home. EdgeSwipeBackOnly explicitly disables iOS interactiveContentPopGestureRecognizer and Explore hides its nav bar.
+- [ ] 7–8. Clear selected History preset styling; date fields/labels/axes must not collide at phone sizes and large text.
+- [ ] 9. Notes/files reveal+scroll is already in pushed build 23; verify against the user's real behavior, not only the old build-22 screenshot.
+- [ ] 10. Surprise dialog must size to its content with a sensible maximum, not consume the screen. Current ScrollView fixedSize + frame(maxHeight: availableHeight) stretches the panel.
+- [ ] 11. Expanded synopsis should use the available full width below the hero instead of staying in a narrow poster-side column. TitleHero currently keeps all synopsis content in that HStack column.
+- [ ] 12. Cache/invalidate per-title Glance progress; changing category must not reload every visible card. Current task(id: workspace.events) refetches every card after any event and every remount.
+- [ ] 13–14. Search return must preserve the same search immediately without a Home flash. Use one consistent Library+TMDB search everywhere except Glance's current-watch-only search. Library and History currently have their own local-only inline search; screens without search need the shared entry where appropriate.
+- [ ] 15. Glance menu: favorite, current-season completion, dropped, notes and useful collection choices; preserve current-season scope and aired/watch/Undo rules. Current menu contains only Queue.
+- [ ] 16–17. Native liquid-glass where it complements the design, spring/press/symbol feedback and transitions, with reduced-motion/transparency and readable contrast. Avoid random gratuitous motion or blurring art.
+- [ ] 18. Profile by structure and CI evidence: reduce repeated projection/read/image work; no unsupported performance claims.
+
+Implementation direction to review before coding: use scoped card pending state and a serialized mutation queue so unrelated cards stay usable without bypassing operation IDs/session guards; add per-title card revisions/cache keyed by event/episode/season/day/reveal state and deduplicate concurrent Home/Glance reads. Retain confirmed-write refresh safety from build 22. Bound ratings requests and stop futile batches on provider failure, with an explicit retry. New unit/fixture UI tests must cover rapid different-card actions, watch/Undo, category cache retention, timeout/cancel/sign-out, toast expiry, full-content back/search restoration, compact dialog and expanded synopsis geometry. No hosted writes or deployments.
+
 The user resumed native-app development after asking for verification of an attached quality brief. Verification was read-only: main-actor decode/cache, sequential reloads and confirmed-write/refetch false failures are real; old Home sortedHistory, missing DerivedData caching and missing decorative-icon hiding claims are outdated. Existing server duplicate/intentional-rewatch regressions pass 2/2 against in-memory SQLite. A new operation ID does not duplicate a non-rewatch of the same episode; intentional-rewatch refresh recovery needs native coverage.
 
 **Build 22 / 40089027240 / b6b5b5f completes with one unit-test assertion failure.** Core **50/50**, native unit **88/89**, and primary UI **29/29**; the separate real drag/Undo/movie preflight also passes. Both simulator and arm64 Release compile/package with **zero warnings**. All prior History/Person UI failures and the new confirmed-write recovery UI flow pass. Extra-device layouts are skipped because the unit suite failed; this is not a fully accepted release. Completed logs/xcresults are downloaded under .local/ios-app-build-40089027240/results. Run: https://github.com/Amit29533/TwilDiary/actions/runs/40089027240
