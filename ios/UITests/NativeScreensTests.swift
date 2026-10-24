@@ -369,7 +369,7 @@ import UIKit
         let count = app.staticTexts["16 titles"]
         for _ in 0..<12 { if count.isHittable { break }; app.swipeDown() }
         XCTAssertTrue(count.isHittable)
-        app.buttons["explore-section-done"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.buttons["explore-daily-pick"].waitForExistence(timeout: 5))
     }
     func testHomeStatsUsesTodayAndKeepsTheOriginalRangeBar() {
@@ -629,7 +629,8 @@ import UIKit
         app.buttons["person-reset"].tap(); app.buttons["person-collection"].tap(); app.buttons["On your server"].tap()
         XCTAssertTrue(app.staticTexts["No titles in this mix"].waitForExistence(timeout: 5)); XCTAssertEqual(count.label, "0 titles · On your server")
         capture("Person server filmography empty")
-        app.buttons["person-filmography-done"].tap()
+        XCTAssertFalse(app.buttons["person-filmography-done"].exists)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.buttons["person-more-shows"].waitForExistence(timeout: 5))
     }
     func testTitleMenuRevealsAndScrollsNotesAndLocationsAndCopiesAPath() {
@@ -684,6 +685,7 @@ import UIKit
         capture("Notes draft retained")
         // Favorite changes the title version, but must not conflict with an unchanged
         // saved Notes field or discard this still-unsaved local draft.
+        if !app.buttons["Favorite"].exists { app.buttons["title-more"].tap() }
         app.buttons["Favorite"].tap()
         XCTAssertTrue((editor.value as? String)?.contains("Native draft survives cast navigation") == true)
         app.buttons["Save notes"].tap()
@@ -731,19 +733,20 @@ import UIKit
             }
         }
     }
-    func testNativeExploreReturnsByDoneActiveHomeTabAndFullContentSwipe() {
+    func testNativeExploreReturnsByBackActiveHomeTabAndFullContentSwipe() {
         let app = launch(); app.buttons["tab-home"].tap()
         let explore = app.buttons["explore-shortcut"]
         for _ in 0..<4 { if explore.isHittable { break }; app.swipeUp() }
-        explore.tap(); XCTAssertTrue(app.buttons["explore-done"].waitForExistence(timeout: 5))
-        app.buttons["explore-done"].tap()
-        XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5))
-        explore.tap(); XCTAssertTrue(app.buttons["explore-done"].waitForExistence(timeout: 5))
-        app.buttons["tab-home"].tap()
+        explore.tap(); XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["explore-done"].exists)
-        explore.tap(); XCTAssertTrue(app.buttons["explore-done"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5))
+        explore.tap(); XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: 5))
+        app.buttons["tab-home"].tap()
+        XCTAssertFalse(app.navigationBars["Explore"].exists)
+        explore.tap(); XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: 5))
         completeContentBack(app, beside: app.staticTexts["Recommendation of the day"])
-        wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.buttons["explore-done"])], timeout: 5)
+        wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.navigationBars["Explore"])], timeout: 5)
         XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5))
         capture("Native Explore returned Home")
     }

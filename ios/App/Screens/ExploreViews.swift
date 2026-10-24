@@ -2,9 +2,7 @@ import SwiftUI
 import TwilDiaryCore
 
 struct ExploreView: View {
-    @Environment(\.diaryBack) private var back
     @Environment(DiaryStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
     @State private var showSearch = false
     var body: some View {
         VStack(spacing: 0) {
@@ -18,7 +16,6 @@ struct ExploreView: View {
             .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Button { showSearch.toggle() } label: { DiaryIcon(name: "search", size: 22) }.accessibilityLabel("Search").accessibilityIdentifier("search-explore") }
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { if back?.perform() != true { dismiss() } }.accessibilityIdentifier("explore-done") }
             }
     }
 }
@@ -143,20 +140,19 @@ private struct RecommendedDiscoveryView: View {
 struct ExploreSectionView: View {
     let route: ExploreSectionRoute
     let store: DiaryStore
-    @Environment(\.dismiss) private var dismiss
     @State private var showSearch = false
     @State private var service: LiveDiscoveryService
     init(route: ExploreSectionRoute, store: DiaryStore) { self.route = route; self.store = store; _service = State(initialValue: LiveDiscoveryService(store: store)) }
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Explore", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "explore-section-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     DiscoveryBrowser(section: route.section, service: service, store: store, initialFilters: route.filters)
                 }.padding(.horizontal, 14).padding(.top, 2).padding(.bottom, 100)
             }
-        }.background(.black).navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
+        }.background(.black).navigationTitle("Explore").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showSearch.toggle() } label: { DiaryIcon(name: "search", size: 22) }.accessibilityLabel("Search").accessibilityIdentifier("search-explore-section") } }
     }
 }
 

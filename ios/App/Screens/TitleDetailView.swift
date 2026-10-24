@@ -27,6 +27,7 @@ struct TitleDetailView: View {
     @State private var ratingField = VersionedField<Double?>(value: nil, version: nil)
     @State private var showRating = false
     @State private var showInformation = false
+    @State private var compactHeader = false
     @State private var resetConfirmation = false
     @State private var card: WatchCard?
     @State private var cardRequest = UUID()
@@ -88,11 +89,23 @@ struct TitleDetailView: View {
                             }
                             .onChange(of: notesFocused) { _, focused in if focused { pendingScrollTarget = nil } }
                             .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
+                            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+                            .toolbarBackground(compactHeader ? .visible : .hidden, for: .navigationBar)
                             .toolbar {
+                                ToolbarItem(placement: .principal) {
+                                    if compactHeader { CompactTitleNavigation(name: title.name, poster: title.poster) }
+                                }
                                 ToolbarItemGroup(placement: .topBarTrailing) {
-                                    Button { showInformation = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("Community information").accessibilityIdentifier("title-information")
-                                    Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
+                                    if compactHeader { TitleShareAction(name: title.name, kind: title.isSeries ? .tv : .movie, id: title.tmdbId) }
+                                    else {
+                                        Button { showInformation = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("Community information").accessibilityIdentifier("title-information")
+                                        Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
+                                    }
                                     Menu {
+                                        if compactHeader {
+                                            Button("Community information", systemImage: "info.circle") { showInformation = true }
+                                            Button(title.favorite ? "Remove favorite" : "Favorite", systemImage: title.favorite ? "heart.slash" : "heart") { Task { await store.patch(title, values: ["favorite": !title.favorite]) } }.disabled(store.writesBlocked)
+                                        }
                                         Button(title.queued == true ? "Remove from Queue" : "Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }.disabled(store.writesBlocked)
                                         Button("Notes") { showNotes = true; pendingScrollTarget = "notes-editor" }.accessibilityIdentifier("title-menu-notes")
                                         Button("File locations") { showLocation = true; pendingScrollTarget = "files" }.accessibilityIdentifier("title-menu-files")
@@ -173,7 +186,7 @@ struct TitleDetailView: View {
             .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color(webHex: "#ffffff0d")))
     }
     private func header(_ title: MediaTitle) -> some View {
-        TitleHero(name: title.name, poster: title.poster, year: title.year, category: title.categoryName, runtime: title.runtimeMinutes, series: title.isSeries, score: title.communityScore, summary: title.overview, expanded: $showOverview) { personalRating(title).frame(minHeight: 44) }
+        TitleHero(name: title.name, poster: title.poster, year: title.year, category: title.categoryName, runtime: title.runtimeMinutes, series: title.isSeries, score: title.communityScore, summary: title.overview, expanded: $showOverview, onNameScrolled: { compactHeader = $0 }) { personalRating(title).frame(minHeight: 44) }
     }
     private func personalRating(_ title: MediaTitle) -> some View { Button { openRating(title) } label: { HStack(spacing: 7) { DiaryIcon(name: "star", size: 21); Text("Your rating").foregroundStyle(.secondary); Text(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—") } }.buttonStyle(.plain).accessibilityIdentifier("title-personal-rating").accessibilityLabel("Your rating").accessibilityValue(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "Not rated") }
     private func progressPanel(_ title: MediaTitle) -> some View {

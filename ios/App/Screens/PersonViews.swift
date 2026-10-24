@@ -129,7 +129,6 @@ private struct PersonCreditShelf: View {
 struct PersonFilmographyView: View {
     let route: PersonFilmographyRoute
     @Environment(DiaryStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
     @State private var person: PersonDetails?
     @State private var failure: String?
     @State private var filters: PersonFilmographyFilters
@@ -139,7 +138,6 @@ struct PersonFilmographyView: View {
     init(route: PersonFilmographyRoute) { self.route = route; _filters = State(initialValue: PersonFilmographyFilters(section: route.section, onServer: route.onServer)) }
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Explore", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "person-filmography-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
@@ -158,7 +156,9 @@ struct PersonFilmographyView: View {
                     else { ProgressView("Loading filmography…").frame(maxWidth: .infinity).padding(24) }
                 }.padding(.horizontal, 14).padding(.bottom, 100)
             }
-        }.background(.black).navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar).task(id: route) { await load() }.onChange(of: filters) { _, _ in shown = 40 }
+        }.background(.black).navigationTitle("Explore").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showSearch.toggle() } label: { DiaryIcon(name: "search", size: 22) }.accessibilityLabel("Search").accessibilityIdentifier("search-person-filmography") } }
+            .task(id: route) { await load() }.onChange(of: filters) { _, _ in shown = 40 }
     }
     private func filterForm(_ person: PersonDetails) -> some View {
         let genres = Set(filters.credits(person: person, workspace: store.workspace, section: route.section).flatMap { $0.genres ?? [] }).sorted()

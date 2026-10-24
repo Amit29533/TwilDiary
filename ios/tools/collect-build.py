@@ -59,7 +59,7 @@ if progress_log.exists():
         'testConfirmedWatchRefreshFailureRecoversWithoutAnotherWatchAndPreservesUndo',
         'testFilesAndScannerMatchPublishLocationWithoutChangingWatchHistory',
         'testManualTitleYearValidationStatusRatingAndSavedNavigation',
-        'testNativeExploreReturnsByDoneActiveHomeTabAndFullContentSwipe',
+        'testNativeExploreReturnsByBackActiveHomeTabAndFullContentSwipe' if int(args.build) >= 35 else 'testNativeExploreReturnsByDoneActiveHomeTabAndFullContentSwipe',
         'testRandomPickKeepsPlannedScopeAndLogoRerollsWithoutRepeating',
         'testSearchReturnsDirectlyToRetainedResultsAndGlanceRemainsScoped',
         'testTitleArtworkScrollsAwayBeforeTheEpisodeAndNotesContent',

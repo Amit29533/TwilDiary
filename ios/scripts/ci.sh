@@ -66,7 +66,7 @@ PY
       -only-testing:TwilDiaryUITests/NativeScreensTests/testConfirmedWatchRefreshFailureRecoversWithoutAnotherWatchAndPreservesUndo \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testFilesAndScannerMatchPublishLocationWithoutChangingWatchHistory \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testManualTitleYearValidationStatusRatingAndSavedNavigation \
-      -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeExploreReturnsByDoneActiveHomeTabAndFullContentSwipe \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeExploreReturnsByBackActiveHomeTabAndFullContentSwipe \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testRandomPickKeepsPlannedScopeAndLogoRerollsWithoutRepeating \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testSearchReturnsDirectlyToRetainedResultsAndGlanceRemainsScoped \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testTitleArtworkScrollsAwayBeforeTheEpisodeAndNotesContent \

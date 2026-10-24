@@ -1,5 +1,12 @@
 # Native TwilDiary progress
 
+## Live feature implementation — build34 on Codemagic, build35 navigation prepared
+
+Codemagic run6add25824a72334e32e4d74a confirms checkout6d4c21c0594ef68068cfad2551d2ad9887dbb292 from temporary codex/ios-ci-next. URL https://codemagic.io/app/6adcc927390bc3069c9e5490/build/6add25824a72334e32e4d74a. Canonical development checkout is still ios-native; main untouched. This validation ref avoids cancelling active GitHub33; no PR/merge exists. Build34 contains genuine community Information plus dedicatedTrash/Glance/cache changes and the corrected extra-phone assertions. Exact next: read its compiler/unit/UI output; don't infer acceptance from source.
+
+The user reiterates active feature implementation alongside verification. Prepared35 locally removes redundant Done in Explore/section/person-filmography and uses native title/Back/search bars. Tests retain actual system Back, active-Home reselect, content swipe and return/filter checks, explicitly asserting removed Done actions. Early case renamed to reflect Back; collector preserves pre35 method provenance. Added real scrolled poster/name identity in system saved/catalog title bars, triggered only when the hero-name visibility Bool crosses the scroll viewport, rather than sending every pixel into shell state. Compact toolbar exposes public TMDB/name Share, retains More/Information/actions and uses readable native material; hero text/height stays unchanged. Notes/Favorite version test follows the action into More when compact. Native/visual verification is pending; complete blurred dominant-color Glass surfaces/nav and rounded-control consistency still in progress, not forgotten. No backend deployment or hosted mutations.
+
+
 ## Current parallel evidence and prepared build34
 
 GitHub33/source3cd25b01f75039cf502a78caa684953abdef343a passes native compilation, unit121 and all ten early UI checks. Original scoped screenshots and exact source/run/test metadata are downloaded to .local/ios-app-build-40130893194/progress-evidence and retained in ios/docs/screenshots/step-10/build-33-progress. Root tabs hide correctly before twice-repeated saved-search content Back; online cancellation/keyboard and all actual progress/movie Undo assertions pass. Full44-next-source versus43-current-source acceptance remains separate. Physical33 IPA exists; full primary regression is still running, so no release promotion.
