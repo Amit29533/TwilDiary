@@ -6,7 +6,16 @@ import TwilDiaryCore
     @State private var store = DiaryStore()
     @State private var router = AppRouter()
     @AppStorage("theme") private var theme = DiaryTheme.twilight
-    init() { UITabBar.appearance().isHidden = true }
+    init() {
+        UITabBar.appearance().isHidden = true
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+            UserDefaults.standard.set(DiaryTheme.twilight.rawValue, forKey: "theme")
+            UserDefaults.standard.set(PublicRatingSource.tmdb.rawValue, forKey: "publicRatingSource")
+            UserDefaults.standard.set(true, forKey: "hideSpoilers")
+        }
+        #endif
+    }
     var body: some Scene {
         WindowGroup { RootView().environment(store).environment(router).preferredColorScheme(.dark).tint(theme.accent) }
     }

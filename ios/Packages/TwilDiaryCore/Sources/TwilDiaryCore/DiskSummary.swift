@@ -41,3 +41,15 @@ public enum ServerAvailability {
         return "Available on Server" + (drives.isEmpty ? "" : ": " + drives.map { "Drive " + $0 }.joined(separator: " / "))
     }
 }
+
+/// Owner-configured shortcuts from the web source; labels do not imply a confirmed scan.
+public struct HomeDiskShortcut: Identifiable, Sendable {
+    public var id: String { key }
+    public let key: String
+    public let label: String
+    public static let all: [Self] = [
+        Self(key: "drive:E:", label: "E: Toshiba (4TB)"),
+        Self(key: "drive:F:", label: "F: Legion (1TB)"),
+        Self(key: "drive:G:", label: "G: Seagate (1TB)")
+    ]
+}

@@ -28,8 +28,10 @@ struct LibraryView: View {
             if showSearch { SearchField(placeholder: "Search your library…", text: $search, label: "library-search", autoFocus: true).padding(.horizontal, 14).padding(.bottom, 10) }
             CategoryPicker(selection: $category)
             filterBar
+            if hasFilters {
+                HStack(spacing: 12) { Text("\(filtered.count) \(filtered.count == 1 ? "title" : "titles")").foregroundStyle(.secondary); Button("Clear filters") { category = .all; status = "all"; genre = ""; drive = ""; search = "" }; Spacer(minLength: 0) }.font(.system(size: 13)).padding(.horizontal, 14).padding(.bottom, 8)
+            }
             orderingBar
-            if category != .all || status != "all" || !genre.isEmpty || !drive.isEmpty || !search.isEmpty { Button("Clear filters") { category = .all; status = "all"; genre = ""; drive = ""; search = "" }.font(.caption).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.bottom, 8) }
             if ratingSource == .trakt {
                 if store.communityRatings.loading { ratingStatus("Loading Trakt community ratings…") }
                 else if store.communityRatings.unavailable { ratingStatus("Some Trakt ratings are unavailable. Try again later or select TMDB in Settings.") }
@@ -54,13 +56,18 @@ struct LibraryView: View {
                             Text("All statuses").tag("all")
                             ForEach(["planned", "watching", "completed", "dropped", "queue"], id: \.self) { Text($0.capitalized).tag($0) }
                         }
-                    } label: { filterChip(status == "all" ? "Status" : status.capitalized, selected: status != "all") }
+                    } label: { filterChip(status == "all" ? "Status" : status.capitalized, selected: status != "all") }.accessibilityIdentifier("library-status")
                     Menu {
                         Picker("Genre", selection: $genre) { Text("All genres").tag(""); ForEach(genres, id: \.self) { value in Text("\(value) (\(collection.filter { $0.genres.contains(value) }.count))").tag(value) } }
-                    } label: { filterChip(genre.isEmpty ? "Genre" : genre, selected: !genre.isEmpty) }
+                    } label: { filterChip(genre.isEmpty ? "Genre" : genre, selected: !genre.isEmpty) }.accessibilityIdentifier("library-genre")
                     Menu {
-                        Picker("Disk", selection: $drive) { Text("All disks").tag(""); Text("On any disk").tag("mapped"); Text("Not on a disk").tag("unmapped"); ForEach(disks) { Text($0.letters.joined(separator: " / ") + " · " + $0.deviceName).tag($0.key) } }
-                    } label: { filterChip(driveLabel, selected: !drive.isEmpty) }
+                        Picker("Disk", selection: $drive) {
+                            Text("All disks").tag("")
+                            ForEach(HomeDiskShortcut.all) { Text($0.label).tag($0.key) }
+                            ForEach(extraDisks) { Text($0.deviceName + " · " + $0.letters.joined(separator: " / ")).tag($0.key) }
+                            Text("No disk mapping").tag("unmapped")
+                        }
+                    } label: { filterChip(driveLabel, selected: !drive.isEmpty) }.accessibilityIdentifier("library-disk")
                     if archived { Button { dismiss() } label: { trashChip }.accessibilityLabel("Return to Library") }
                     else { NavigationLink(value: AppDestination.trash) { trashChip }.accessibilityLabel("Open Trash") }
                 }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).padding(.horizontal, 14).padding(.vertical, 10)
@@ -68,16 +75,15 @@ struct LibraryView: View {
     }
     private var orderingBar: some View {
         HStack(spacing: 6) {
-                Text(archived ? "In Trash" : filtered.count == collection.count ? "All titles" : "\(filtered.count) titles").font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
+                Text(archived ? "In Trash" : hasFilters ? "" : "All titles").font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
                 Spacer(minLength: 0)
                 Menu {
-                    Picker("Order", selection: $sort) { Text("Library order").tag("library"); Text("Title A–Z").tag("name"); Text("Rating").tag("rating"); Text("Year").tag("year") }
-                } label: { HStack(spacing: 5) { DiaryIcon(name: "arrow-down-up", size: 15); Text(sort == "library" ? "Library order" : sort == "name" ? "Title A–Z" : sort == "year" ? "Year" : "Rating"); DiaryIcon(name: "chevron-down", size: 12) }.font(.system(size: 12, weight: .semibold)).fixedSize().padding(.horizontal, 5).frame(height: 38) }.buttonStyle(.plain)
+                    Picker("Order", selection: $sort) { Text("Library order").tag("library"); Text("Title A–Z").tag("name"); Text("Highest " + ratingSource.label + " rating").tag("rating"); Text("Newest year").tag("year") }
+                } label: { HStack(spacing: 5) { DiaryIcon(name: "arrow-down-up", size: 15); Text(sort == "library" ? "Library order" : sort == "name" ? "Title A–Z" : sort == "year" ? "Newest year" : "Highest " + ratingSource.label + " rating"); DiaryIcon(name: "chevron-down", size: 12) }.font(.system(size: 12, weight: .semibold)).fixedSize().padding(.horizontal, 5).frame(height: 38) }.buttonStyle(.plain)
                 if selecting { Button("Done selecting", systemImage: "xmark") { selecting = false; selected = [] }.labelStyle(.iconOnly) }
                 else {
-                    Button { list = false; genreRows = false } label: { layoutIcon("layout-grid", selected: !list && !genreRows) }.accessibilityLabel("Grid layout")
-                    Button { list = true; genreRows = false } label: { layoutIcon("rows-3", selected: list && !genreRows) }.accessibilityLabel("List layout")
-                    if !archived { Button { genreRows.toggle(); list = false } label: { layoutIcon("list-video", selected: genreRows) }.accessibilityLabel("Genre sections") }
+                    Button { list.toggle(); genreRows = false } label: { layoutIcon(list ? "rows-3" : "layout-grid", selected: true) }.accessibilityLabel(list ? "Grid layout" : "List layout")
+                    if !archived { Button { genreRows.toggle(); list = false } label: { layoutIcon("rows-3", selected: genreRows) }.accessibilityLabel("Genre sections") }
                 }
             }.foregroundStyle(Color(webHex: "#c5c0cf")).buttonStyle(.plain).padding(.horizontal, 14).padding(.bottom, 10)
     }
@@ -109,7 +115,7 @@ struct LibraryView: View {
         guard !archived, router.libraryRevision > appliedShortcutRevision else { return }
         appliedShortcutRevision = router.libraryRevision
         category = .all; search = ""; genre = router.libraryGenreShortcut; drive = router.libraryDiskShortcut; status = "all"
-        switch router.libraryShortcut { case "queue": status = "queue"; case "planned", "watching", "completed", "dropped": status = router.libraryShortcut ?? "all"; case "disk": drive = "mapped"; default: break }
+        switch router.libraryShortcut { case "queue": status = "queue"; case "planned", "watching", "completed", "dropped": status = router.libraryShortcut ?? "all"; case "disk": drive = HomeDiskShortcut.all.first?.key ?? ""; default: break }
     }
     @ViewBuilder private func poster(_ title: MediaTitle, row: Bool = false) -> some View {
         if selecting {
@@ -141,8 +147,10 @@ struct LibraryView: View {
     }
     private func layoutIcon(_ name: String, selected: Bool) -> some View { DiaryIcon(name: name, size: 18).frame(width: 32, height: 38).background(selected ? Color(webHex: "#211c30") : .clear, in: RoundedRectangle(cornerRadius: 11)) }
     private var genres: [String] { LibraryShelf.make(collection).map(\.genre).filter { $0 != "Without a genre" } }
-    private var disks: [DiskSummary] { DiskSummary.make(store.workspace.locations) }
-    private var driveLabel: String { if drive.isEmpty { return "Disk" }; if drive == "mapped" { return "On disk" }; if drive == "unmapped" { return "No disk" }; return disks.first { $0.key == drive }?.letters.joined(separator: " / ") ?? "Selected disk" }
+    private var hasFilters: Bool { category != .all || status != "all" || !genre.isEmpty || !drive.isEmpty || !search.isEmpty }
+    private var disks: [DiskSummary] { let ids = Set(collection.map(\.id)); return DiskSummary.make(store.workspace.locations.filter { ids.contains($0.titleId) }) }
+    private var extraDisks: [DiskSummary] { disks.filter { disk in disk.key == drive || disk.letters.allSatisfy { letter in !HomeDiskShortcut.all.contains { $0.key == "drive:" + letter.uppercased() } } } }
+    private var driveLabel: String { if drive.isEmpty { return "Disk" }; if drive == "mapped" { return "On disk" }; if drive == "unmapped" { return "No disk mapping" }; if let shortcut = HomeDiskShortcut.all.first(where: { $0.key == drive }) { return shortcut.label }; return disks.first { $0.key == drive }?.letters.joined(separator: " / ") ?? "Selected disk" }
     private var filtered: [MediaTitle] {
         var query = LibraryQuery()
         query.archived = archived

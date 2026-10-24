@@ -70,6 +70,19 @@ import UIKit
         app.buttons["Clear search"].tap(); app.buttons["List layout"].tap(); capture("Library list")
         app.buttons["Genre sections"].tap(); capture("Library genres")
     }
+    func testLibraryStatusGenreAndDriveComposeThenClearTogether() {
+        let app = launch(); app.buttons["tab-library"].tap()
+        app.buttons["library-status"].tap(); app.buttons["Watching"].tap()
+        app.buttons["library-genre"].tap(); app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Romance ('")).firstMatch.tap()
+        app.buttons["library-disk"].tap(); app.buttons["E: Toshiba (4TB)"].tap()
+        XCTAssertTrue(app.buttons["title-night"].waitForExistence(timeout: 5)); XCTAssertFalse(app.buttons["title-again"].exists); XCTAssertFalse(app.buttons["title-frieren"].exists)
+        XCTAssertTrue(app.staticTexts["1 title"].exists); capture("Library composed filters")
+        app.buttons["Clear filters"].tap()
+        XCTAssertTrue(app.buttons["title-again"].waitForExistence(timeout: 5)); XCTAssertTrue(app.buttons["title-frieren"].exists)
+        XCTAssertTrue(app.buttons["List layout"].exists); XCTAssertFalse(app.buttons["Grid layout"].exists)
+        capture("Library filters cleared")
+    }
+
     func testLibraryCommunityRatingPreferenceNeverDisplaysPersonalScores() {
         let app = launch()
         app.buttons["tab-more"].tap()
