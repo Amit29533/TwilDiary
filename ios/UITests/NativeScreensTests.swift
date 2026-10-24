@@ -49,6 +49,20 @@ import UIKit
         app.buttons["tab-more"].tap()
         XCTAssertTrue(app.staticTexts["Appearance & region"].waitForExistence(timeout: 5)); capture("More")
     }
+    func testCommunityInformationSheetUsesOverallStatsAndReturnsToTheTitle() {
+        let app = launch(); app.buttons["tab-library"].tap(); app.buttons["title-frieren"].tap()
+        let information = app.buttons["title-information"]
+        XCTAssertTrue(information.waitForExistence(timeout: 5)); information.tap()
+        XCTAssertTrue(app.staticTexts["Community stats"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["What people are saying"].exists)
+        XCTAssertTrue(app.staticTexts["Engaging pacing and mysteries"].exists)
+        XCTAssertTrue(app.staticTexts["Repetitive storyline"].exists)
+        XCTAssertFalse(app.buttons["title-personal-rating"].isHittable)
+        capture("Trakt community information fixture")
+        app.swipeDown()
+        XCTAssertTrue(information.waitForExistence(timeout: 5)); XCTAssertTrue(information.isHittable)
+        XCTAssertEqual(app.sliders["episode-progress"].value as? String, "12 of 28 episodes watched")
+    }
     func testEmptyDiaryScreensRetainNavigationAndSourceEmptyStates() {
         let app = launch(empty: true)
         XCTAssertTrue(app.staticTexts["A clear little corner"].waitForExistence(timeout: 5)); capture("Empty Glance")

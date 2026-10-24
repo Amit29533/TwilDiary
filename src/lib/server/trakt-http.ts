@@ -13,7 +13,7 @@ export async function traktRequest(
   options: { method?: 'GET' | 'POST'; body?: unknown; transport?: typeof fetch } = {}
 ) {
   if (
-    !/^\/(?:oauth\/token|sync\/[a-z_]+(?:\/[a-z_]+)?|sync\/history\/(?:movies|episodes)\/\d{1,10}|users\/settings|recommendations\/(?:movies|shows)|search\/tmdb\/\d{1,10}|(?:movies|shows)\/\d{1,10}\/ratings|shows\/\d{1,10}\/seasons\/\d{1,3}\/episodes\/\d{1,4})$/.test(
+    !/^\/(?:oauth\/token|sync\/[a-z_]+(?:\/[a-z_]+)?|sync\/history\/(?:movies|episodes)\/\d{1,10}|users\/settings|recommendations\/(?:movies|shows)|search\/tmdb\/\d{1,10}|(?:movies|shows)\/\d{1,10}\/(?:ratings|stats|sentiments)|shows\/\d{1,10}\/seasons\/\d{1,3}\/episodes\/\d{1,4})$/.test(
       path.split('?')[0] ?? ''
     )
   )

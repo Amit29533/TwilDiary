@@ -26,6 +26,7 @@ struct TitleDetailView: View {
     @State private var notesField = VersionedField(value: "", version: nil)
     @State private var ratingField = VersionedField<Double?>(value: nil, version: nil)
     @State private var showRating = false
+    @State private var showInformation = false
     @State private var resetConfirmation = false
     @State private var card: WatchCard?
     @State private var cardRequest = UUID()
@@ -89,6 +90,7 @@ struct TitleDetailView: View {
                             .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
                             .toolbar {
                                 ToolbarItemGroup(placement: .topBarTrailing) {
+                                    Button { showInformation = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("Community information").accessibilityIdentifier("title-information")
                                     Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
                                     Menu {
                                         Button(title.queued == true ? "Remove from Queue" : "Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }.disabled(store.writesBlocked)
@@ -123,6 +125,9 @@ struct TitleDetailView: View {
                                         .navigationTitle("Watch date").navigationBarTitleDisplayMode(.inline)
                                         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { choosingWatchDate = false } } }
                                 }.presentationDetents([.medium, .large])
+                            }
+                            .sheet(isPresented: $showInformation) {
+                                CommunityInformationSheet(name: title.name, identity: CommunityIdentity(kind: title.isSeries ? .tv : .movie, id: title.tmdbId))
                             }
                             .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
                             .onChange(of: store.sessionRevision) { _, _ in episodeDetails.reset(); revealedEpisodeIDs = []; expandedEpisodes = [] }

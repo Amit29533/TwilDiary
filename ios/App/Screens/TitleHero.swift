@@ -44,7 +44,9 @@ struct TitleHero<PersonalRating: View>: View {
                         .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("title-synopsis-continuation")
                     Button("Less") { setExpanded(false) }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 44)
-                }.transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 6)))
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .contain).accessibilityIdentifier("title-synopsis-expanded")
+                    .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 6)))
             }
         }.padding(.top, 82).onChange(of: synopsisText) { _, _ in measureSynopsis() }
     }

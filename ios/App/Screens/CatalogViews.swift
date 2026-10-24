@@ -180,6 +180,7 @@ struct CatalogDetailView: View {
     @State private var failure: String?
     @State private var loading = false
     @State private var showOverview = false
+    @State private var showInformation = false
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
@@ -204,6 +205,14 @@ struct CatalogDetailView: View {
                         if let details { TitleArtworkBackdrop(path: CatalogTools.image(details.details.backdropPath, size: "w780"), name: details.details.name, topExtension: geometry.safeAreaInsets.top) }
                     }
             }.scrollClipDisabled().background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { showInformation = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("Community information").accessibilityIdentifier("catalog-information")
+                    }
+                }
+                .sheet(isPresented: $showInformation) {
+                    CommunityInformationSheet(name: details?.details.name ?? "Title", identity: CommunityIdentity(kind: route.kind, id: route.id))
+                }
                 .task(id: route) { await load() }
         }
     }

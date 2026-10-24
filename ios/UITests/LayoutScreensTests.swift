@@ -84,8 +84,13 @@ import XCTest
         XCTAssertEqual(summary.label, leadingText)
         XCTAssertEqual(summary.frame.height, leadingFrame.height, accuracy: 1)
         XCTAssertLessThanOrEqual(summary.frame.maxX, app.frame.width - 14)
-        XCTAssertGreaterThan(summary.frame.minX, app.frame.width / 3)
-        XCTAssertGreaterThan(continuation.frame.width, app.frame.width * 0.8)
+        // The cover/column spacing is fixed by the source design, not a third
+        // of each phone width. Text AX bounds describe glyph ink, not its column.
+        XCTAssertEqual(summary.frame.minX, app.staticTexts["title-hero-name"].frame.minX, accuracy: 1)
+        let expandedRegion = app.descendants(matching: .any)["title-synopsis-expanded"]
+        XCTAssertTrue(expandedRegion.exists)
+        XCTAssertEqual(expandedRegion.frame.minX, 14, accuracy: 1)
+        XCTAssertEqual(expandedRegion.frame.maxX, app.frame.width - 14, accuracy: 1)
         XCTAssertLessThan(continuation.frame.minX, 24)
         XCTAssertGreaterThan(continuation.frame.minY, summary.frame.maxY)
         capture("Expanded synopsis keeps leading lines beside cover", app: app)
