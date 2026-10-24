@@ -193,6 +193,7 @@ struct LibraryView: View {
             .frame(width: genre ? 36 : 42, height: 44)
             .background(genre ? (selected ? theme.accent.opacity(0.09) : .clear) : Color(webHex: "#211d2b"), in: RoundedRectangle(cornerRadius: 14))
             .overlay { if genre && selected { RoundedRectangle(cornerRadius: 14).strokeBorder(theme.accent.opacity(0.45)) } }
+            .contentShape(Rectangle())
     }
     private var genres: [String] { LibraryShelf.make(collection).map(\.genre).filter { $0 != "Without a genre" } }
     private var hasFilters: Bool { category != .all || status != "all" || !genre.isEmpty || !drive.isEmpty }

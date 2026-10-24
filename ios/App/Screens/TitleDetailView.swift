@@ -67,8 +67,8 @@ struct TitleDetailView: View {
                                         if locations.isEmpty { Text("No mapped files yet. A Windows scan will add matching locations here.").font(.system(size: 13)).foregroundStyle(.secondary) }
                                         NavigationLink("All files & drives →", value: AppDestination.files).font(.system(size: 14, weight: .semibold)).frame(minHeight: 48).accessibilityIdentifier("title-all-files")
                                     }.padding(.top, 12)
-                                } label: { Text(serverLabel).font(.subheadline.weight(.semibold)) }
-                                    .id("files").accessibilityIdentifier("title-locations")
+                                } label: { Text(serverLabel).font(.subheadline.weight(.semibold)).accessibilityIdentifier("title-locations") }
+                                    .id("files")
                             }.diaryPanel()
                         }.padding(.horizontal, 14).padding(.bottom, 32)
                     }.scrollDismissesKeyboard(.interactively).background(alignment: .top) {

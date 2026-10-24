@@ -29,7 +29,7 @@ struct TitleHero<PersonalRating: View>: View {
                     if !expanded { synopsis.padding(.top, 16) }
                 }.padding(.top, 14)
             }
-            if expanded { synopsis.accessibilityIdentifier("expanded-synopsis") }
+            if expanded { synopsis }
         }.padding(.top, 82)
     }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
