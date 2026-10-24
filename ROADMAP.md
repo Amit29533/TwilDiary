@@ -170,3 +170,12 @@ Build 14 evidence checkpoint: run 40056346004 passes all 66 tests/zero warnings;
 - The expanded real local API probe passes 30 requests with unchanged pre-existing fixtures and zero hosted requests; fixture watch/Undo receipts mirror those contracts and the existing server status projection.
 - Title history refresh/initial season/window rules and retained editor state are corrected from source; three mutation/draft UI flows and two core selection regressions are added. Validation awaits CI.
 - Core cache retains compiler work but never skips tests. Future full runs allow 65 minutes/35-minute native tests to cover the larger regression suite on the pinned Intel image.
+
+## Build 23 follow-up prepared — not compiled
+
+- [ ] Source-measured Library category/filter/sort/layout/grid geometry and all-size bounds acceptance.
+- [ ] Navigation dark gradient, Liquid Glass selection/labels and reduced-transparency surface acceptance.
+- [ ] Home upcoming episode carries its validated season and reveals Episodes; ordinary title links retain default behavior.
+- [ ] Title menu reveals Notes/Files in view; location evidence/path/copy/empty/Files-return controls work.
+
+The unchanged web unit suite passes 346 tests and isolated reference walkthrough passes 96 states; two additional menu states pass separately (98 in the manifest). Native compile/runtime/screenshots remain pending. Existing earlier-step regressions remain enabled.

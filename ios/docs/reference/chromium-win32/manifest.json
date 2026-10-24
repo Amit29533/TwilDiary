@@ -2239,7 +2239,7 @@
       }
     ],
     "file": "explore.png",
-    "sha256": "96aba86ab94ec3f257717d9144439ad0a01177c0b57cc677cf63732360cee618",
+    "sha256": "f4801d8b11c84c49c174f4f4c602ab223ba763941672907e858f8f7636bee0d5",
     "passed": true
   },
   {
@@ -2392,7 +2392,7 @@
       }
     ],
     "file": "explore-genre-results.png",
-    "sha256": "082cce83c4e0755463758d2e6901e6d6ff4b9f4b1a24523bb68fb7827532dd7c",
+    "sha256": "6dd31b6fda70746b401d2f811ac23b2c795e2e2e53c85b4a604b40cf4e5d2d10",
     "passed": true
   },
   {
@@ -3021,7 +3021,7 @@
       }
     ],
     "file": "catalog-show.png",
-    "sha256": "88585e52504d3641328b855c63012941150ccf606d254c7f73766ecb3284d4dd",
+    "sha256": "66431342692fd7d208b3fb0a4f8f8bc58cc1d57110acc43b58222953184c915c",
     "passed": true
   },
   {
@@ -3063,7 +3063,7 @@
       }
     ],
     "file": "catalog-movie.png",
-    "sha256": "49125e52549da932051985c45ee436c56896e12e6649722b079c8c6e4736574c",
+    "sha256": "480e916752258f3fef713bcefb5812b215e39e0b667fa8610a07dfbb9c36bb41",
     "passed": true
   },
   {
@@ -3140,7 +3140,7 @@
       }
     ],
     "file": "catalog-revealed-episode.png",
-    "sha256": "764d0e06f9271299764525fcedb82230c4b5995bbc7a6d100536e39e8901e4bb",
+    "sha256": "a3e975b760f32e944d7a6d12f73d18f6d950878cd2c719edb901d1ee4315cc45",
     "passed": true
   },
   {
@@ -3413,7 +3413,7 @@
       }
     ],
     "file": "person-shows.png",
-    "sha256": "d0bd6990ddd55f0da6bfefdb5e6b993db9fe33628c8f63c34f2fb09c296aea1a",
+    "sha256": "96117565d77c50cd7cd938ec40e595fdbc7ab89b7aba8fbd43106d010bb4ef50",
     "passed": true
   },
   {
@@ -3450,7 +3450,7 @@
       }
     ],
     "file": "person-movies.png",
-    "sha256": "8a41ca84871eb7091532371004026c0a048adf5c0fe82e5a5a6f93ec6eea7a15",
+    "sha256": "d77ab5cc0f5396d1aea1142e599657ca0feee94af0c9aaafa3d3f83c69246ff2",
     "passed": true
   },
   {
@@ -3487,7 +3487,7 @@
       }
     ],
     "file": "person-known-for.png",
-    "sha256": "db18f4a32c81cab31875319a437e652f3fd3cc39c0cadf6e720a48bb2717c77d",
+    "sha256": "edbe0a3e1813e6a704be86706f0cd5cde0de75fe6ad65163125035dae365b2c9",
     "passed": true
   },
   {
@@ -3524,7 +3524,7 @@
       }
     ],
     "file": "person-credits.png",
-    "sha256": "0fe26bb65c7c86cade5abe9312e85a3c4336785736ab73572cd3a3a9cf87148d",
+    "sha256": "d6b3149b814aaef48fa4a5ac2b02a267ba7103f8c55b98555500b0e71c43e618",
     "passed": true
   },
   {
@@ -3660,6 +3660,7 @@
     "id": "home-random-pick",
     "path": "/preview/home",
     "scenario": "default",
+    "randomSample": 0.45,
     "theme": "twilight",
     "engine": "chromium",
     "browserVersion": "156.0.8078.4",
@@ -3747,6 +3748,7 @@
     "id": "collection-random-pick",
     "path": "/preview/home",
     "scenario": "default",
+    "randomSample": 0.45,
     "theme": "twilight",
     "engine": "chromium",
     "browserVersion": "156.0.8078.4",
@@ -3827,7 +3829,7 @@
       }
     ],
     "file": "collection-random-pick.png",
-    "sha256": "e587c2ecb9b8be4622b88373589bf97465cb97e7b67d9417043ffeb22cfa4f24",
+    "sha256": "209d0686d5adefdbb1b94d8bffacd612dff58f59a3aeb71800561352a42ab7c7",
     "passed": true
   },
   {
@@ -4966,6 +4968,306 @@
     ],
     "file": "title-location.png",
     "sha256": "b02e16221ab8cb85f4d8c38fb0f7654d231a3dc8085c61b7c233b7ac368f3248",
+    "passed": true
+  },
+  {
+    "id": "title-menu-notes",
+    "path": "/preview/title/again",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1656,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Back",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Add to favorites",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "More options for 18 Again",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Your rating7.5",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Watch status",
+        "value": "watching"
+      },
+      {
+        "tag": "INPUT",
+        "label": "Season 1 episodes watched",
+        "value": "8"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 9 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark E9 watched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Watched today",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Rate show",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Season",
+        "value": "1"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 8 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 8 unwatched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 9 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 9 watched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 10 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 10 watched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 11 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 11 watched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Show all 16 episodes",
+        "value": ""
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Notes"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Save notes",
+        "value": ""
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Not Available on Server"
+      }
+    ],
+    "file": "title-menu-notes.png",
+    "sha256": "c4a12d9d2171e2a11e3cd56407855a4efe64ec56b9da3615b68bac24cf1d4376",
+    "passed": true
+  },
+  {
+    "id": "title-menu-files",
+    "path": "/preview/title/frieren",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1651,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Back",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Remove from favorites",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "More options for Frieren: Beyond Journey’s End",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Your rating9.5",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "More",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Watch status",
+        "value": "watching"
+      },
+      {
+        "tag": "INPUT",
+        "label": "Season 1 episodes watched",
+        "value": "12"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 13 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark E13 watched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Watched today",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Rate show",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Season",
+        "value": "1"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 12 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 12 unwatched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 13 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 13 watched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 14 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 14 watched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 15 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 15 watched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Show all 28 episodes",
+        "value": ""
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Notes"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Save notes",
+        "value": ""
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Available on Server: Drive E"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Copy path for Frieren: Beyond Journey’s End",
+        "value": ""
+      }
+    ],
+    "file": "title-menu-files.png",
+    "sha256": "3b2805baa049d05c0d03f137be72aa41a0e9110f5c25783956de2eef6d483702",
     "passed": true
   },
   {

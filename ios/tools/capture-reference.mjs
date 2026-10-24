@@ -18,6 +18,7 @@ for (const state of states) {
   const {browser,context,page,origin} = await referenceBrowser(state.scenario);
   const errors=[]; page.on('pageerror',error=>errors.push(error.message));
   try {
+    if (state.randomSample !== undefined) await context.addInitScript(sample=>{Math.random=()=>sample;},state.randomSample);
     if (state.theme) await context.addInitScript(theme=>localStorage.setItem('twildiary.theme.v1',theme),state.theme);
     if (state.ratingSource) await context.addInitScript(value=>localStorage.setItem('twildiary.community-rating-source.v1',value),state.ratingSource);
     await page.goto(origin+state.path,{waitUntil:'domcontentloaded'});
@@ -30,7 +31,7 @@ for (const state of states) {
     await page.screenshot({path:resolve(folder,state.id+'-full.png'),fullPage:true,animations:'disabled'});
     const controls = await page.locator('button,select,input,summary').evaluateAll(nodes=>nodes.map(node=>({tag:node.tagName,label:node.getAttribute('aria-label')??node.textContent?.trim().slice(0,100),value:'value'in node&&node.type!=='password'?node.value:undefined})));
     const digest = createHash('sha256').update(await readFile(resolve(folder,filename))).digest('hex');
-    results.push({id:state.id,path:state.path,scenario:state.scenario??'default',theme:state.theme??'twilight',engine,browserVersion:browser.version(),referenceTime,geometry,errors,controls,file:filename,sha256:digest,passed:errors.length===0&&geometry.documentWidth<=390});
+    results.push({id:state.id,path:state.path,scenario:state.scenario??'default',randomSample:state.randomSample,theme:state.theme??'twilight',engine,browserVersion:browser.version(),referenceTime,geometry,errors,controls,file:filename,sha256:digest,passed:errors.length===0&&geometry.documentWidth<=390});
     console.log((results.at(-1).passed?'PASS ':'FAIL ')+state.id+(errors.length?' '+errors.join('; '):''));
   } catch(error) {results.push({id:state.id,path:state.path,passed:false,error:error.message});console.log('FAIL '+state.id+': '+error.message.split('\n')[0]);}
   finally {await browser.close();}

@@ -77,8 +77,8 @@ struct TitleDetailView: View {
                                 Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
                                 Menu {
                                     Button(title.queued == true ? "Remove from Queue" : "Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }.disabled(store.writesBlocked)
-                                    Button("Notes") { showNotes = true; Task { await Task.yield(); proxy.scrollTo("notes", anchor: .top) } }
-                                    Button("File locations") { showLocation = true; Task { await Task.yield(); proxy.scrollTo("files", anchor: .top) } }
+                                    Button("Notes") { showNotes = true; Task { await Task.yield(); proxy.scrollTo("notes", anchor: .top) } }.accessibilityIdentifier("title-menu-notes")
+                                    Button("File locations") { showLocation = true; Task { await Task.yield(); proxy.scrollTo("files", anchor: .top) } }.accessibilityIdentifier("title-menu-files")
                                 } label: { Image(systemName: "ellipsis") }.accessibilityLabel("More options for " + title.name).accessibilityIdentifier("title-more")
                             }
                         }

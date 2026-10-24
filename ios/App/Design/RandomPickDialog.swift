@@ -98,7 +98,12 @@ struct RandomPickDialog: View {
     }
     private func choose() {
         guard !rolling else { return }
-        let next = RandomPick.choose(titles, previousID: selectedID)
+        #if DEBUG
+        let sample = ProcessInfo.processInfo.arguments.contains("--ui-testing") ? 0.45 : Double.random(in: 0..<1)
+        #else
+        let sample = Double.random(in: 0..<1)
+        #endif
+        let next = RandomPick.choose(titles, previousID: selectedID, sample: sample)
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.5)) { selectedID = next?.id; sequence += 1; rolling = next != nil }
     }
 }

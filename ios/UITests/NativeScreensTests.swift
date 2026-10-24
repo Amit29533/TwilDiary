@@ -576,16 +576,16 @@ import UIKit
         let app = launch(); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
         let editor = app.textViews["title-notes"]
         XCTAssertFalse(editor.exists)
-        app.buttons["title-more"].tap(); app.buttons["Notes"].tap()
+        app.buttons["title-more"].tap(); app.buttons["title-menu-notes"].tap()
         XCTAssertTrue(editor.waitForExistence(timeout: 5)); XCTAssertTrue(editor.isHittable); capture("Title menu Notes revealed")
-        app.buttons["title-more"].tap(); app.buttons["File locations"].tap()
+        app.buttons["title-more"].tap(); app.buttons["title-menu-files"].tap()
         let empty = app.staticTexts["No mapped files yet. A Windows scan will add matching locations here."]
         XCTAssertTrue(empty.waitForExistence(timeout: 5)); XCTAssertTrue(empty.isHittable)
         app.buttons["title-all-files"].tap()
         XCTAssertTrue(app.buttons["files-done"].waitForExistence(timeout: 5)); app.buttons["files-done"].tap()
         XCTAssertTrue(app.buttons["title-more"].waitForExistence(timeout: 5))
         app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["title-frieren"].tap()
-        app.buttons["title-more"].tap(); app.buttons["File locations"].tap()
+        app.buttons["title-more"].tap(); app.buttons["title-menu-files"].tap()
         let copy = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'title-copy-location-'")).firstMatch
         XCTAssertTrue(copy.waitForExistence(timeout: 5)); XCTAssertTrue(copy.isHittable); copy.tap()
         XCTAssertEqual(copy.value as? String, "Copied"); capture("Title mapped location copied")

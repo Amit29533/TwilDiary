@@ -28,4 +28,4 @@ Build 22 is pushed at b6b5b5f and running as 40089027240: acknowledged-save/fail
 
 PC-only boundary: scanning/ingestion and provider credential editing remain on the existing Windows/server side, as on mobile web. Native presents saved mappings, scanner evidence and reviewed resolution. No arbitrary Windows-volume scanning from the phone, bundled service token or fake provider success.
 
-Primary references: reference/chromium-win32 (96 passing states, 390×844; all image hashes verified). Secondary: reference/chromium-win32-402x778 (matching iPhone 17 Pro content excluding documented 62pt top/34pt bottom system insets). DEVICE-CHECKS.md records what CI cannot establish.
+Primary references: reference/chromium-win32 (98 passing states, 390×844; all image hashes verified). Secondary: reference/chromium-win32-402x778 (matching iPhone 17 Pro content excluding documented 62pt top/34pt bottom system insets). DEVICE-CHECKS.md records what CI cannot establish.
