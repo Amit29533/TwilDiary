@@ -64,6 +64,8 @@ PY
       -only-testing:TwilDiaryUITests/NativeScreensTests/testRandomPickKeepsPlannedScopeAndLogoRerollsWithoutRepeating \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testSearchReturnsDirectlyToRetainedResultsAndGlanceRemainsScoped \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testTitleArtworkScrollsAwayBeforeTheEpisodeAndNotesContent \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testDoneButtonsReturnFromEverySettingsDestination \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testGlanceNotesWaitForLateCastAndRelatedLayoutThenKeepEditorVisible \
       -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/ProgressGate.xcresult" \
       2>&1 | tee "$ARTIFACTS/logs/progress-tests.log"
     ;;

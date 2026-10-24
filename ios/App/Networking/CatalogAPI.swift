@@ -19,11 +19,21 @@ extension DiaryStore {
         return try await read(CatalogTools.apiPath("/api/metadata/browse", query: ["type": route.kind.rawValue, "id": String(route.id)]))
     }
     func cast(_ route: CatalogRoute) async throws -> CastResponse {
-        if isPreview { return PreviewCatalog.cast }
+        if isPreview {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-slow-metadata") { try await Task.sleep(for: .milliseconds(700)) }
+            #endif
+            return PreviewCatalog.cast
+        }
         return try await read(CatalogTools.apiPath("/api/metadata/cast", query: ["type": route.kind.rawValue, "id": String(route.id)]))
     }
     func related(_ route: CatalogRoute) async throws -> RelatedResponse {
-        if isPreview { return PreviewCatalog.related }
+        if isPreview {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-slow-metadata") { try await Task.sleep(for: .milliseconds(700)) }
+            #endif
+            return PreviewCatalog.related
+        }
         return try await read(CatalogTools.apiPath("/api/metadata/related", query: ["type": route.kind.rawValue, "id": String(route.id)]))
     }
     func person(_ id: Int) async throws -> PersonResponse {

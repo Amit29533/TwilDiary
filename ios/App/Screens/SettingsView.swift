@@ -24,19 +24,19 @@ struct SettingsView: View {
                     settingsSection("Library") {
                         HStack(spacing: 8) { settingsIcon("star"); VStack(alignment: .leading, spacing: 3) { Text("Library ratings").font(.subheadline.weight(.semibold)); Text("Community scores, not your rating").font(.caption).foregroundStyle(.secondary) }; Spacer(minLength: 0); Picker("Library ratings", selection: $ratingSource) { ForEach(PublicRatingSource.allCases) { Text($0.label).tag($0) } }.pickerStyle(.menu).font(.caption).fixedSize().accessibilityIdentifier("settings-rating-source") }.padding(14)
                         Divider().padding(.leading, 58)
-                        NavigationLink { FilesView() } label: { settingsRow("hard-drive", "Files & drives", subtitle: "Folders, seasons and local copies", disclosure: true) }.accessibilityIdentifier("settings-files")
+                        NavigationLink(value: AppDestination.files) { settingsRow("hard-drive", "Files & drives", subtitle: "Folders, seasons and local copies", disclosure: true) }.accessibilityIdentifier("settings-files")
                         Divider().padding(.leading, 58)
-                        NavigationLink { TrashView() } label: { settingsRow("trash-2", "Trash", subtitle: store.workspace.titles.contains(where: { $0.deletedAt != nil }) ? "\(store.workspace.titles.filter { $0.deletedAt != nil }.count) removed \(store.workspace.titles.filter { $0.deletedAt != nil }.count == 1 ? "title" : "titles")" : "No removed titles", disclosure: true) }
+                        NavigationLink(value: AppDestination.trash) { settingsRow("trash-2", "Trash", subtitle: store.workspace.titles.contains(where: { $0.deletedAt != nil }) ? "\(store.workspace.titles.filter { $0.deletedAt != nil }.count) removed \(store.workspace.titles.filter { $0.deletedAt != nil }.count == 1 ? "title" : "titles")" : "No removed titles", disclosure: true) }
                     }
                     settingsSection("Tracking") {
                         HStack(spacing: 8) { settingsIcon("eye-off"); Toggle(isOn: $hideSpoilers) { VStack(alignment: .leading, spacing: 3) { Text("Hide episode spoilers").font(.subheadline.weight(.semibold)); Text("Hide unwatched titles, summaries and images").font(.caption).foregroundStyle(.secondary) } }.tint(theme.accent) }.padding(14)
                         Divider().padding(.leading, 58)
-                        NavigationLink { HistoryView() } label: { settingsRow("history", "Watch history", subtitle: "Recently watched, dates and filters", disclosure: true) }
+                        NavigationLink(value: AppDestination.history) { settingsRow("history", "Watch history", subtitle: "Recently watched, dates and filters", disclosure: true) }.accessibilityIdentifier("settings-history")
                         Divider().padding(.leading, 58)
                         settingsRow("star", "Rating scale", value: "10 · decimals")
                     }
                     settingsSection("Appearance & region") {
-                        NavigationLink { AppearanceView() } label: { settingsRow("palette", "Theme", value: theme.name, disclosure: true) }.accessibilityIdentifier("settings-theme")
+                        NavigationLink(value: AppDestination.appearance) { settingsRow("palette", "Theme", value: theme.name, disclosure: true) }.accessibilityIdentifier("settings-theme")
                         Divider().padding(.leading, 58)
                         settingsRow("activity", "Reduce motion", value: reduceMotion ? "Reduced · device" : "Follow device")
                         Divider().padding(.leading, 58)
@@ -45,9 +45,9 @@ struct SettingsView: View {
                         settingsRow("calendar-days", "Week starts on", value: "Monday")
                     }
                     settingsSection("Connections") {
-                        NavigationLink { TMDBConnectionView() } label: { settingsRow("database", "TMDB", subtitle: "Posters, details, seasons and episodes", disclosure: true) }
+                        NavigationLink(value: AppDestination.tmdb) { settingsRow("database", "TMDB", subtitle: "Posters, details, seasons and episodes", disclosure: true) }.accessibilityIdentifier("settings-tmdb")
                         Divider().padding(.leading, 58)
-                        NavigationLink { TraktView(store: store) } label: { settingsRow("link-2", "Trakt", subtitle: "History, ratings and watchlist", value: summary?.status?.needsReconnect == true ? "Reconnect" : summary?.status?.connected == true ? "Connected" : "Set up", disclosure: true) }.accessibilityIdentifier("settings-trakt")
+                        NavigationLink(value: AppDestination.trakt) { settingsRow("link-2", "Trakt", subtitle: "History, ratings and watchlist", value: summary?.status?.needsReconnect == true ? "Reconnect" : summary?.status?.connected == true ? "Connected" : "Set up", disclosure: true) }.accessibilityIdentifier("settings-trakt")
                     }
                     settingsSection("Data & backup") {
                         Button { exportDiary() } label: { settingsRow("download", "Export diary", subtitle: "Titles, progress, notes and file mappings", disclosure: true) }
@@ -55,9 +55,9 @@ struct SettingsView: View {
                         settingsRow("shield-check", "Diary storage", subtitle: "Your diary is saved to your workspace", value: store.busy ? "Saving…" : store.showingCachedSnapshot ? "Saved copy" : "Ready")
                     }
                     settingsSection("About") {
-                        NavigationLink { AboutView() } label: { settingsRow("info", "About TwilDiary", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.0.0", disclosure: true) }
+                        NavigationLink(value: AppDestination.about) { settingsRow("info", "About TwilDiary", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.0.0", disclosure: true) }.accessibilityIdentifier("settings-about")
                         Divider().padding(.leading, 58)
-                        NavigationLink { AboutView() } label: { settingsRow("shield-check", "Attribution & licenses", disclosure: true) }
+                        NavigationLink(value: AppDestination.about) { settingsRow("shield-check", "Attribution & licenses", disclosure: true) }
                     }
                     Text("This product uses the TMDB API but is not endorsed or certified by TMDB.").font(.caption).foregroundStyle(.secondary).padding(.horizontal, 4)
                     Button("Sign out", role: .destructive) { confirmSignOut = true }.font(.subheadline).frame(maxWidth: .infinity, alignment: .leading).frame(minHeight: 44).disabled(store.busy)
@@ -79,7 +79,7 @@ struct SettingsView: View {
             }
             Text(value.title).font(.system(size: 20, weight: .semibold)).accessibilityIdentifier("settings-trakt-title")
             Text(value.detail).font(.system(size: 13)).foregroundStyle(.secondary).lineSpacing(3)
-            NavigationLink { TraktView(store: store) } label: { Text(value.action).font(.system(size: 13, weight: .semibold)).padding(.horizontal, 16).frame(height: 42).foregroundStyle(theme.ink).background(theme.accent, in: RoundedRectangle(cornerRadius: 12)) }.accessibilityIdentifier("settings-trakt-summary")
+            NavigationLink(value: AppDestination.trakt) { Text(value.action).font(.system(size: 13, weight: .semibold)).padding(.horizontal, 16).frame(height: 42).foregroundStyle(theme.ink).background(theme.accent, in: RoundedRectangle(cornerRadius: 12)) }.accessibilityIdentifier("settings-trakt-summary")
         }.diaryPanel()
     }
     private func settingsSection<Content: View>(_ name: String, @ViewBuilder content: () -> Content) -> some View {
@@ -101,6 +101,7 @@ struct DiaryJSONDocument: FileDocument {
 }
 
 struct TMDBConnectionView: View {
+    @Environment(\.diaryBack) private var back
     @Environment(DiaryStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var checking = false
@@ -113,18 +114,19 @@ struct TMDBConnectionView: View {
             Button(checking ? "Checking…" : "Check connection") { Task { await check() } }.buttonStyle(.bordered).disabled(checking)
             if let error { Text(error).font(.subheadline).foregroundStyle(.secondary) }
             Text("API credentials stay on your server. Use the PC app to configure or replace them.").font(.caption).foregroundStyle(.secondary)
-        }.diaryPanel().padding(16) }.background(.black).navigationTitle("TMDB").navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar).toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }.task { await check() }
+        }.diaryPanel().padding(16) }.background(.black).navigationTitle("TMDB").navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar).toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { if back?.perform() != true { dismiss() } }.accessibilityIdentifier("tmdb-done") } }.task { await check() }
     }
     private func check() async { checking = true; error = nil; defer { checking = false }; do { if !store.isPreview { let _: EmptyResponse = try await store.read("/api/metadata/status") }; verified = true } catch { verified = false; self.error = error.localizedDescription } }
 }
 
 struct AboutView: View {
+    @Environment(\.diaryBack) private var back
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         ScrollView { VStack(alignment: .leading, spacing: 24) {
             VStack(spacing: 12) { BrandMark().fill(.tint).frame(width: 54, height: 54); Text("TwilDiary").font(.title.bold()); Text("Your stories, at your pace.").foregroundStyle(.secondary); Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.0.0") · Build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "")").font(.caption) }.frame(maxWidth: .infinity).diaryPanel()
             VStack(alignment: .leading, spacing: 16) { Text("Attribution & licenses").font(.title2.bold()); Text("Movie & television data").font(.headline); Text("This product uses the TMDB API but is not endorsed or certified by TMDB.").font(.subheadline).foregroundStyle(.secondary); Link("The Movie Database ↗", destination: URL(string: "https://www.themoviedb.org")!); Text("Trakt").font(.headline); Text("Trakt connects your watch history, ratings and watchlist when you authorize it. Scanning prepares a review before changes are applied.").font(.subheadline).foregroundStyle(.secondary); Link("Trakt ↗", destination: URL(string: "https://trakt.tv")!); Text("Icons").font(.headline); Text("Lucide icons are provided under the ISC license.").font(.subheadline).foregroundStyle(.secondary) }.diaryPanel()
             if let url = Bundle.main.url(forResource: "Lucide-LICENSE", withExtension: "txt"), let license = try? String(contentsOf: url, encoding: .utf8) { DisclosureGroup("Lucide ISC license") { Text(license).font(.caption).textSelection(.enabled).padding(.top, 12) }.diaryPanel() }
-        }.padding(16) }.background(.black).navigationTitle("About").navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar).toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+        }.padding(16) }.background(.black).navigationTitle("About").navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar).toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { if back?.perform() != true { dismiss() } }.accessibilityIdentifier("about-done") } }
     }
 }

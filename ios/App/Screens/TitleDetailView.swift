@@ -8,6 +8,8 @@ struct TitleDetailView: View {
     var focusEpisodes = false
     var focusNotes = false
     @State private var didFocusNotes = false
+    @State private var pendingScrollTarget: String?
+    @State private var contentHeight: CGFloat = 0
     @State private var choosingWatchDate = false
     @State private var didFocusEpisodes = false
     @Environment(DiaryStore.self) private var store
@@ -31,6 +33,7 @@ struct TitleDetailView: View {
     @State private var card: WatchCard?
     @State private var cardRequest = UUID()
     @State private var showAllEpisodes = false
+    @AppStorage("episodesGrid") private var episodesGrid = false
     @State private var watchDate = Date.now
     @State private var showDate = false
     @State private var sliderDraft: Double?
@@ -54,7 +57,7 @@ struct TitleDetailView: View {
                                 VStack(spacing: 20) {
                                     DisclosureGroup("Notes", isExpanded: $showNotes) {
                                         VStack(alignment: .leading, spacing: 12) {
-                                            TextEditor(text: $notes).frame(minHeight: 110).scrollContentBackground(.hidden).focused($notesFocused).accessibilityIdentifier("title-notes").accessibilityLabel("Title notes")
+                                            TextEditor(text: $notes).frame(minHeight: 110).scrollContentBackground(.hidden).focused($notesFocused).accessibilityIdentifier("title-notes").accessibilityLabel("Title notes").id("notes-editor")
                                             if notes.utf16.count > 20_000 { Text("Keep notes within 20,000 characters.").font(.caption).foregroundStyle(.orange) }
                                             Button("Save notes") { Task { if await store.patch(title, values: ["notes": notes], expectedVersion: notesVersion) { notesVersion = store.title(id)?.version } } }.disabled(store.writesBlocked || notes == title.notes || notes.utf16.count > 20_000)
                                         }.padding(.top, 12)
@@ -70,18 +73,27 @@ struct TitleDetailView: View {
                                         .id("files")
                                 }.diaryPanel()
                             }.padding(.horizontal, 14).padding(.bottom, 32)
+                                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
                                 .background(alignment: .top) {
                                     TitleArtworkBackdrop(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, name: title.name, topExtension: geometry.safeAreaInsets.top)
                                 }
                         }.scrollClipDisabled().scrollDismissesKeyboard(.interactively).background(.black)
+                            .onScrollPhaseChange { _, phase in if phase == .tracking || phase == .interacting { pendingScrollTarget = nil } }
+                            .task(id: ScrollFocus(target: pendingScrollTarget, height: contentHeight, notes: showNotes, files: showLocation)) {
+                                guard let target = pendingScrollTarget else { return }
+                                await Task.yield()
+                                guard !Task.isCancelled, pendingScrollTarget == target else { return }
+                                proxy.scrollTo(target, anchor: target == "notes-editor" ? .center : .top)
+                            }
+                            .onChange(of: notesFocused) { _, focused in if focused { pendingScrollTarget = nil } }
                             .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
                             .toolbar {
                                 ToolbarItemGroup(placement: .topBarTrailing) {
                                     Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
                                     Menu {
                                         Button(title.queued == true ? "Remove from Queue" : "Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }.disabled(store.writesBlocked)
-                                        Button("Notes") { showNotes = true; Task { await Task.yield(); proxy.scrollTo("notes", anchor: .top) } }.accessibilityIdentifier("title-menu-notes")
-                                        Button("File locations") { showLocation = true; Task { await Task.yield(); proxy.scrollTo("files", anchor: .top) } }.accessibilityIdentifier("title-menu-files")
+                                        Button("Notes") { showNotes = true; pendingScrollTarget = "notes-editor" }.accessibilityIdentifier("title-menu-notes")
+                                        Button("File locations") { showLocation = true; pendingScrollTarget = "files" }.accessibilityIdentifier("title-menu-files")
                                     } label: { Image(systemName: "ellipsis") }.accessibilityLabel("More options for " + title.name).accessibilityIdentifier("title-more")
                                 }
                             }
@@ -101,9 +113,8 @@ struct TitleDetailView: View {
                             .task {
                                 if focusNotes && !didFocusNotes {
                                     showNotes = true
-                                    await Task.yield()
-                                    guard !Task.isCancelled else { return }
-                                    didFocusNotes = true; proxy.scrollTo("notes", anchor: .top)
+                                    didFocusNotes = true
+                                    pendingScrollTarget = "notes-editor"
                                 }
                             }
                             .sheet(isPresented: $choosingWatchDate) {
@@ -126,6 +137,12 @@ struct TitleDetailView: View {
                 }
             } else { ContentUnavailableView("Title unavailable", systemImage: "film") }
         }
+    }
+    private struct ScrollFocus: Equatable {
+        let target: String?
+        let height: CGFloat
+        let notes: Bool
+        let files: Bool
     }
     private func locationRow(_ location: FileLocation, title: MediaTitle) -> some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -265,12 +282,13 @@ struct TitleDetailView: View {
                     }.pickerStyle(.menu).accessibilityIdentifier("title-season").accessibilityValue(season == 0 ? "Specials" : "Season \(season)")
                 }
             }
+            HStack { Spacer(); CollectionLayoutToggle(grid: $episodesGrid, collection: "episodes") }
             if !seasonCanEdit(title) { Button("Load season episodes") { Task { await store.loadSeason(title, number: season); await loadCard(title) } }.buttonStyle(.bordered).disabled(store.writesBlocked) }
             if preparingSeason { ProgressView("Loading season…").font(.caption) }
             if let seasonLoadError { RetryNotice(message: seasonLoadError) { Task { await prepareSeason(title, force: true) } } }
             if episodeDetails.isLoading(season) { ProgressView("Loading episode details…").font(.caption) }
             if let episodeError = episodeDetails.error(for: season) { Text(episodeError).font(.caption).foregroundStyle(.secondary); Button("Retry episode details") { Task { await revealSeason(title) } } }
-            LazyVStack(spacing: 10) { ForEach(visibleEpisodes) { episode in episodeRow(title, episode: episode) } }
+            CollectionLayout(grid: episodesGrid, spacing: 10) { ForEach(visibleEpisodes) { episode in episodeRow(title, episode: episode) } }
             if episodes.isEmpty { Text("No episode metadata yet").font(.subheadline).foregroundStyle(.secondary) }
             if episodes.count > 4 { Button(showAllEpisodes ? "Back to next episode" : "Show all \(episodes.count) episodes") { showAllEpisodes.toggle() }.frame(maxWidth: .infinity).frame(minHeight: 44) }
             if let pending = store.pendingSeasonAdjustments[title.id + ":" + String(season)] { Button("Retry progress to episode \(pending.count)") { Task { await store.setSeasonProgress(title, season: season, count: pending.count, watchedAt: watchInstant); await loadCard(title) } }.disabled(store.writesBlocked) }
@@ -278,14 +296,15 @@ struct TitleDetailView: View {
     }
     private func episodeRow(_ title: MediaTitle, episode: Episode) -> some View {
         let isWatched = watched.contains(episode.id), next = card?.next?.id == episode.id
+        let layout = episodesGrid ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10)) : AnyLayout(HStackLayout(spacing: 12))
         return VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 12) {
+            layout {
                 Button { toggleEpisode(title, episode: episode) } label: {
-                    HStack(spacing: 12) {
-                        episodeArtwork(episode).frame(width: 96, height: 54).clipShape(RoundedRectangle(cornerRadius: 10))
+                    layout {
+                        episodeArtwork(episode).frame(width: episodesGrid ? nil : 96, height: episodesGrid ? 96 : 54).frame(maxWidth: episodesGrid ? .infinity : nil).clipShape(RoundedRectangle(cornerRadius: 10))
                         VStack(alignment: .leading, spacing: 4) {
                             Text("\(episode.number) · \(episodeName(episode))").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).multilineTextAlignment(.leading)
-                            HStack(spacing: 5) {
+                            InlineFlowLayout {
                                 Text(isWatched ? "Watched" : next ? "Up next" : hasAired(episode) ? "Not watched" : "Not aired yet").foregroundStyle(next ? theme.accent : Color.secondary)
                                 if let score = episodeDetails.episodes[episode.id]?.communityScore ?? episode.communityScore, score > 0 { Text("★ " + score.formatted(.number.precision(.fractionLength(1))) + " TMDb").foregroundStyle(.yellow) }
                             }.font(.system(size: 11))

@@ -24,21 +24,32 @@ struct RandomPickDialog: View {
     @State private var sequence = 0
     @State private var rolling = false
     @State private var panelHeight: CGFloat?
+    @GestureState private var swipe = CGSize.zero
     private var active: [MediaTitle] { titles.filter { $0.deletedAt == nil } }
     private var picked: MediaTitle? { active.first { $0.id == selectedID } }
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
-                Color(webHex: "#020106bf").background(.ultraThinMaterial).ignoresSafeArea().onTapGesture { onClose() }.accessibilityHidden(true)
-                RandomPickModalContainer {
-                    ViewThatFits(in: .vertical) {
-                        panel(compact: proxy.size.width < 359).fixedSize(horizontal: false, vertical: true)
-                        ScrollView { panel(compact: proxy.size.width < 359) }
-                    }.tint(theme.accent)
-                }.frame(width: min(480, max(0, proxy.size.width - 38)), height: min(panelHeight ?? max(0, proxy.size.height - 32), max(0, proxy.size.height - 32)))
+                Color(webHex: "#020106bf").background(.ultraThinMaterial).ignoresSafeArea().contentShape(Rectangle()).onTapGesture { }.accessibilityHidden(true)
+                ScrollView {
+                    panel(compact: proxy.size.width < 359).fixedSize(horizontal: false, vertical: true)
+                }.scrollIndicators(.hidden)
+                    .scrollDisabled((panelHeight ?? 380) <= max(0, proxy.size.height - 32))
+                    .tint(theme.accent)
+                    .frame(width: min(480, max(0, proxy.size.width - 38)), height: min(panelHeight ?? 380, max(0, proxy.size.height - 32)))
                     .padding(.vertical, 16)
+                    .offset(x: swipe.width * 0.65, y: swipe.height * 0.65)
+                    .rotationEffect(.degrees(reduceMotion ? 0 : Double(swipe.width / 70)))
+                    .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.8), value: swipe)
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                .simultaneousGesture(DragGesture(minimumDistance: 18)
+                    .updating($swipe) { value, state, _ in if !reduceMotion { state = value.translation } }
+                    .onEnded { value in
+                        let distance = hypot(value.translation.width, value.translation.height)
+                        let projected = hypot(value.predictedEndTranslation.width, value.predictedEndTranslation.height)
+                        if distance > 55 || projected > 140 { onClose() }
+                    })
         }.onAppear { choose() }
             .onChange(of: active.map(\.id)) { _, _ in if picked == nil { rolling = false; choose() } }
             .task(id: sequence) {
@@ -51,7 +62,7 @@ struct RandomPickDialog: View {
                     VStack(alignment: .leading, spacing: 0) {
                         HStack(spacing: 8) {
                             DiaryIcon(name: "sparkles", size: 17)
-                            Text("A little surprise").font(.system(size: 14))
+                            Text("A little surprise").font(.system(size: 14)).accessibilityHidden(true)
                             Spacer(minLength: 0)
                             Button(action: onClose) { DiaryIcon(name: "x", size: 21).frame(width: 44, height: 44) }
                                 .buttonStyle(.plain).accessibilityLabel("Close random pick")
@@ -77,8 +88,7 @@ struct RandomPickDialog: View {
                         }
                     }.padding(16)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { panelHeight = $0 }
-                        .background(Color(webHex: "#0d0d12"), in: RoundedRectangle(cornerRadius: 26))
-                        .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(theme.accent.opacity(0.3137)))
+                        .background { RandomPickSurface(accent: UIColor(theme.accent)) }
                         .shadow(color: .black.opacity(0.6), radius: 30, y: 15)
 
     }
@@ -116,23 +126,24 @@ struct RandomPickDialog: View {
     }
 }
 
-/// Give the modal a real, bounded container. SwiftUI otherwise promotes this fitting
-/// overlay's modal accessibility group to the full-screen presentation ancestor.
-private struct RandomPickModalContainer<Content: View>: UIViewControllerRepresentable {
-    let content: Content
-    init(@ViewBuilder content: () -> Content) { self.content = content() }
-    func makeUIViewController(context: Context) -> UIHostingController<Content> {
-        let controller = UIHostingController(rootView: content)
-        controller.view.backgroundColor = .clear
-        controller.view.isAccessibilityElement = false
-        controller.view.accessibilityContainerType = .semanticGroup
-        controller.view.shouldGroupAccessibilityChildren = true
-        controller.view.accessibilityViewIsModal = true
-        controller.view.accessibilityLabel = "Random pick"
-        controller.view.accessibilityIdentifier = "random-pick-dialog"
-        return controller
+/// This is the actual rounded panel surface, with a heading for VoiceOver.
+/// A non-element hosting-container group is promoted to the whole modal viewport by iOS.
+/// Keeping the native surface as an element preserves its real rendered bounds without
+/// overriding accessibility frames or hiding any of the SwiftUI action buttons.
+private struct RandomPickSurface: UIViewRepresentable {
+    let accent: UIColor
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        view.isAccessibilityElement = true
+        view.accessibilityLabel = "A little surprise"
+        view.accessibilityTraits = .header
+        view.accessibilityIdentifier = "random-pick-dialog"
+        view.layer.cornerRadius = 26
+        view.layer.borderWidth = 1
+        view.backgroundColor = UIColor(red: 13 / 255, green: 13 / 255, blue: 18 / 255, alpha: 1)
+        return view
     }
-    func updateUIViewController(_ controller: UIHostingController<Content>, context: Context) {
-        controller.rootView = content
+    func updateUIView(_ view: UIView, context: Context) {
+        view.layer.borderColor = accent.withAlphaComponent(0.3137).cgColor
     }
 }

@@ -56,6 +56,8 @@ if progress_log.exists():
         'testSearchReturnsDirectlyToRetainedResultsAndGlanceRemainsScoped',
         'testTitleArtworkScrollsAwayBeforeTheEpisodeAndNotesContent',
     }
+    if int(args.build) >= 29:
+        expected_progress.update({'testDoneButtonsReturnFromEverySettingsDestination', 'testGlanceNotesWaitForLateCastAndRelatedLayoutThenKeepEditorVisible'})
     observed_progress = set(re.findall(r"Test Case '-\[TwilDiaryUITests\.NativeScreensTests ([^]]+)\]' passed", value))
     if observed_progress != expected_progress:
         raise SystemExit('Early device regression suite is incomplete: ' + repr(observed_progress))

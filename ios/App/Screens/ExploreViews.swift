@@ -2,6 +2,7 @@ import SwiftUI
 import TwilDiaryCore
 
 struct ExploreView: View {
+    @Environment(\.diaryBack) private var back
     @Environment(DiaryStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var showSearch = false
@@ -17,7 +18,7 @@ struct ExploreView: View {
             .toolbar(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { Button { showSearch.toggle() } label: { DiaryIcon(name: "search", size: 22) }.accessibilityLabel("Search").accessibilityIdentifier("search-explore") }
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("explore-done") }
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { if back?.perform() != true { dismiss() } }.accessibilityIdentifier("explore-done") }
             }
     }
 }

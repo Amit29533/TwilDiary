@@ -1,5 +1,23 @@
 # Native TwilDiary progress
 
+## Current continuation — build 29 prepared after device feedback
+
+Repo **Amit29533/TwilDiary**, branch **ios-native**, source reference web main b43454e. No main push, hosted write, backend change or deployment. The separate iOS repo is not the active build source.
+
+Latest completed CI **40109472619**, source **cb6bed8**, build28: **failure**. Core56 passes and simulator/test bundles compile with zero warnings. Early UI6/8: recovery/Undo, Files/scanner, manual add, Explore return, clear full-bleed artwork scrolling, episode slider/watch/movie/Undo pass. Surprise remains visibly compact but its hosting-container accessibility group reports the full874pt viewport. Search Back starts at y454 on the Watching menu, which consumes the gesture; the destination remains onscreen. Device Release/IPA/full unit/UI/extra-phone gates correctly skip after early failure. No build28 IPA or release acceptance. Diagnostic recordings, hierarchy and screenshots downloaded under .local/ios-app-build-40109472619. Last packaged user trial is build25, overall failed tests, at D:/Downloads/TwilDiary-native-build25-test.ipa; last fully green scoped build remains14.
+
+Prepared native29 work (uncompiled until next CI):
+- Own all custom Done routes in typed per-tab NavigationPaths. A stack-specific back action pops one page; scanner's nested search sheet owns its own path/back action. Convert remaining direct destinations and keep real sheet Done actions local. Seven unit regressions cover independent/nested navigation plus glyph-measured, Unicode-safe synopsis continuation.
+- Shared saved/catalog hero keeps the opening two synopsis lines beside the poster when More expands only the remainder full width below. Actual full-bleed top coverage already passed26/27/28; all-size layout test now measures stable lead position and continuation bounds.
+- Glance Notes targets the editor, follows content-height changes from late cast/related metadata, and stops following when the user scrolls/focuses. No arbitrary production delay. UI regression includes deterministic delayed metadata in DEBUG fixtures and saves/reopens notes.
+- Search clears SwiftUI focus and resigns the keyboard before either saved or online navigation. Library Add hands off only after sheet dismissal; scanner keeps catalog pushes inside its sheet. Existing search test now leaves the keyboard up, checks online push/short cancelled pop/full Back, and tests content Back on the hero rather than a status control.
+- Surprise no longer dismisses on a backdrop tap; directional swipes dismiss with spring drag feedback. Replace the full-screen promoted hosting group with one bounded scrolling panel; its actual rounded UIKit surface supplies a VoiceOver heading and actual rendered bounds, without overriding accessibility frames or removing size assertions. Retain explicit Close, Escape, planned scope/reroll/Open tests.
+- Persistent list/grid controls for History, Home recent/upcoming, Glance with all watch/menu controls, Files folders, unmatched scans, saved/catalog episodes, catalog/discovery/filmography, global search, Stats backlog and Trakt review. Reuse one lazy grid container across modes to retain card identity/cache. Settings/form rows remain forms. Buttons use spring/selection feedback and reduce-motion handling. New UI regression checks key grid geometry and preserved actions; existing person filmography test exercises list then grid and Done.
+- Local commit6f7d158 additionally isolates Trakt filter reads from scan/apply, with three interleaving tests. Not part of build28.
+
+Expected next suite inventory: Core56, native unit119, primary UI43, plus the same three layout cases per extra phone. This is an inventory, not passed evidence. Local validation: YAML/Python parsing, ten unique early-test selectors and 119/43 native-unit/UI method inventory pass; tree-sitter reports no syntax errors in changed Swift (one known parser limitation in unchanged TraktSignIn). UTF-8/diff checks pass. This does not type-check Swift. Exact next action: commit/push native29, follow logs and all gates, repair each failure and visually review passed screenshots. Never cancel an active run by pushing another ios/** batch. Physical-device motion, keyboard snapshot behavior and VoiceOver remain device-check items after simulator verification.
+
+
 Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native → ios/**. Web source of truth: main baseline b43454e. The separate TwilDiary-iOS repository remains unchanged. No PR has been created or merged. No hosted writes or deployments.
 
 ## Current request and exact next action

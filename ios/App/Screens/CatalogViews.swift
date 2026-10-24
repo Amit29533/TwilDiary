@@ -4,15 +4,33 @@ import TwilDiaryCore
 
 struct CatalogGrid: View {
     @Environment(DiaryStore.self) private var store
+    @AppStorage("catalogGrid") private var grid = true
     let items: [CatalogItem]
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), alignment: .leading, spacing: 20) {
-            ForEach(items, id: \.displayKey) { item in
-                Group {
-                    if let saved = CatalogTools.libraryIdentity(item, in: store.workspace) { NavigationLink(value: saved) { CatalogPoster(item: item) } }
-                    else { NavigationLink(value: item.route) { CatalogPoster(item: item) } }
-                }.buttonStyle(.plain).accessibilityIdentifier("catalog-" + item.displayKey)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack { Spacer(); CollectionLayoutToggle(grid: $grid, collection: "catalog") }
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: grid ? 3 : 1), alignment: .leading, spacing: grid ? 20 : 10) {
+                ForEach(items, id: \.displayKey) { item in
+                    Group {
+                        if let saved = CatalogTools.libraryIdentity(item, in: store.workspace) { NavigationLink(value: saved) { card(item) } }
+                        else { NavigationLink(value: item.route) { card(item) } }
+                    }.buttonStyle(.plain).accessibilityIdentifier("catalog-" + item.displayKey)
+                }
             }
+        }
+    }
+    @ViewBuilder private func card(_ item: CatalogItem) -> some View {
+        if grid { CatalogPoster(item: item) }
+        else {
+            HStack(spacing: 12) {
+                Artwork(path: item.artwork, title: item.name, initialsOnly: false).frame(width: 68, height: 102).clipShape(RoundedRectangle(cornerRadius: 10))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
+                    Text((item.year.map(String.init) ?? "Year unknown") + (item.inLibraryId == nil ? "" : " · In your library")).font(.system(size: 12)).foregroundStyle(.secondary)
+                    if let score = item.rating, score > 0 { Label(score.formatted(.number.precision(.fractionLength(1))), systemImage: "star.fill").font(.system(size: 12)).foregroundStyle(.yellow) }
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                DiaryIcon(name: "chevron-right", size: 16).foregroundStyle(.secondary)
+            }.contentShape(Rectangle())
         }
     }
 }
@@ -51,6 +69,8 @@ struct CatalogSearchView: View {
     @State private var failure: String?
     @State private var showManual = false
     @State private var savedManualID: String?
+    @State private var dismissKeyboard = 0
+    @AppStorage("searchGrid") private var grid = false
     @State private var page = 1
     @State private var totalPages = 0
     @State private var libraryLimit = 20
@@ -60,27 +80,25 @@ struct CatalogSearchView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 4) {
-                SearchField(placeholder: "Title or IMDb ID…", text: $query, label: "Search library and online", autoFocus: true)
+                SearchField(placeholder: "Title or IMDb ID…", text: $query, label: "Search library and online", autoFocus: true, dismissRevision: dismissKeyboard)
                 if let onClose { Button(action: onClose) { DiaryIcon(name: "x", size: 18).frame(width: 44, height: 44) }.buttonStyle(.plain).accessibilityLabel("Close search") }
             }
             if !ready { Text("Find a title, or paste an IMDb ID.").font(.system(size: 14)).foregroundStyle(.secondary) }
             else {
-                Text("In Library · \(localMatches.count)").font(.system(size: 15, weight: .semibold))
-                ForEach(localMatches.prefix(libraryLimit)) { title in
+                HStack { Text("In Library · \(localMatches.count)").font(.system(size: 15, weight: .semibold)); Spacer(); CollectionLayoutToggle(grid: $grid, collection: "search") }
+                CollectionLayout(grid: grid) { ForEach(localMatches.prefix(libraryLimit)) { title in
                     Button { chooseLibrary(title.id) } label: { searchRow(title) }.buttonStyle(.plain)
                         .accessibilityIdentifier((onLibraryChoose == nil ? "search-library-" : "match-title-") + title.id)
-                }
+                } }
                 if localMatches.count > libraryLimit { Button("More library matches") { libraryLimit += 20 }.font(.system(size: 13)).frame(minHeight: 44) }
                 if localMatches.isEmpty { Text("No library matches").font(.system(size: 13)).foregroundStyle(.secondary) }
                 Text("Not In Library · TMDB").font(.system(size: 15, weight: .semibold))
                 if loading { ProgressView("Searching…") }
                 if let failure { HStack { Text(failure).font(.system(size: 13)).foregroundStyle(.secondary); Spacer(minLength: 0); Button("Retry") { requestPage(page) }.font(.system(size: 13)) } }
-                ForEach(results, id: \.key) { item in
-                    Group {
-                        if let onCatalogChoose { Button { onCatalogChoose(item.route) } label: { onlineRow(item) } }
-                        else { NavigationLink(value: item.route) { onlineRow(item) } }
-                    }.buttonStyle(.plain).accessibilityIdentifier("search-" + item.key)
-                }
+                CollectionLayout(grid: grid) { ForEach(results, id: \.key) { item in
+                    Button { chooseCatalog(item.route) } label: { onlineRow(item) }
+                        .buttonStyle(.plain).accessibilityIdentifier("search-" + item.key)
+                } }
                 if !loading && results.isEmpty && failure == nil { Text("No online matches").font(.system(size: 13)).foregroundStyle(.secondary) }
                 if totalPages > 1 {
                     HStack { Button("Previous") { requestPage(page - 1) }.disabled(page <= 1 || loading); Spacer(); Text("Page \(page) of \(totalPages)").font(.system(size: 13)).foregroundStyle(.secondary); Spacer(); Button("Next") { requestPage(page + 1) }.disabled(page >= min(500, totalPages) || loading) }.font(.system(size: 13))
@@ -96,23 +114,26 @@ struct CatalogSearchView: View {
             }) { ManualTitleView(initialName: normalized) { id in savedManualID = id; showManual = false } }
     }
     private func onlineRow(_ item: CatalogItem) -> some View {
-        HStack(spacing: 12) {
-            Artwork(path: item.artwork, title: item.name, initialsOnly: false).frame(width: 72, height: 108).clipShape(RoundedRectangle(cornerRadius: 8))
+        let layout = grid ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
+        return layout {
+            Artwork(path: item.artwork, title: item.name, initialsOnly: false).frame(width: grid ? nil : 72, height: grid ? 170 : 108).frame(maxWidth: grid ? .infinity : nil).clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 4) { Text(item.name).font(.system(size: 15, weight: .semibold)); Text([item.year.map(String.init), item.mediaType == .tv ? "Show" : "Movie"].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 13)).foregroundStyle(.secondary) }
-            Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint)
+            if !grid { Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint) }
         }.padding(.vertical, 9).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)
     }
     private var normalized: String { DiarySearchTools.normalize(query) }
     private var ready: Bool { DiarySearchTools.ready(normalized) }
     private var localMatches: [SearchLibraryTitle] { DiarySearchTools.merging(DiarySearchTools.matches(store.workspace, query: normalized), identified) }
     private func searchRow(_ title: SearchLibraryTitle) -> some View {
-        HStack(spacing: 12) {
-            Artwork(path: title.artwork, title: title.name).frame(width: 72, height: 108).clipShape(RoundedRectangle(cornerRadius: 8))
+        let layout = grid ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
+        return layout {
+            Artwork(path: title.artwork, title: title.name).frame(width: grid ? nil : 72, height: grid ? 170 : 108).frame(maxWidth: grid ? .infinity : nil).clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 4) { Text(title.name).font(.system(size: 15, weight: .semibold)); Text([title.year.map(String.init), title.category == "anime-movie" ? "Anime movie" : title.category.capitalized].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 13)).foregroundStyle(.secondary) }
-            Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint)
+            if !grid { Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint) }
         }.padding(.vertical, 9).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)
     }
     private func chooseLibrary(_ id: String) {
+        dismissKeyboard += 1
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         Task {
             if store.title(id) == nil { await store.refresh() }
@@ -120,6 +141,12 @@ struct CatalogSearchView: View {
             if let onLibraryChoose { onLibraryChoose(id) }
             else { router.openTitle(id, tab: router.selectedTab) }
         }
+    }
+    private func chooseCatalog(_ route: CatalogRoute) {
+        dismissKeyboard += 1
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        if let onCatalogChoose { onCatalogChoose(route) }
+        else { router.paths[router.selectedTab, default: NavigationPath()].append(route) }
     }
     private func requestPage(_ number: Int) { pageTask?.cancel(); pageTask = Task { await search(number: number) } }
     private func search(number: Int, reset: Bool = false) async {
@@ -160,7 +187,7 @@ struct CatalogDetailView: View {
                     if let details {
                         TitleHero(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), year: details.details.year, category: details.details.suggestedCategory == "anime-movie" ? "Anime movie" : details.details.suggestedCategory.capitalized, runtime: details.details.runtimeMinutes, series: route.kind == .tv, score: details.details.communityScore, summary: details.details.overview, expanded: $showOverview) { EmptyView() }
                         if details.libraryTitle?.trashed == true {
-                            NavigationLink { TrashView().onAppear { router.detailTabs.remove(router.selectedTab) } } label: { Text("Restore from Trash") }.buttonStyle(.borderedProminent).controlSize(.large)
+                            NavigationLink(value: AppDestination.trash) { Text("Restore from Trash") }.buttonStyle(.borderedProminent).controlSize(.large)
                         } else if let saved = details.libraryTitle {
                             Button("Open in Library") { accepted(saved.id) }.buttonStyle(.borderedProminent).controlSize(.large)
                         } else {
@@ -204,6 +231,7 @@ private struct CatalogSeasonPreview: View {
     @State private var controller: CatalogEpisodeController
     @State private var selected: Int
     @State private var showAll = false
+    @AppStorage("episodesGrid") private var episodesGrid = false
     @State private var expanded = Set<Int>()
     @State private var revealed = Set<Int>()
     init(route: CatalogRoute, details: CatalogDetails, store: DiaryStore) {
@@ -236,7 +264,8 @@ private struct CatalogSeasonPreview: View {
                 if controller.loading { ProgressView("Loading season…") }
                 if let error = controller.error { RetryNotice(message: error) { Task { await controller.load(selected, reveal: !hideSpoilers || controller.revealed, force: true) } } }
                 if controller.items.isEmpty && !controller.loading && controller.error == nil { ContentUnavailableView("No episode metadata yet", systemImage: "film", description: Text("No episodes are available for this season yet.")) }
-                ForEach(visible) { episode in episodeRow(episode) }
+                HStack { Spacer(); CollectionLayoutToggle(grid: $episodesGrid, collection: "catalog-episodes") }
+                CollectionLayout(grid: episodesGrid) { ForEach(visible) { episode in episodeRow(episode) } }
                 if controller.items.count > 4 {
                     Button(showAll ? "Show fewer episodes" : "Show all \(controller.items.count) episodes") { showAll.toggle() }.font(.system(size: 14)).frame(maxWidth: .infinity).frame(minHeight: 44)
                 }
@@ -247,16 +276,17 @@ private struct CatalogSeasonPreview: View {
     }
     private func episodeRow(_ episode: CatalogEpisode) -> some View {
         let hidden = hideSpoilers && !revealed.contains(episode.number)
+        let layout = episodesGrid ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(spacing: 12))
         return VStack(alignment: .leading, spacing: 12) {
             Button {
                 if expanded.contains(episode.number) { expanded.remove(episode.number) }
                 else { expanded.insert(episode.number); revealed.insert(episode.number); Task { await controller.load(selected, reveal: true) } }
             } label: {
-                HStack(spacing: 12) {
+                layout {
                     Group {
                         if hidden { DiaryIcon(name: "eye-off", size: 23).frame(maxWidth: .infinity, maxHeight: .infinity).foregroundStyle(.secondary).background(Color(webHex: "#242030")) }
                         else { Artwork(path: CatalogTools.image(episode.stillPath) ?? CatalogTools.image(details.backdropPath), title: details.name) }
-                    }.frame(width: 96, height: 54).clipShape(RoundedRectangle(cornerRadius: 10))
+                    }.frame(width: episodesGrid ? nil : 96, height: episodesGrid ? 96 : 54).frame(maxWidth: episodesGrid ? .infinity : nil).clipShape(RoundedRectangle(cornerRadius: 10))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("\(episode.number) · " + (hidden ? "A story for later" : episode.name.isEmpty ? "Episode \(episode.number)" : episode.name)).font(.system(size: 14, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
                         HStack(spacing: 5) {

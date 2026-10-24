@@ -70,11 +70,20 @@ import XCTest
     }
     func testExpandedSummaryAndWatchDateRemainInsideEveryPhone() {
         let app = launch(); app.buttons["tab-library"].tap(); app.buttons["title-frieren"].tap()
-        XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: 5)); app.buttons["More"].tap()
         let summary = app.staticTexts["title-synopsis-text"]
-        XCTAssertTrue(summary.exists); XCTAssertGreaterThan(summary.frame.width, app.frame.width * 0.8)
-        XCTAssertLessThan(summary.frame.minX, 24)
-        capture("Expanded synopsis full width", app: app)
+        XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: 5))
+        let leadingFrame = summary.frame
+        app.buttons["More"].tap()
+        let continuation = app.staticTexts["title-synopsis-continuation"]
+        XCTAssertTrue(continuation.waitForExistence(timeout: 5))
+        XCTAssertEqual(summary.frame.minX, leadingFrame.minX, accuracy: 1)
+        XCTAssertEqual(summary.frame.minY, leadingFrame.minY, accuracy: 1)
+        XCTAssertEqual(summary.frame.width, leadingFrame.width, accuracy: 1)
+        XCTAssertGreaterThan(summary.frame.minX, app.frame.width / 3)
+        XCTAssertGreaterThan(continuation.frame.width, app.frame.width * 0.8)
+        XCTAssertLessThan(continuation.frame.minX, 24)
+        XCTAssertGreaterThan(continuation.frame.minY, summary.frame.maxY)
+        capture("Expanded synopsis keeps leading lines beside cover", app: app)
         let watched = app.buttons["watch-date"]
         for _ in 0..<5 { if watched.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(watched.isHittable); watched.tap()

@@ -14,6 +14,7 @@ struct StatsView: View {
     @State private var expandedGenres = false
     @State private var progressLimit = 5
     @State private var staleLimit = 2
+    @AppStorage("backlogGrid") private var grid = false
     @State private var clock = Date.now
     var body: some View {
         let data = StatsOverview(workspace: store.workspace, period: period, year: year, now: clock)
@@ -50,7 +51,7 @@ struct StatsView: View {
             HStack(alignment: .firstTextBaseline) { Text("\(value.dated) of \(value.total) watches have dates").font(.system(size: 15, weight: .bold)); Spacer(minLength: 4); Text("\(value.percent)%").font(.system(size: 14, weight: .bold)).foregroundStyle(.tint) }
             ProgressView(value: Double(value.percent), total: 100).accessibilityLabel("Watches with dates")
             caption(coverageCopy(value))
-            if value.unknown > 0 { NavigationLink { HistoryView(initialUnknown: true) } label: { Text("Review dates").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 12).padding(.vertical, 9).overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.14))) }.buttonStyle(.plain) }
+            if value.unknown > 0 { NavigationLink(value: HistoryRoute(unknown: true)) { Text("Review dates").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 12).padding(.vertical, 9).overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.14))) }.buttonStyle(.plain) }
         }.statsPanel()
     }
     private func coverageCopy(_ value: StatsOverview.Coverage) -> String {
@@ -114,7 +115,7 @@ struct StatsView: View {
             HStack(spacing: 4) { ForEach(0..<12, id: \.self) { column in
                 VStack(spacing: 4) { ForEach(0..<7, id: \.self) { row in
                     let day = value.heatmap[column * 7 + row]
-                    NavigationLink { HistoryView(initialDay: localDay(day.date)) } label: { RoundedRectangle(cornerRadius: 3).fill(heatColor(day.count, maxCount)).frame(height: 14).opacity(day.future ? 0.25 : 1) }.buttonStyle(.plain).disabled(day.future).accessibilityLabel("\(day.date): \(day.count) watches")
+                    NavigationLink(value: HistoryRoute(day: localDay(day.date))) { RoundedRectangle(cornerRadius: 3).fill(heatColor(day.count, maxCount)).frame(height: 14).opacity(day.future ? 0.25 : 1) }.buttonStyle(.plain).disabled(day.future).accessibilityLabel("\(day.date): \(day.count) watches")
                 } }.frame(maxWidth: .infinity)
             } }
             HStack { Text("Last 12 weeks"); Spacer(); Text("Less"); ForEach(0..<5, id: \.self) { level in RoundedRectangle(cornerRadius: 2).fill(heatColor(level, 4)).frame(width: 10, height: 10) }; Text("More") }.font(.system(size: 10)).foregroundStyle(.secondary)
@@ -122,25 +123,26 @@ struct StatsView: View {
     }
     private func backlog(_ value: StatsOverview.Backlog) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            heading("Backlog")
+            HStack { heading("Backlog"); Spacer(); CollectionLayoutToggle(grid: $grid, collection: "backlog") }
             GeometryReader { geometry in HStack(spacing: 0) { ForEach(statuses, id: \.self) { status in statusColor(status).frame(width: geometry.size.width * CGFloat(value.counts[status] ?? 0) / CGFloat(max(1, value.total))) } } }.frame(height: 10).clipShape(Capsule()).accessibilityLabel(statuses.map { "\($0.capitalized): \(value.counts[$0] ?? 0)" }.joined(separator: ", "))
             ForEach(statuses, id: \.self) { status in Button { router.library(status) } label: { HStack { Circle().fill(statusColor(status)).frame(width: 8, height: 8); Text(status.capitalized); Spacer(); Text("\(value.counts[status] ?? 0)").bold() }.font(.system(size: 13)).foregroundStyle(.white) }.buttonStyle(.plain) }
             HStack(alignment: .top) { VStack(alignment: .leading, spacing: 5) { caption("Planned runtime", size: 12); Text(DiaryDate.duration(value.plannedMinutes)).font(.system(size: 24, weight: .bold)).foregroundStyle(.tint); caption(value.unknownPlanned > 0 ? "\(value.unknownPlanned) titles lack runtime or complete episode data" : "Estimated from known, aired content", size: 11) }; Spacer(minLength: 4); Button("Open planned") { router.library("planned") }.font(.system(size: 12, weight: .semibold)).padding(.vertical, 10) }.padding(.vertical, 10)
             VStack(alignment: .leading, spacing: 4) { Text("In progress").font(.system(size: 15, weight: .bold)); caption("Shortest to finish first") }
             if value.inProgress.isEmpty { caption("No movies or shows in progress.") }
-            ForEach(Array(value.inProgress.prefix(progressLimit))) { item in NavigationLink(value: item.id) { progressRow(item) }.buttonStyle(.plain) }
+            CollectionLayout(grid: grid) { ForEach(Array(value.inProgress.prefix(progressLimit))) { item in NavigationLink(value: item.id) { progressRow(item) }.buttonStyle(.plain) } }
             if progressLimit < value.inProgress.count { Button("Show more in progress") { progressLimit += 5 }.font(.system(size: 13, weight: .semibold)) }
             VStack(alignment: .leading, spacing: 5) { Text("No progress in 30+ days").font(.system(size: 15, weight: .bold)); caption("Pick them back up or mark them dropped") }.padding(.top, 10)
-            ForEach(Array(value.stale.prefix(staleLimit))) { item in HStack { NavigationLink(value: item.id) { VStack(alignment: .leading, spacing: 4) { Text(item.title.name).font(.system(size: 13, weight: .bold)); caption("Last watched \(item.daysSince ?? 0) days ago", size: 11) } }.buttonStyle(.plain); Spacer(); Button("Drop") { Task { await store.setStatus(item.title, status: "dropped") } }.font(.system(size: 12, weight: .semibold)).disabled(store.busy) } }
+            CollectionLayout(grid: grid) { ForEach(Array(value.stale.prefix(staleLimit))) { item in VStack(alignment: .leading, spacing: 8) { NavigationLink(value: item.id) { VStack(alignment: .leading, spacing: 4) { Text(item.title.name).font(.system(size: 13, weight: .bold)); caption("Last watched \(item.daysSince ?? 0) days ago", size: 11) } }.buttonStyle(.plain); Spacer(); Button("Drop") { Task { await store.setStatus(item.title, status: "dropped") } }.font(.system(size: 12, weight: .semibold)).disabled(store.busy) } } }
             if value.stale.isEmpty { caption("No stalled titles with a known watch date.") }
             if staleLimit < value.stale.count { Button("Show more") { staleLimit += 5 }.font(.system(size: 13, weight: .semibold)) }
         }.statsPanel()
     }
     private func progressRow(_ item: StatsOverview.Progress) -> some View {
-        HStack(spacing: 10) {
-            Artwork(path: item.title.poster, title: item.title.name).frame(width: 40, height: 60).clipShape(RoundedRectangle(cornerRadius: 6))
+        let layout = grid ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
+        return layout {
+            Artwork(path: item.title.poster, title: item.title.name).frame(width: grid ? nil : 40, height: grid ? 150 : 60).frame(maxWidth: grid ? .infinity : nil).clipShape(RoundedRectangle(cornerRadius: 6))
             VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline) { Text(item.title.name).font(.system(size: 13, weight: .bold)); Spacer(minLength: 4); caption(item.remainingMinutes.map { DiaryDate.duration($0) + " left" } ?? "Time unknown", size: 11) }
+                InlineFlowLayout { Text(item.title.name).font(.system(size: 13, weight: .bold)); Spacer(minLength: 4); caption(item.remainingMinutes.map { DiaryDate.duration($0) + " left" } ?? "Time unknown", size: 11) }
                 caption(item.title.isSeries ? item.catalogueKnown ? "\(item.watched) of \(item.total) aired episodes · \(item.remaining) to go" : "Episode data incomplete · open to load details" : "Movie", size: 11)
                 ProgressView(value: item.percent, total: 100)
             }

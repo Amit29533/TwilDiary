@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Shared title header for saved titles and unimported catalog previews.
 struct TitleHero<PersonalRating: View>: View {
@@ -15,6 +16,9 @@ struct TitleHero<PersonalRating: View>: View {
     init(name: String, poster: String?, year: Int?, category: String, runtime: Int?, series: Bool, score: Double?, summary: String, expanded: Binding<Bool>, @ViewBuilder personalRating: () -> PersonalRating) {
         self.name = name; self.poster = poster; self.year = year; self.category = category; self.runtime = runtime; self.series = series; self.score = score; self.summary = summary; self._expanded = expanded; self.personalRating = personalRating()
     }
+    @State private var synopsisWidth: CGFloat = 0
+    @State private var synopsisParts = SynopsisTextLayout.Parts(leading: "", continuation: "")
+    private var synopsisText: String { summary.isEmpty ? "Add your own thoughts in Notes." : summary }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 15) {
@@ -26,21 +30,46 @@ struct TitleHero<PersonalRating: View>: View {
                         HStack(spacing: 5) { Image(systemName: "star.fill").font(.system(size: 20)).foregroundStyle(.yellow); Text(score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—").foregroundStyle(.yellow); Text("TMDb").font(.system(size: 14.4)).foregroundStyle(.secondary) }.frame(minHeight: 44)
                         personalRating
                     }.font(.system(size: 15.2)).padding(.top, 14)
-                    if !expanded { synopsis.padding(.top, 16) }
+                    synopsisLead.padding(.top, 16)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+                            synopsisWidth = width; measureSynopsis()
+                        }
                 }.padding(.top, 14)
             }
-            if expanded { synopsis }
-        }.padding(.top, 82)
+            if expanded && !synopsisParts.continuation.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(synopsisParts.continuation.trimmingCharacters(in: .whitespacesAndNewlines))
+                        .font(.system(size: 15.04)).lineSpacing(6).foregroundStyle(Color(webHex: "#c5c0cf"))
+                        .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("title-synopsis-continuation")
+                    Button("Less") { setExpanded(false) }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 44)
+                }.transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 6)))
+            }
+        }.padding(.top, 82).onChange(of: synopsisText) { _, _ in measureSynopsis() }
     }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private var synopsis: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(summary.isEmpty ? "Add your own thoughts in Notes." : summary).font(.system(size: 15.04)).lineSpacing(6).foregroundStyle(Color(webHex: "#c5c0cf")).lineLimit(expanded ? nil : 2).frame(maxWidth: .infinity, alignment: .leading).accessibilityIdentifier("title-synopsis-text")
-                .padding(.trailing, !expanded && summary.count > 100 ? 36 : 0)
-                .overlay(alignment: .bottomTrailing) { if !expanded && summary.count > 100 { Button("More") { withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) { expanded = true } }.font(.system(size: 14, weight: .semibold)).frame(width: 44, height: 44).offset(y: 8) } }
-            if expanded { Button("Less") { withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) { expanded = false } }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 36) }
-        }
+    private var synopsisLead: some View {
+        let hasOverflow = !synopsisParts.continuation.isEmpty
+        return Text(synopsisParts.leading.isEmpty ? synopsisText : synopsisParts.leading.trimmingCharacters(in: .whitespacesAndNewlines) + (expanded || !hasOverflow ? "" : "…"))
+            .font(.system(size: 15.04)).lineSpacing(6).foregroundStyle(Color(webHex: "#c5c0cf"))
+            .lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.trailing, 36)
+            .accessibilityIdentifier("title-synopsis-text")
+            .overlay(alignment: .bottomTrailing) {
+                if !expanded && hasOverflow {
+                    Button("More") { setExpanded(true) }.font(.system(size: 14, weight: .semibold))
+                        .frame(width: 44, height: 44).offset(y: 8)
+                }
+            }
     }
+    private func setExpanded(_ value: Bool) {
+        withAnimation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.88)) { expanded = value }
+    }
+    private func measureSynopsis() {
+        guard synopsisWidth > 36 else { return }
+        synopsisParts = SynopsisTextLayout.split(synopsisText, width: synopsisWidth - 36)
+    }
+
 }
 struct TitleArtworkBackdrop: View {
     let path: String?

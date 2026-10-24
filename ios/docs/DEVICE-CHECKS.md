@@ -32,3 +32,14 @@ Hosted mutation tests require the owner's explicit authorization. Simulator chec
 - Verify hero art remains full bleed at the top and scrolls completely out before lower episode/notes content; check saved titles, online previews and person pages.
 - Hold Library and slide through all five tabs; the lens should follow the finger, with one final destination on release. Release above/outside the bar to cancel; normal active-tab taps should still return to the tab root. Test VoiceOver activation, Reduce Motion, all six themes and a phone with a Home indicator.
 - The scrub lens uses one shared native glass bar plus light/shape feedback rather than an extra live image blur per tab. Physical spring, haptic and touch comfort require real-phone validation.
+
+
+## Device-feedback build 29 (pending simulator and phone verification)
+
+- Confirm saved and online hero artwork reaches behind the status/navigation bars; it scrolls away into black without showing through episode/Notes rows.
+- Expand More: the opening two lines remain beside the cover, only overflow continues beneath. Check a long synopsis, emoji and the largest text setting.
+- From Home, cast filmography and More subpages, Done must return exactly one level. Test both a completed swipe and a short cancelled swipe. Online search must retain the query with no keyboard behind the transitioning title.
+- From Glance → Notes, wait for cast/related metadata: the editor stays visible until a finger scroll or editor focus takes control. Save, back and reopen to verify persistence.
+- Surprise backdrop tap stays open. Swipe up/down/left/right dismisses; a short drag springs back; Close and VoiceOver Escape work. VoiceOver must reach the heading, reroll and Open actions without reaching the dimmed app.
+- Test collection grid/list preferences, scroll and independent +/- actions in Glance. Confirm a layout change retains data and does not block unrelated cards. Review narrow-phone long paths and Trakt conflict actions in grid mode.
+- Assess spring motion, haptics and scroll responsiveness on the actual phone, including Reduce Motion/Reduce Transparency. CI screenshots do not establish physical smoothness.

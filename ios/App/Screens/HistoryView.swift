@@ -5,6 +5,7 @@ struct HistoryView: View {
     @Environment(DiaryStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @AppStorage("theme") private var theme = DiaryTheme.twilight
+    @AppStorage("historyGrid") private var grid = false
     @State private var filters: HistoryQuery
     @State private var showRange: Bool
     @State private var limit = 12
@@ -26,6 +27,7 @@ struct HistoryView: View {
                         Text("Your watch history").font(.system(size: 19, weight: .semibold)).frame(maxWidth: .infinity, alignment: .leading)
                         Text("\(entries.count) \(entries.count == 1 ? "watch" : "watches")").font(.system(size: 12)).foregroundStyle(.secondary)
                             .padding(.horizontal, 8).padding(.vertical, 4).background(theme.accent.opacity(0.1), in: Capsule()).accessibilityIdentifier("history-count")
+                        CollectionLayoutToggle(grid: $grid, collection: "history")
                         Button { showRange.toggle() } label: { DiaryIcon(name: "sliders-horizontal", size: 18).frame(width: 44, height: 44) }
                             .buttonStyle(.plain).foregroundStyle(showRange || filters.filtered ? theme.accent : .secondary)
                             .accessibilityLabel("Date filters").accessibilityAddTraits(showRange ? .isSelected : [])
@@ -59,9 +61,9 @@ struct HistoryView: View {
                     if entries.isEmpty {
                         DiaryEmptyState(title: "No watches found", description: "Try another title or date range. Unknown dates are excluded from date ranges.")
                     } else {
-                        LazyVStack(spacing: 8) {
+                        CollectionLayout(grid: grid, spacing: 8) {
                             ForEach(entries.prefix(limit)) { entry in
-                                NavigationLink(value: entry.title.id) { HistoryRow(entry: entry) }.buttonStyle(.plain).accessibilityIdentifier("history-event-" + entry.id)
+                                NavigationLink(value: entry.title.id) { HistoryRow(entry: entry, grid: grid) }.buttonStyle(.plain).accessibilityIdentifier("history-event-" + entry.id)
                             }
                         }
                     }
@@ -69,7 +71,7 @@ struct HistoryView: View {
                         Button { limit += 12 } label: { Text("Show more watches (\(entries.count - limit))").font(.system(size: 14, weight: .semibold)).frame(maxWidth: .infinity).frame(minHeight: 44) }.buttonStyle(.bordered).accessibilityIdentifier("history-load-more")
                     }
                     HStack(alignment: .top, spacing: 6) { DiaryIcon(name: "clock-3", size: 13); Text("Unknown dates stay unknown. Dates are never guessed.").font(.system(size: 12)) }.foregroundStyle(.secondary)
-                }.padding(14)
+                }.padding(14).padding(.bottom, 100)
             }.refreshable { await store.refresh() }
         }.navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
             .onChange(of: filters) { _, _ in limit = 12 }
@@ -122,9 +124,11 @@ private struct HistoryCalendarSheet: View {
 
 struct HistoryRow: View {
     let entry: HistoryEntry
+    var grid = false
+    private var layout: AnyLayout { grid ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10)) : AnyLayout(HStackLayout(spacing: 10)) }
     var body: some View {
-        HStack(spacing: 10) {
-            Artwork(path: entry.title.poster, title: entry.title.name, initialsOnly: false).frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 8))
+        layout {
+            Artwork(path: entry.title.poster, title: entry.title.name, initialsOnly: false).frame(width: grid ? nil : 60, height: grid ? 170 : 90).frame(maxWidth: grid ? .infinity : nil).clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 0) {
                 Text(entry.title.name).font(.system(size: 15, weight: .semibold)).fixedSize(horizontal: false, vertical: true).shadow(color: .black.opacity(0.53), radius: 4, y: 1)
                 InlineFlowLayout {
@@ -134,7 +138,7 @@ struct HistoryRow: View {
                 Spacer(minLength: 0)
                 Text(DiaryDate.parse(entry.event.watchedAt).map { $0.formatted(.dateTime.month(.abbreviated).day().year()) } ?? "Watch date unknown").font(.system(size: 12)).foregroundStyle(Color(webHex: "#a09aa9")).padding(.top, 10)
             }.frame(maxWidth: .infinity, minHeight: 84, alignment: .topLeading).padding(.vertical, 3)
-            DiaryIcon(name: "chevron-right", size: 17).foregroundStyle(Color(webHex: "#a09aa9"))
+            if !grid { DiaryIcon(name: "chevron-right", size: 17).foregroundStyle(Color(webHex: "#a09aa9")) }
         }.padding(7).foregroundStyle(Color(webHex: "#f3f0f7"))
             .background {
                 ZStack {

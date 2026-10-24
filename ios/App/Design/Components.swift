@@ -89,6 +89,7 @@ struct PageHeader: View {
     var doneIdentifier = "page-done"
     var height: CGFloat = 56
     @Environment(AppRouter.self) private var router
+    @Environment(\.diaryBack) private var back
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var taps: [Double] = []
     @State private var angle = 0.0
@@ -114,7 +115,7 @@ struct PageHeader: View {
             if let count { Text(count).font(.system(size: 13)).foregroundStyle(Color(webHex: "#a09aa9")).lineLimit(1) }
             Spacer(minLength: 0)
             if let onSearch { Button(action: onSearch) { DiaryIcon(name: "search", size: 22).frame(width: 44, height: 44) }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel(name == "Library" ? "Search library" : "Search").accessibilityIdentifier("search-" + name.lowercased()) }
-            if let onDone { Button("Done", action: onDone).font(.system(size: 14, weight: .semibold)).frame(minWidth: 44, minHeight: 44).accessibilityIdentifier(doneIdentifier) }
+            if let onDone { Button("Done") { if back?.perform() != true { onDone() } }.font(.system(size: 14, weight: .semibold)).frame(minWidth: 44, minHeight: 44).buttonStyle(DiaryPressStyle()).accessibilityIdentifier(doneIdentifier) }
         }.frame(height: height).padding(.horizontal, 14).background(Color(webHex: theme == .glass ? "#000000" : ["Library", "Trash"].contains(name) ? "#0e0d13" : "#050507"))
     }
 }
@@ -125,6 +126,7 @@ struct SearchField: View {
     let label: String
     var autoFocus = false
     var focusRevision = 0
+    var dismissRevision = 0
     @State private var didAutoFocus = false
     @FocusState private var focused: Bool
     @AppStorage("theme") private var theme = DiaryTheme.twilight
@@ -137,6 +139,7 @@ struct SearchField: View {
             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(focused ? theme.accent.opacity(0.65) : .clear))
             .onDisappear { focused = false }
             .onChange(of: focusRevision) { _, _ in focused = true }
+            .onChange(of: dismissRevision) { _, _ in focused = false }
             .task { if autoFocus && !didAutoFocus { didAutoFocus = true; focused = true } }
     }
 }
@@ -301,6 +304,7 @@ struct ProgressCard: View {
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     let title: MediaTitle
     var compact = false
+    var grid = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(DiaryStore.self) private var store
     @State private var loadedCard: WatchCard?
@@ -351,10 +355,12 @@ struct ProgressCard: View {
             }
         }.padding(12).frame(height: 142)
     }
+    private var topLayout: AnyLayout { grid ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .top, spacing: 12)) }
+    private var actionLayout: AnyLayout { grid ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10)) : AnyLayout(HStackLayout(spacing: 12)) }
     private var glanceContent: some View {
         VStack(spacing: 10) {
-            HStack(alignment: .top, spacing: 12) {
-                Button { openTitle() } label: { Artwork(path: title.poster, title: title.name, initialsOnly: false).frame(width: 94, height: 118).clipShape(RoundedRectangle(cornerRadius: 8)) }.buttonStyle(.plain)
+            topLayout {
+                Button { openTitle() } label: { Artwork(path: title.poster, title: title.name, initialsOnly: false).frame(width: grid ? nil : 94, height: grid ? 154 : 118).frame(maxWidth: grid ? .infinity : nil).clipShape(RoundedRectangle(cornerRadius: 8)) }.buttonStyle(.plain)
                 VStack(alignment: .leading, spacing: 7) {
                     HStack(alignment: .top) {
                         Button { openTitle() } label: { Text(title.name).font(.system(size: 18, weight: .semibold)).foregroundStyle(.white).lineLimit(2).multilineTextAlignment(.leading) }.buttonStyle(.plain).accessibilityIdentifier("progress-title-" + title.id)
@@ -377,11 +383,12 @@ struct ProgressCard: View {
                     Spacer(minLength: 0)
                 }
             }
-            HStack(spacing: 12) {
+            actionLayout {
                 VStack(alignment: .leading, spacing: 5) {
                     GeometryReader { proxy in Capsule().fill(.white.opacity(0.16)).overlay(alignment: .leading) { Capsule().fill(.tint).frame(width: proxy.size.width * fraction) } }.frame(height: 6)
                     Text(title.isSeries ? "\(Int((fraction * 100).rounded()))% complete" : fraction > 0 ? "Watched" : "Not watched yet").font(.system(size: 13)).foregroundStyle(Color(webHex: "#c5c0cf"))
                 }
+                HStack(spacing: 12) {
                 if title.isSeries {
                     Button { Task { await removeWatch() } } label: { actionIcon(.remove, symbol: "minus", size: 18).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))) }.buttonStyle(.plain).disabled(cardBusy || store.needsMutationRefresh || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
                     Text("\(card?.progress.watched ?? 0)").font(.system(size: 17, weight: .semibold)).monospacedDigit().contentTransition(.numericText()).animation(reduceMotion ? nil : .snappy(duration: 0.2), value: card?.progress.watched).accessibilityIdentifier("watch-count-" + title.id)
@@ -392,6 +399,7 @@ struct ProgressCard: View {
                             .font(.system(size: 13, weight: .semibold)).frame(width: 124, height: 44)
                             .foregroundStyle(theme.ink).background(theme.accent, in: RoundedRectangle(cornerRadius: 12))
                     }.buttonStyle(DiaryPressStyle()).disabled(!canMark).accessibilityLabel((fraction > 0 ? "Watched " : "Log watch for ") + title.name)
+                }
                 }
             }
         }.padding(10)

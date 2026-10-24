@@ -13,6 +13,8 @@ import TwilDiaryCore
             UserDefaults.standard.set(DiaryTheme.twilight.rawValue, forKey: "theme")
             UserDefaults.standard.set(PublicRatingSource.tmdb.rawValue, forKey: "publicRatingSource")
             UserDefaults.standard.set(true, forKey: "hideSpoilers")
+            for key in ["historyGrid", "homeHistoryGrid", "upcomingGrid", "glanceGrid", "filesGrid", "scannerGrid", "episodesGrid", "traktGrid", "searchGrid", "backlogGrid"] { UserDefaults.standard.set(false, forKey: key) }
+            UserDefaults.standard.set(true, forKey: "catalogGrid")
         }
         #endif
     }
@@ -28,7 +30,11 @@ enum AppTab: String, CaseIterable, Hashable {
         switch self { case .home: "house"; case .library: "library-big"; case .glance: "eye"; case .stats: "chart-no-axes-column-increasing"; case .more: "ellipsis" }
     }
 }
-enum AppDestination: Hashable { case explore, history, files, trash }
+enum AppDestination: Hashable { case explore, history, files, trash, scanner, appearance, trakt, tmdb, about }
+struct HistoryRoute: Hashable {
+    var day: Date? = nil
+    var unknown = false
+}
 struct SavedTitleRoute: Hashable {
     let id: String
     let season: Int
@@ -46,6 +52,13 @@ struct SavedTitleRoute: Hashable {
     var libraryRevision = 0
     var statsRevision = 0
     var detailTabs = Set<AppTab>()
+    @discardableResult func goBack(tab: AppTab? = nil) -> Bool {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        let owner = tab ?? selectedTab
+        guard var path = paths[owner], !path.isEmpty else { return false }
+        path.removeLast(); paths[owner] = path
+        return true
+    }
     func select(_ tab: AppTab) {
         if selectedTab == tab { paths[tab] = NavigationPath(); detailTabs.remove(tab) }
         selectedTab = tab
@@ -59,7 +72,10 @@ struct SavedTitleRoute: Hashable {
     func libraryDisk(_ key: String) { library("all"); libraryDiskShortcut = key == "all" ? "" : key }
     func statsToday() { statsRevision += 1; paths[.stats] = NavigationPath(); selectedTab = .stats }
     func files() { selectedTab = .more; paths[.more] = NavigationPath(); paths[.more, default: NavigationPath()].append(AppDestination.files) }
-    func openTitle(_ id: String, tab: AppTab) { selectedTab = tab; paths[tab, default: NavigationPath()].append(id) }
+    func openTitle(_ id: String, tab: AppTab) {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        selectedTab = tab; paths[tab, default: NavigationPath()].append(id)
+    }
     func replaceTitle(_ id: String, tab: AppTab) {
         selectedTab = tab
         if paths[tab, default: NavigationPath()].count > 0 { paths[tab, default: NavigationPath()].removeLast() }
@@ -135,7 +151,7 @@ struct RootView: View {
                         }
                     }
             }
-        }.accessibilityHidden(router.randomPick != nil)
+        }.accessibilityHidden(router.randomPick != nil).allowsHitTesting(router.randomPick == nil)
             .overlay {
                 if let scope = router.randomPick {
                     RandomPickDialog(titles: scope.candidates(in: store.workspace),
@@ -157,9 +173,23 @@ struct RootView: View {
                 .navigationDestination(for: ExploreSectionRoute.self) { ExploreSectionView(route: $0, store: store).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) } }
                 .navigationDestination(for: PersonFilmographyRoute.self) { PersonFilmographyView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) } }
                 .navigationDestination(for: PersonRoute.self) { PersonView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
+                .navigationDestination(for: HistoryRoute.self) { route in
+                    HistoryView(initialDay: route.day, initialUnknown: route.unknown).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
+                }
                 .navigationDestination(for: AppDestination.self) { destination in
-                    Group { switch destination { case .explore: ExploreView(); case .history: HistoryView(); case .files: FilesView(); case .trash: TrashView() } }.toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
+                    Group { switch destination {
+                    case .explore: ExploreView()
+                    case .history: HistoryView()
+                    case .files: FilesView()
+                    case .trash: TrashView()
+                    case .scanner: ScannerReviewView()
+                    case .appearance: AppearanceView()
+                    case .trakt: TraktView(store: store)
+                    case .tmdb: TMDBConnectionView()
+                    case .about: AboutView()
+                    } }.toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
                 }
         }.toolbar(.hidden, for: .tabBar)
+            .environment(\.diaryBack, DiaryBackAction { router.goBack(tab: tab) })
     }
 }

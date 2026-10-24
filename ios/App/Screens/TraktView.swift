@@ -2,6 +2,7 @@ import SwiftUI
 import TwilDiaryCore
 
 @MainActor struct TraktView: View {
+    @Environment(\.diaryBack) private var back
     let store: DiaryStore
     @State private var controller: TraktController
     @State private var showSignIn = false
@@ -10,6 +11,7 @@ import TwilDiaryCore
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage("theme") private var theme = DiaryTheme.twilight
+    @AppStorage("traktGrid") private var grid = false
     init(store: DiaryStore) { self.store = store; _controller = State(initialValue: TraktController(service: makeTraktService(store: store))) }
     var body: some View {
         @Bindable var controller = controller
@@ -24,7 +26,7 @@ import TwilDiaryCore
                 if let error = controller.error { VStack(alignment: .leading, spacing: 8) { Text(error).font(.subheadline).foregroundStyle(.secondary); Button("Retry") { Task { await controller.refresh() } }.disabled(controller.busy) }.diaryPanel().accessibilityIdentifier("trakt-error") }
             }.padding(16).padding(.bottom, 100)
         }.background(.black).navigationTitle("Trakt").navigationBarTitleDisplayMode(.inline).navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { if back?.perform() != true { dismiss() } }.accessibilityIdentifier("trakt-done") } }
             .task(id: controller.kind.rawValue + "\n" + controller.query) {
                 do { try await Task.sleep(for: .milliseconds(250)); try Task.checkCancellation(); await controller.refreshReview() } catch { }
             }
@@ -91,7 +93,7 @@ import TwilDiaryCore
     private func review(_ sync: TraktSync) -> some View {
         @Bindable var controller = controller
         return VStack(alignment: .leading, spacing: 14) {
-            HStack { Text("Review changes").font(.title2.bold()); Spacer(); Text("\(sync.pendingChanges) remaining").font(.caption).foregroundStyle(.secondary) }
+            HStack { Text("Review changes").font(.title2.bold()); Spacer(); CollectionLayoutToggle(grid: $grid, collection: "trakt-review"); Text("\(sync.pendingChanges) remaining").font(.caption).foregroundStyle(.secondary) }
             Text("\(sync.run?.progress ?? 0) Trakt items scanned. Nothing is saved until you apply it.").font(.subheadline).foregroundStyle(.secondary)
             if let error = sync.run?.error { Text(error).font(.caption).foregroundStyle(.secondary) }
             if sync.run?.state == "complete" { Label((sync.counts["skipped"] ?? 0) > 0 ? "Finished with skipped items" : "You’re up to date", systemImage: "checkmark.circle").diaryPanel() }
@@ -99,7 +101,7 @@ import TwilDiaryCore
             else {
                 SearchField(placeholder: "Find a title in this review…", text: $controller.query, label: "Search Trakt changes")
                 Picker("Filter Trakt changes", selection: $controller.kind) { ForEach(TraktKind.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented).accessibilityIdentifier("trakt-kind")
-                LazyVStack(spacing: 10) { ForEach(Array(controller.visibleItems.prefix(controller.limit))) { change in reviewItem(change, sync: sync) } }
+                CollectionLayout(grid: grid, spacing: 10) { ForEach(Array(controller.visibleItems.prefix(controller.limit))) { change in reviewItem(change, sync: sync) } }
                 if controller.visibleItems.isEmpty { Text("No matching changes in this review.").font(.subheadline).foregroundStyle(.secondary) }
                 HStack { Text("Showing \(min(controller.limit, controller.visibleItems.count)) of \(controller.visibleItems.count) loaded changes").font(.caption).foregroundStyle(.secondary); Spacer(); if controller.limit < controller.visibleItems.count || sync.next != nil { Button("Load more") { Task { await controller.loadMore() } }.font(.subheadline).disabled(controller.busy) } }
                 if sync.reviewing && (sync.counts["safe"] ?? 0) > 0 { applyPanel(sync).padding(.top, 10) }
@@ -130,7 +132,7 @@ import TwilDiaryCore
             else {
                 // A single subtree keeps each review action unique in accessibility.
                 // ViewThatFits retained two sets of buttons, including hidden candidates.
-                let layout = dynamicTypeSize.isAccessibilitySize
+                let layout = grid || dynamicTypeSize.isAccessibilitySize
                     ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
                     : AnyLayout(HStackLayout(spacing: 8))
                 layout { changeActions(change) }.disabled(controller.busy || !sync.reviewing)

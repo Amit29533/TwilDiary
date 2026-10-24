@@ -44,6 +44,8 @@ Screens/files: `ios/Shell`, `ios/Design`, `ios/Components`, shared XCUITests.
 
 Done: shared states match references at SE/390/Pro Max sizes; navigation and Undo do not jump; green regression and screenshots.
 
+Pending device-feedback build29: typed Done ownership, keyboard-safe pushes and Add-sheet handoff, retained synopsis lead with full-width continuation, stable Notes editor targeting after late metadata, swipe-dismiss Surprise and collection list/grid preferences. All await macOS compile, functional UI checks and all-phone screenshots; no additional checkbox accepted yet.
+
 ## 4. Home
 
 Goal: reproduce the existing Home and each linked daily action.

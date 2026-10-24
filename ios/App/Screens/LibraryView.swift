@@ -14,6 +14,8 @@ struct LibraryView: View {
     @State private var drive = ""
     @State private var showSearch = false
     @State private var showAdd = false
+    @State private var addedTitle: String?
+    @State private var addedCatalog: CatalogRoute?
     @State private var list = false
     @State private var genreRows = false
     @State private var sort = "library"
@@ -51,11 +53,14 @@ struct LibraryView: View {
             .onAppear { applyShortcut() }
             .onChange(of: filterScope) { _, _ in selecting = false; selected = [] }
             .onChange(of: filtered.map(\.id)) { _, ids in selected.formIntersection(ids) }
-            .sheet(isPresented: $showAdd) {
+            .sheet(isPresented: $showAdd, onDismiss: {
+                if let id = addedTitle { addedTitle = nil; router.openTitle(id, tab: .library) }
+                else if let route = addedCatalog { addedCatalog = nil; router.paths[.library, default: NavigationPath()].append(route) }
+            }) {
                 NavigationStack {
                     ScrollView {
-                        CatalogSearchView(onLibraryChoose: { id in showAdd = false; router.openTitle(id, tab: .library) },
-                            onCatalogChoose: { route in showAdd = false; router.paths[.library, default: NavigationPath()].append(route) },
+                        CatalogSearchView(onLibraryChoose: { id in addedTitle = id; showAdd = false },
+                            onCatalogChoose: { route in addedCatalog = route; showAdd = false },
                             onClose: { showAdd = false }).padding(.top, 14)
                     }.navigationTitle("Add title").navigationBarTitleDisplayMode(.inline)
                 }
@@ -220,6 +225,7 @@ struct LibraryView: View {
 }
 
 struct GlanceView: View {
+    @AppStorage("glanceGrid") private var grid = false
     @Environment(DiaryStore.self) private var store
     @State private var category = LibraryCategory.all
     @State private var search = ""
@@ -228,9 +234,9 @@ struct GlanceView: View {
         VStack(spacing: 0) {
             PageHeader(name: "Glance", count: "\(store.workspace.activeTitles.filter { $0.status == "watching" }.count) watching", onSearch: { showSearch.toggle(); if !showSearch { search = "" } })
             if showSearch { SearchField(placeholder: "Find a current watch…", text: $search, label: "Find a current watch", autoFocus: true).padding(.horizontal, 14).padding(.bottom, 10) }
-            CategoryPicker(selection: $category)
+            HStack(spacing: 0) { CategoryPicker(selection: $category); CollectionLayoutToggle(grid: $grid, collection: "glance").padding(.trailing, 8) }
             ScrollView {
-                LazyVStack(spacing: 8) { ForEach(titles) { ProgressCard(title: $0) } }.padding(.horizontal, 8).padding(.top, 12).padding(.bottom, 100)
+                CollectionLayout(grid: grid, spacing: 8) { ForEach(titles) { ProgressCard(title: $0, grid: grid) } }.padding(.horizontal, 8).padding(.top, 12).padding(.bottom, 100)
                 if titles.isEmpty { DiaryEmptyState(title: "A clear little corner", description: "No current watches match these filters. Try another category or clear your search.").padding(.horizontal, 14).padding(.top, 20) }
             }.accessibilityIdentifier("glance-content").refreshable { await store.refresh() }
         }
