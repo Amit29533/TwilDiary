@@ -87,6 +87,7 @@ struct PageHeader: View {
     var onSearch: (() -> Void)? = nil
     var onDone: (() -> Void)? = nil
     var doneIdentifier = "page-done"
+    var height: CGFloat = 56
     @Environment(AppRouter.self) private var router
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var taps: [Double] = []
@@ -114,7 +115,7 @@ struct PageHeader: View {
             Spacer(minLength: 0)
             if let onSearch { Button(action: onSearch) { DiaryIcon(name: "search", size: 22).frame(width: 44, height: 44) }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel(name == "Library" ? "Search library" : "Search").accessibilityIdentifier("search-" + name.lowercased()) }
             if let onDone { Button("Done", action: onDone).font(.system(size: 14, weight: .semibold)).frame(minWidth: 44, minHeight: 44).accessibilityIdentifier(doneIdentifier) }
-        }.frame(height: 56).padding(.horizontal, 14).background(Color(webHex: theme == .glass ? "#000000" : ["Library", "Trash"].contains(name) ? "#0e0d13" : "#050507"))
+        }.frame(height: height).padding(.horizontal, 14).background(Color(webHex: theme == .glass ? "#000000" : ["Library", "Trash"].contains(name) ? "#0e0d13" : "#050507"))
     }
 }
 
@@ -275,16 +276,17 @@ struct PosterCard: View {
 struct CategoryPicker: View {
     @Binding var selection: LibraryCategory
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 2) {
             ForEach(LibraryCategory.allCases) { category in
                 Button { selection = category } label: {
                     Text(category.rawValue).font(.system(size: 15, weight: .semibold)).foregroundStyle(selection == category ? Color(webHex: "#f3f0f7") : Color(webHex: "#a09aa9"))
-                        .padding(.horizontal, 14).frame(height: 40)
+                        .padding(.leading, category == .all ? 4 : 12).padding(.trailing, 12).frame(height: 40)
                         .overlay(alignment: .bottom) { if category == selection { Rectangle().fill(.tint).frame(height: 3) } }
-                }.buttonStyle(.plain).accessibilityAddTraits(selection == category ? .isSelected : [])
+                }.buttonStyle(.plain).accessibilityIdentifier("category-" + category.rawValue.lowercased()).accessibilityAddTraits(selection == category ? .isSelected : [])
             }
             Spacer(minLength: 0)
-        }
+        }.padding(.horizontal, 14).padding(.bottom, 1)
+            .overlay(alignment: .bottom) { Rectangle().fill(Color(webHex: "#2c2736")).frame(height: 1) }
     }
 }
 

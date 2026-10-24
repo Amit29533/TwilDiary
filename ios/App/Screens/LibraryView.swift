@@ -25,7 +25,7 @@ struct LibraryView: View {
     @State private var confirmEmptyTrash = false
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: archived ? "Trash" : "Library", count: String(collection.count), onSearch: { showSearch.toggle(); if !showSearch { search = "" } })
+            PageHeader(name: archived ? "Trash" : "Library", count: String(collection.count), onSearch: { showSearch.toggle(); if !showSearch { search = "" } }, height: 54)
             if showSearch { SearchField(placeholder: "Search your library…", text: $search, label: "library-search", autoFocus: true).padding(.horizontal, 14).padding(.bottom, 10) }
             CategoryPicker(selection: $category)
             filterBar
@@ -81,22 +81,47 @@ struct LibraryView: View {
                     } label: { filterChip(driveLabel, selected: !drive.isEmpty) }.accessibilityIdentifier("library-disk")
                     if archived { Button { dismiss() } label: { trashChip }.accessibilityLabel("Return to Library") }
                     else { NavigationLink(value: AppDestination.trash) { trashChip }.accessibilityLabel("Open Trash") }
-                }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).padding(.horizontal, 14).padding(.vertical, 10)
+                }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).padding(.horizontal, 14).padding(.vertical, 8)
             }.scrollIndicators(.hidden)
     }
     private var orderingBar: some View {
-        HStack(spacing: 6) {
-                Text(archived ? "In Trash" : hasFilters ? "" : "All titles").font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
-                Spacer(minLength: 0)
+        GeometryReader { geometry in
+            HStack(spacing: 8) {
+                Text(archived ? "In Trash" : hasFilters ? "" : "All titles")
+                    .font(.system(size: geometry.size.width < 331 ? 13 : 14))
+                    .foregroundStyle(.secondary).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                 Menu {
-                    Picker("Order", selection: $sort) { Text("Library order").tag("library"); Text("Title A–Z").tag("name"); Text("Highest " + ratingSource.label + " rating").tag("rating"); Text("Newest year").tag("year") }
-                } label: { HStack(spacing: 5) { DiaryIcon(name: "arrow-down-up", size: 15); Text(sort == "library" ? "Library order" : sort == "name" ? "Title A–Z" : sort == "year" ? "Newest year" : "Highest " + ratingSource.label + " rating"); DiaryIcon(name: "chevron-down", size: 12) }.font(.system(size: 12, weight: .semibold)).fixedSize().padding(.horizontal, 5).frame(height: 38) }.buttonStyle(.plain)
-                if selecting { Button("Done selecting", systemImage: "xmark") { selecting = false; selected = [] }.labelStyle(.iconOnly) }
-                else {
-                    Button { list.toggle(); genreRows = false } label: { layoutIcon(list ? "rows-3" : "layout-grid", selected: true) }.accessibilityLabel(list ? "Grid layout" : "List layout")
-                    if !archived { Button { genreRows.toggle(); list = false } label: { layoutIcon("rows-3", selected: genreRows) }.accessibilityLabel("Genre sections") }
+                    Picker("Order", selection: $sort) {
+                        Text("Library order").tag("library"); Text("Title A–Z").tag("name")
+                        Text("Newest year").tag("year"); Text("Highest " + ratingSource.label + " rating").tag("rating")
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        DiaryIcon(name: "arrow-down-up", size: 17)
+                        HStack(spacing: 0) {
+                            Text(sortLabel).lineLimit(1)
+                            Spacer(minLength: 0)
+                            DiaryIcon(name: "chevron-down", size: 12)
+                        }.font(.system(size: geometry.size.width < 331 ? 12 : 13, weight: .semibold))
+                            .frame(width: geometry.size.width < 331 ? 110 : 145, height: 44)
+                    }.padding(.horizontal, 9).frame(height: 46).contentShape(RoundedRectangle(cornerRadius: 14))
+                }.buttonStyle(.plain).accessibilityIdentifier("library-order")
+                if selecting {
+                    Button("Done selecting", systemImage: "xmark") { selecting = false; selected = [] }
+                        .labelStyle(.iconOnly).frame(width: 42, height: 44)
+                } else {
+                    Button { list.toggle(); genreRows = false } label: { layoutIcon(list ? "list" : "layout-grid", selected: true) }
+                        .accessibilityLabel(list ? "Grid layout" : "List layout").accessibilityIdentifier("library-layout")
+                    if !archived {
+                        Button { genreRows.toggle(); list = false } label: { layoutIcon("rows-3", selected: genreRows, genre: true) }
+                            .accessibilityLabel("Genre sections").accessibilityIdentifier("library-genres")
+                    }
                 }
-            }.foregroundStyle(Color(webHex: "#c5c0cf")).buttonStyle(.plain).padding(.horizontal, 14).padding(.bottom, 10)
+            }.foregroundStyle(Color(webHex: "#c5c0cf")).buttonStyle(.plain)
+        }.frame(height: 46).padding(.horizontal, 14).padding(.bottom, 12)
+    }
+    private var sortLabel: String {
+        switch sort { case "name": "Title A–Z"; case "year": "Newest year"; case "rating": "Highest " + ratingSource.label + " rating"; default: "Library order" }
     }
     private var collectionContent: some View {
         ScrollView {
@@ -117,7 +142,7 @@ struct LibraryView: View {
                 } else if list {
                     LazyVStack(spacing: 12) { ForEach(filtered) { title in poster(title, row: true) } }.padding(.horizontal, 14)
                 } else {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), alignment: .leading, spacing: 20) { ForEach(filtered) { poster($0) } }.padding(.horizontal, 14)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10, alignment: .top), count: 3), alignment: .leading, spacing: 18) { ForEach(filtered) { poster($0) } }.padding(.horizontal, 14)
                 }
                 if filtered.isEmpty { DiaryEmptyState(title: archived ? "Trash is clear" : "Nothing here just yet", description: archived ? "Removed titles will appear here. Try clearing filters if a title is missing." : "Try a different search or clear a filter to find your stories.").padding(.horizontal, 14).padding(.top, 20) }
             }.refreshable { await store.refresh(); await store.loadPublicRatings(collection, source: ratingSource) }
@@ -152,11 +177,16 @@ struct LibraryView: View {
     private func prepareReview(_ change: CollectionChange) { let titles = filtered.filter { selected.contains($0.id) }; if !titles.isEmpty { review = CollectionReview(titles: titles, change: change) } }
     private var filterScope: String { [category.rawValue, status, genre, drive, search, sort].joined(separator: "\n") }
     private var collection: [MediaTitle] { store.workspace.titles.filter { ($0.deletedAt != nil) == archived } }
-    private var trashChip: some View { HStack(spacing: 6) { DiaryIcon(name: "trash-2", size: 16); Text("Trash") }.font(.system(size: 13, weight: .semibold)).padding(.horizontal, 15).frame(height: 38).background { DiaryControlSurface(shape: Capsule(), selected: archived) } }
+    private var trashChip: some View { HStack(spacing: 6) { DiaryIcon(name: "trash-2", size: 15); Text("Trash") }.font(.system(size: 14, weight: .semibold)).padding(.horizontal, 14).frame(height: 40).background { DiaryControlSurface(shape: Capsule(), selected: archived) } }
     private func filterChip(_ label: String, selected: Bool) -> some View {
-        HStack(spacing: 7) { Text(label).lineLimit(1); DiaryIcon(name: "chevron-down", size: 13) }.font(.system(size: 13, weight: .semibold)).padding(.horizontal, 15).frame(height: 38).background { DiaryControlSurface(shape: Capsule(), selected: selected) }
+        HStack(spacing: 7) { Text(label).lineLimit(1); DiaryIcon(name: "chevron-down", size: 15) }.font(.system(size: 14, weight: .semibold)).padding(.horizontal, 14).frame(height: 40).background { DiaryControlSurface(shape: Capsule(), selected: selected) }
     }
-    private func layoutIcon(_ name: String, selected: Bool) -> some View { DiaryIcon(name: name, size: 18).frame(width: 32, height: 38).background(selected ? Color(webHex: "#211c30") : .clear, in: RoundedRectangle(cornerRadius: 11)) }
+    private func layoutIcon(_ name: String, selected: Bool, genre: Bool = false) -> some View {
+        DiaryIcon(name: name, size: 20).foregroundStyle(genre && selected ? theme.accent : Color(webHex: "#c5c0cf"))
+            .frame(width: genre ? 36 : 42, height: 44)
+            .background(genre ? (selected ? theme.accent.opacity(0.09) : .clear) : Color(webHex: "#211d2b"), in: RoundedRectangle(cornerRadius: 14))
+            .overlay { if genre && selected { RoundedRectangle(cornerRadius: 14).strokeBorder(theme.accent.opacity(0.45)) } }
+    }
     private var genres: [String] { LibraryShelf.make(collection).map(\.genre).filter { $0 != "Without a genre" } }
     private var hasFilters: Bool { category != .all || status != "all" || !genre.isEmpty || !drive.isEmpty || !search.isEmpty }
     private var disks: [DiskSummary] { let ids = Set(collection.map(\.id)); return DiskSummary.make(store.workspace.locations.filter { ids.contains($0.titleId) }) }

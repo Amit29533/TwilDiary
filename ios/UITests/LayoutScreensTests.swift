@@ -15,6 +15,18 @@ import XCTest
         let titles = ["after-rain", "again", "frieren"].map { app.buttons["title-" + $0] }
         for title in titles { XCTAssertTrue(title.waitForExistence(timeout: 5)); XCTAssertGreaterThanOrEqual(title.frame.minX, 10); XCTAssertLessThanOrEqual(title.frame.maxX, app.frame.width - 10) }
         XCTAssertLessThan(titles[0].frame.maxX, titles[1].frame.minX); XCTAssertLessThan(titles[1].frame.maxX, titles[2].frame.minX)
+        // Match the phone web grid and controls; measure layout, not text-ink widths.
+        XCTAssertEqual(titles[0].frame.minX, 14, accuracy: 1)
+        XCTAssertEqual(titles[0].frame.width, (app.frame.width - 48) / 3, accuracy: 1)
+        XCTAssertEqual(titles[1].frame.minX - titles[0].frame.maxX, 10, accuracy: 1)
+        XCTAssertEqual(titles[2].frame.minX - titles[1].frame.maxX, 10, accuracy: 1)
+        let order = app.buttons["library-order"], layout = app.buttons["library-layout"], genres = app.buttons["library-genres"]
+        XCTAssertEqual(order.frame.width, app.frame.width < 359 ? 150 : 185, accuracy: 1)
+        XCTAssertEqual(order.frame.height, 46, accuracy: 1)
+        XCTAssertEqual(layout.frame.width, 42, accuracy: 1); XCTAssertEqual(layout.frame.height, 44, accuracy: 1)
+        XCTAssertEqual(genres.frame.width, 36, accuracy: 1); XCTAssertEqual(genres.frame.height, 44, accuracy: 1)
+        XCTAssertEqual(app.buttons["category-all"].frame.minX, 14, accuracy: 1)
+        XCTAssertEqual(titles[0].frame.minY - app.buttons["random-pick-logo"].frame.minY, 204, accuracy: 2)
         capture("Library", app: app)
         titles[1].tap()
         let track = app.sliders["episode-progress"]
