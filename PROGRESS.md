@@ -22,6 +22,9 @@ Pending More summary follow-up: source Trakt copy/priorities for loading, unavai
 Build 20 has passed Core and both simulator/arm64 compilations and is executing unit/UI tests. Its long compile times put the original 65-minute allowance under pressure; no passing outcome is inferred. Next CI batch keeps all checks but allows 100 minutes, caches native compilation intermediates after both builds, disables indexing work irrelevant to CI, and records Xcode build timing summaries. Every restored cache still goes through ordinary xcodebuild dependency validation; no build/test command is skipped. Cache size/performance and zero-warning gate await evidence.
 
 
+Home calculation review found two order differences: the web sorts eligible Planned titles by identity via its shared discovery helper, while Home used storage order; upcoming ties use ordinary lexical locale comparison, while native used numeric-aware standard comparison. Reused DiscoveryTools.unwatched and matched the lexical tie rule. Nine expectations now come directly from unchanged homeOverview, covering weekly/date/runtime coverage, DST, planned history exclusions/order and upcoming skip/special/drop/30-day/dedup/tie rules. Pending native Core CI.
+
+
 Build 19 also includes these source-driven improvements, all awaiting native CI/visual acceptance:
 - Shared saved/catalog hero and backdrop; online TV season picker, read-only episode pieces, four-row/expanded lists, explicit spoiler reveal, lazy season cache and retries.
 - Exact suggested-category imports, archived-identity Restore routing, replace navigation after import, session/cancellation guards, and in-memory opt-in import fixtures that preserve notes/ratings/history.

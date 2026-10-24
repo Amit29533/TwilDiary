@@ -50,8 +50,7 @@ public struct HomeOverview: Sendable {
         var current = 0
         while counts[cursor] != nil { current += 1; cursor = calendar.date(byAdding: .day, value: -1, to: cursor)! }
         streak = current
-        let watchedTitles = Set(active.map(\.titleId))
-        planned = workspace.activeTitles.filter { $0.status == "planned" && !watchedTitles.contains($0.id) }
+        planned = DiscoveryTools.unwatched(workspace)
         let watchedEpisodes = Set(active.compactMap(\.episodeId))
         let formatter = DateFormatter()
         formatter.calendar = calendar; formatter.timeZone = calendar.timeZone
@@ -67,7 +66,7 @@ public struct HomeOverview: Sendable {
             if $0.daysAway != $1.daysAway { return $0.daysAway < $1.daysAway }
             if $0.episode.season != $1.episode.season { return $0.episode.season < $1.episode.season }
             if $0.episode.number != $1.episode.number { return $0.episode.number < $1.episode.number }
-            return $0.title.name.localizedStandardCompare($1.title.name) == .orderedAscending
+            return $0.title.name.localizedCompare($1.title.name) == .orderedAscending
         }.filter { seen.insert($0.title.id).inserted }
     }
 }
