@@ -92,6 +92,26 @@ PY
       xcrun simctl shutdown "$layout_id"
     done < <(python3 -c 'import json; [print(item["name"].replace(" ", "") + "\t" + item["udid"]) for item in json.load(open("ios/.artifacts/layout-simulators.json"))]')
     ;;
+  screenshots-progress)
+    python3 - "$ARTIFACTS" <<'PY'
+import json, os, pathlib, re, shutil, sys
+folder = pathlib.Path(sys.argv[1])
+value = (folder / 'logs/progress-tests.log').read_text(errors='replace')
+cases = set(re.findall(r"Test Case '-\[TwilDiaryUITests\.NativeScreensTests ([^]]+)\]' passed", value))
+if '** TEST EXECUTE SUCCEEDED **' not in value or len(cases) != 10 or re.search(r'Test Case .* failed', value):
+    raise SystemExit('Refusing passed early screenshots without the ten successful UI cases.')
+target = folder / 'progress-evidence'
+target.mkdir(parents=True, exist_ok=True)
+shutil.copy2(folder / 'logs/progress-tests.log', target / 'progress-tests.log')
+(target / 'scope.json').write_text(json.dumps({
+    'scope': 'Ten passed early UI cases only. Full regression and release acceptance are pending.',
+    'source': os.environ.get('GITHUB_SHA') or os.environ.get('CM_COMMIT'),
+    'run': os.environ.get('GITHUB_RUN_ID') or os.environ.get('CM_BUILD_ID'),
+    'tests': sorted(cases)
+}, indent=2) + '\n')
+PY
+    xcrun xcresulttool export attachments --path "$ARTIFACTS/ProgressGate.xcresult" --output-path "$ARTIFACTS/progress-evidence/screenshots"
+    ;;
   screenshots)
     mkdir -p "$ARTIFACTS/screenshots"
     xcrun simctl io "$SIMULATOR_ID" screenshot "$ARTIFACTS/screenshots/final-screen.png" || true

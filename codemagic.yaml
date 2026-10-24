@@ -38,6 +38,7 @@ workflows:
           bash ios/scripts/ci.sh boot
           bash ios/scripts/ci.sh test-unit
           bash ios/scripts/ci.sh test-progress
+          bash ios/scripts/ci.sh screenshots-progress
           bash ios/scripts/ci.sh build-device
           bash ios/scripts/ci.sh package
           bash ios/scripts/ci.sh test
@@ -48,6 +49,7 @@ workflows:
       - ios/.artifacts/*.xcresult
       - ios/.artifacts/logs/*.log
       - ios/.artifacts/screenshots/**
+      - ios/.artifacts/progress-evidence/**
       - ios/.artifacts/toolchain.txt
       - ios/.artifacts/*simulator*.json
       - ios/.artifacts/devices.json
