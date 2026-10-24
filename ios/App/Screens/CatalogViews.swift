@@ -254,7 +254,7 @@ private struct CatalogSeasonPreview: View {
                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)
             }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) details").accessibilityValue(expanded.contains(episode.number) ? "Expanded" : "Collapsed").accessibilityIdentifier("catalog-episode-\(episode.number)")
             if expanded.contains(episode.number) { Text(controller.loading ? "Loading episode…" : episode.overview.isEmpty ? "No synopsis available yet." : episode.overview).font(.system(size: 13)).foregroundStyle(.secondary).lineSpacing(4) }
-        }
+        }.padding(.vertical, 10).frame(minHeight: 78)
     }
 }
 

@@ -99,6 +99,19 @@ import UIKit
         XCTAssertTrue(actor.waitForExistence(timeout: 5)); actor.tap()
         XCTAssertTrue(app.staticTexts["Facts & trivia"].waitForExistence(timeout: 10)); capture("Cast profile")
     }
+    func testSavedEpisodeRevealPersistsAfterCollapseWithoutRevealingOtherRows() {
+        let app = launch(); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
+        let episode = app.buttons["title-episode-9"]
+        for _ in 0..<8 { if episode.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(episode.isHittable); XCTAssertEqual(episode.value as? String, "A story for later")
+        episode.tap()
+        XCTAssertEqual(episode.value as? String, "Episode 9"); capture("Title revealed episode")
+        episode.tap()
+        XCTAssertEqual(episode.value as? String, "Episode 9", "Collapsing a revealed synopsis must not hide its title again")
+        XCTAssertEqual(app.buttons["title-episode-10"].value as? String, "A story for later", "A season metadata response must not reveal unselected rows")
+        capture("Title revealed episode collapsed")
+    }
+
     func testCatalogSeriesSeasonsSpoilersAndImport() {
         let app = launch(mutations: true); app.buttons["tab-home"].tap(); app.buttons["search-twildiary"].tap()
         let search = app.textFields["Search library and online"]

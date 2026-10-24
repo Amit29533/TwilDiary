@@ -104,7 +104,7 @@ struct RevealedEpisode: Decodable, Identifiable {
     let communityScore: Double?
     init(_ episode: Episode) {
         id = episode.id; number = episode.number; name = episode.name; overview = episode.overview
-        stillPath = episode.still; communityScore = nil
+        stillPath = episode.still; communityScore = episode.communityScore
     }
     var artwork: String? { stillPath.flatMap { $0.hasPrefix("/") ? CatalogTools.image($0) : $0 } }
 }
