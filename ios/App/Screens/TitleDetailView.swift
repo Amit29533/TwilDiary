@@ -35,10 +35,8 @@ struct TitleDetailView: View {
     @State private var showDate = false
     @State private var sliderDraft: Double?
     @State private var expandedEpisodes = Set<String>()
-    @State private var revealedEpisodes: [String: RevealedEpisode] = [:]
+    @State private var episodeDetails = SavedEpisodeDetailsController()
     @State private var revealedEpisodeIDs = Set<String>()
-    @State private var revealing = false
-    @State private var episodeError: String?
     @State private var preparingSeason = false
     @State private var seasonRequest = UUID()
     @State private var seasonLoadError: String?
@@ -116,6 +114,7 @@ struct TitleDetailView: View {
                                 }.presentationDetents([.medium, .large])
                             }
                             .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
+                            .onChange(of: store.sessionRevision) { _, _ in episodeDetails.reset(); revealedEpisodeIDs = []; expandedEpisodes = [] }
                             .onChange(of: title.version) { _, version in
                                 // A confirmed notes save may be followed by delayed snapshot reconciliation.
                                 if notes == title.notes { notesVersion = version }
@@ -269,8 +268,8 @@ struct TitleDetailView: View {
             if !seasonCanEdit(title) { Button("Load season episodes") { Task { await store.loadSeason(title, number: season); await loadCard(title) } }.buttonStyle(.bordered).disabled(store.writesBlocked) }
             if preparingSeason { ProgressView("Loading season…").font(.caption) }
             if let seasonLoadError { RetryNotice(message: seasonLoadError) { Task { await prepareSeason(title, force: true) } } }
-            if revealing { ProgressView("Loading episode details…").font(.caption) }
-            if let episodeError { Text(episodeError).font(.caption).foregroundStyle(.secondary); Button("Retry episode details") { Task { await revealSeason(title) } } }
+            if episodeDetails.isLoading(season) { ProgressView("Loading episode details…").font(.caption) }
+            if let episodeError = episodeDetails.error(for: season) { Text(episodeError).font(.caption).foregroundStyle(.secondary); Button("Retry episode details") { Task { await revealSeason(title) } } }
             LazyVStack(spacing: 10) { ForEach(visibleEpisodes) { episode in episodeRow(title, episode: episode) } }
             if episodes.isEmpty { Text("No episode metadata yet").font(.subheadline).foregroundStyle(.secondary) }
             if episodes.count > 4 { Button(showAllEpisodes ? "Back to next episode" : "Show all \(episodes.count) episodes") { showAllEpisodes.toggle() }.frame(maxWidth: .infinity).frame(minHeight: 44) }
@@ -288,7 +287,7 @@ struct TitleDetailView: View {
                             Text("\(episode.number) · \(episodeName(episode))").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).multilineTextAlignment(.leading)
                             HStack(spacing: 5) {
                                 Text(isWatched ? "Watched" : next ? "Up next" : hasAired(episode) ? "Not watched" : "Not aired yet").foregroundStyle(next ? theme.accent : Color.secondary)
-                                if let score = revealedEpisodes[episode.id]?.communityScore ?? episode.communityScore, score > 0 { Text("★ " + score.formatted(.number.precision(.fractionLength(1))) + " TMDb").foregroundStyle(.yellow) }
+                                if let score = episodeDetails.episodes[episode.id]?.communityScore ?? episode.communityScore, score > 0 { Text("★ " + score.formatted(.number.precision(.fractionLength(1))) + " TMDb").foregroundStyle(.yellow) }
                             }.font(.system(size: 11))
                         }
                         Spacer(minLength: 0)
@@ -302,15 +301,15 @@ struct TitleDetailView: View {
     }
     @ViewBuilder private func episodeArtwork(_ episode: Episode) -> some View {
         if isHidden(episode) { Color(webHex: "#211d2d").overlay { DiaryIcon(name: "eye-off", size: 23).foregroundStyle(.secondary) } }
-        else { Artwork(path: revealedEpisodes[episode.id]?.artwork ?? episode.still ?? store.title(id)?.backdrop, title: String(episode.number)) }
+        else { Artwork(path: episodeDetails.episodes[episode.id]?.artwork ?? episode.still ?? store.title(id)?.backdrop, title: String(episode.number)) }
     }
     private func isHidden(_ episode: Episode) -> Bool { hideSpoilers && !watched.contains(episode.id) && !revealedEpisodeIDs.contains(episode.id) }
     private func episodeName(_ episode: Episode) -> String {
         if isHidden(episode) { return "A story for later" }
-        let name = revealedEpisodes[episode.id]?.name ?? episode.name
+        let name = episodeDetails.episodes[episode.id]?.name ?? episode.name
         return name.isEmpty ? "Episode \(episode.number)" : name
     }
-    private func episodeSummary(_ episode: Episode) -> String { let text = revealedEpisodes[episode.id]?.overview ?? episode.overview; return text.isEmpty ? "No episode summary available." : text }
+    private func episodeSummary(_ episode: Episode) -> String { let text = episodeDetails.episodes[episode.id]?.overview ?? episode.overview; return text.isEmpty ? "No episode summary available." : text }
     private func hasAired(_ episode: Episode) -> Bool { episode.airedOn.map { SeasonAdjustment.validDay($0) && $0 <= DiaryDate.day(store.now) } ?? false }
     private func seasonCanEdit(_ title: MediaTitle) -> Bool {
         guard !episodes.isEmpty else { return false }
@@ -319,7 +318,7 @@ struct TitleDetailView: View {
     }
     private func toggleEpisode(_ title: MediaTitle, episode: Episode) {
         if expandedEpisodes.contains(episode.id) { expandedEpisodes.remove(episode.id) }
-        else { expandedEpisodes.insert(episode.id); revealedEpisodeIDs.insert(episode.id); if revealedEpisodes[episode.id] == nil { Task { await revealSeason(title) } } }
+        else { expandedEpisodes.insert(episode.id); revealedEpisodeIDs.insert(episode.id); if episodeDetails.episodes[episode.id] == nil { Task { await revealSeason(title) } } }
     }
     private func prepareSeason(_ title: MediaTitle, force: Bool = false) async {
         if store.isPreview && !store.canMutate { return }
@@ -332,15 +331,8 @@ struct TitleDetailView: View {
         catch { if seasonRequest == request, selected == season, !Task.isCancelled { seasonLoadError = error.localizedDescription } }
     }
     private func revealSeason(_ title: MediaTitle) async {
-        guard !revealing else { return }
-        let selected = season; revealing = true; episodeError = nil
-        defer { revealing = false }
-        do {
-            let details = try await store.revealedSeason(title, number: selected)
-            guard selected == season, !Task.isCancelled else { return }
-            for episode in details { revealedEpisodes[episode.id] = episode }
-        } catch is CancellationError { }
-        catch { if selected == season { episodeError = error.localizedDescription } }
+        let selected = season
+        await episodeDetails.load(selected) { try await store.revealedSeason(title, number: selected) }
     }
     private var movieViewings: [WatchEvent] { store.workspace.activeEvents.filter { $0.titleId == id && $0.episodeId == nil }.sorted { ($0.recordedAt, $0.id) > ($1.recordedAt, $1.id) } }
     private var displayedWatched: Int { sliderDraft.map(Int.init) ?? card?.progress.watched ?? 0 }

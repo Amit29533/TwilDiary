@@ -106,7 +106,7 @@ extension DiaryStore {
 private struct EpisodeWatchReceipt: Decodable { let event: WatchEvent; let added: Bool }
 private struct EpisodeEventReceipt: Decodable { let event: WatchEvent }
 private struct RevealedSeasonPage: Decodable { let items: [RevealedEpisode]; let nextAfter: Int? }
-struct RevealedEpisode: Decodable, Identifiable {
+struct RevealedEpisode: Decodable, Identifiable, Sendable {
     let id: String
     let number: Int
     let name: String?

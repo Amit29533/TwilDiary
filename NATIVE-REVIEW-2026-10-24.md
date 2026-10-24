@@ -6,6 +6,8 @@ Reviewed 24 October 2026 against native source 6130cdf (build 25), web baseline 
 
 Two verified items now have local source changes and regression coverage, pending the next CI run: duplicate snapshot validation plus Home/History projection fallbacks, and routing public-rating Access expiry to sign-in without provider-outage caching (including late old-session failure isolation). No passed-runtime claim is made. Build27 remains source0efbc94 and does not include these changes. Remaining findings below are unchanged; the original table records what was verified in build25.
 
+Saved-title reveal now also has a local controller fix and four request-interleaving regressions, pending the next CI run. Per-season loading and coalescing replace the dropping global guard; per-episode spoiler consent remains unchanged.
+
 ## Main findings
 
 | Claim | Verdict | Current evidence / qualification |

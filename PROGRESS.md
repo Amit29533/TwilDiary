@@ -5,6 +5,10 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native �
 ## Current request and exact next action
 
 
+### Saved-season reveal fix prepared locally — build 27 unchanged
+
+Prepared the verified saved-title reveal race fix behind SavedEpisodeDetailsController: independent per-season flights and loading/errors, same-season request coalescing, retained valid metadata on selection changes, explicit failed-season retry and generation reset for session changes. The existing per-episode reveal-ID set still controls spoiler visibility, so fetching a season does not reveal unrelated rows. RevealedEpisode explicitly conforms to Sendable for the task result. Four new deterministic continuation-backed tests cover a cancelled old selection while a new season finishes, repeated taps/cache reuse, failure/retry preserving another season and session reset ignoring a cancellation-resistant old transport. No new hidden UI or test-only production path. This is local, self-reviewed and uncompiled; expected next nativeunit count109 (Core56). Do not push while build27 is running; next run must retain existing UI reveal/season/slider/Undo and complete regression coverage.
+
 ### Next local hardening batch — do not cancel build 27
 
 While run40107203106 / source0efbc94 continues, prepared two verified review fixes locally: validate unique title/episode/watch/location identities before publishing a complete network snapshot or replacing/restoring its cache; reject ambiguity and retain the previous complete diary. Home/History direct in-memory projections use safe title/episode indices and distinct event identities, preserving genuine rewatches with different IDs. The old weekly-summary rewatch fixture now uses a distinct event/operation ID instead of duplicating the same database event. New Core and URLProtocol/cache regressions cover duplicate sections, cross-page overlap with conflicting title contents, unchanged prior data/cache, malformed legacy encrypted caches and no false rewatch/double counting.
