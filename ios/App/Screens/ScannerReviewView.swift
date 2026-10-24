@@ -78,7 +78,8 @@ private struct ScannerMatchView: View {
             }.navigationTitle("Match folder").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() }.disabled(store.busy) } }
                 .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0, onImported: choose) }
-                .navigationDestination(for: PersonRoute.self) { PersonView(id: $0.id) }
+                .navigationDestination(for: PersonFilmographyRoute.self) { PersonFilmographyView(route: $0) }
+                .navigationDestination(for: PersonRoute.self) { PersonView(route: $0) }
         }.interactiveDismissDisabled(store.busy)
     }
     private func choose(_ id: String) {

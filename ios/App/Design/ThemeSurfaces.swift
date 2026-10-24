@@ -34,7 +34,7 @@ struct DiaryControlSurface<SurfaceShape: Shape>: View {
                 shape.stroke(.white.opacity(selected ? 0.32 : 0.18), lineWidth: 1)
             } else {
                 shape.fill(selected ? theme.accent.opacity(0.09) : Color(webHex: field ? "#111115" : "#131219"))
-                shape.stroke(selected ? theme.accent.opacity(0.45) : Color(webHex: "#34313f"), lineWidth: 1)
+                shape.stroke(selected ? theme.accent.opacity(0.45) : Color(webHex: field ? "#ffffff21" : "#34313f"), lineWidth: 1)
             }
         }.allowsHitTesting(false)
     }
