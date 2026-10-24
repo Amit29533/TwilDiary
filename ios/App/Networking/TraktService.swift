@@ -48,19 +48,36 @@ import TwilDiaryCore
     var paused = false
     private var refreshID = UUID()
     private var receivedMode = false
+    private var changingReview = false
+    private var deferredRefresh = false
+    private var deferredStatus = false
     init(service: any TraktServicing) { self.service = service }
     var visibleItems: [TraktChange] { sync?.items.filter { (kind == .all || $0.kind == kind.rawValue) && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)) } ?? [] }
     func refresh() async {
+        await refresh(includeStatus: true)
+    }
+    func refreshReview() async {
+        await refresh(includeStatus: status == nil)
+    }
+    private func refresh(includeStatus: Bool) async {
+        guard !Task.isCancelled else { return }
+        guard !changingReview else {
+            deferredRefresh = true; deferredStatus = deferredStatus || includeStatus
+            return
+        }
         let request = UUID(); refreshID = request; loading = true
+        let selectedKind = kind, search = query
         defer { if refreshID == request { loading = false } }
         do {
-            let connection = try await service.status()
-            let review = try await service.review(kind: kind, query: query, after: nil)
-            guard request == refreshID, !Task.isCancelled else { return }
-            status = connection; accept(review); limit = 6; error = nil
+            let connection: TraktStatus?
+            if includeStatus { connection = try await service.status() } else { connection = nil }
+            let review = try await service.review(kind: selectedKind, query: search, after: nil)
+            guard request == refreshID, !changingReview, kind == selectedKind, query == search, !Task.isCancelled else { return }
+            if let connection { status = connection }
+            accept(review); limit = 6; error = nil
             if !receivedMode, let raw = review.run?.ratingMode, let value = TraktRatingMode(rawValue: raw) { mode = value; receivedMode = true }
         } catch is CancellationError { }
-        catch { if request == refreshID, !Task.isCancelled { self.error = error.localizedDescription } }
+        catch { if request == refreshID, !changingReview, kind == selectedKind, query == search, !Task.isCancelled { self.error = error.localizedDescription } }
     }
     func loadMore() async {
         guard !busy, let current = sync else { return }
@@ -77,15 +94,14 @@ import TwilDiaryCore
     }
     func scan(start: Bool) async {
         guard !busy, cooldownUntil <= .now else { return }
-        refreshID = UUID(); loading = false; busy = true; paused = false; error = nil
-        defer { busy = false }
+        refreshID = UUID(); loading = false; busy = true; changingReview = true; paused = false; error = nil
         do {
             var id = sync?.run?.id
             if start || id == nil {
                 if let run = sync?.run, ["building", "review", "applying"].contains(run.state) { try await service.cancel(id: run.id) }
                 id = try await service.start(mode: mode)
             }
-            guard let id else { return }
+            guard let id else { throw APIError.message("The Trakt scan did not start. Please retry.") }
             var previousStep: String?
             var steps = 0
             repeat {
@@ -99,11 +115,11 @@ import TwilDiaryCore
             } while true
         } catch is CancellationError { paused = true }
         catch { self.error = error.localizedDescription }
+        await finishChangingReview()
     }
     func apply(change: TraktChange? = nil, choice: TraktChoice = .apply) async {
         guard !busy, let current = sync, current.reviewing, let id = current.run?.id, choice == .skip || cooldownUntil <= .now else { return }
-        refreshID = UUID(); loading = false; busy = true; paused = false; error = nil
-        defer { busy = false }
+        refreshID = UUID(); loading = false; busy = true; changingReview = true; paused = false; error = nil
         do {
             var steps = 0
             repeat {
@@ -117,19 +133,28 @@ import TwilDiaryCore
                (result.counts["safe"] ?? 0) == 0, result.unresolved == 0 {
                 accept(try await service.apply(id: id, change: nil, choice: .apply))
             }
-            await refresh()
+            deferredRefresh = true; deferredStatus = true
         } catch is CancellationError { paused = true }
         catch { self.error = error.localizedDescription }
+        await finishChangingReview()
     }
     func cancel() async {
         guard !busy, let id = sync?.run?.id else { return }
-        busy = true; defer { busy = false }
-        do { try await service.cancel(id: id); await refresh() } catch { self.error = error.localizedDescription }
+        refreshID = UUID(); loading = false; busy = true; changingReview = true
+        do { try await service.cancel(id: id); deferredRefresh = true; deferredStatus = true } catch { self.error = error.localizedDescription }
+        await finishChangingReview()
     }
     func disconnect() async {
         guard !busy else { return }
-        busy = true; defer { busy = false }
-        do { try await service.disconnect(); await refresh() } catch { self.error = error.localizedDescription }
+        refreshID = UUID(); loading = false; busy = true; changingReview = true
+        do { try await service.disconnect(); deferredRefresh = true; deferredStatus = true } catch { self.error = error.localizedDescription }
+        await finishChangingReview()
+    }
+    private func finishChangingReview() async {
+        changingReview = false; busy = false
+        let pending = deferredRefresh, includeStatus = deferredStatus
+        deferredRefresh = false; deferredStatus = false
+        if pending { await refresh(includeStatus: includeStatus) }
     }
     private func accept(_ value: TraktSync) { sync = value; cooldownUntil = .now.addingTimeInterval(Double(value.run?.retryAfter ?? 0)) }
 }

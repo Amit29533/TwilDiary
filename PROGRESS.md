@@ -5,6 +5,14 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary â†’ ios-native â†
 ## Current request and exact next action
 
 
+### Build 28 active; next Trakt race fix local only
+
+Build28 source **cb6bed8**, run **40109472619**, https://github.com/Amit29533/TwilDiary/actions/runs/40109472619. Exact acceptance remains Core56/nativeunit109, the eight-case early gate, full primary40 UI and three layout tests on each extra phone; these are expected counts, not passed claims. Preserve its run while doing independent local work.
+
+Prepared the separately verified Trakt filter/scan race fix locally: review-only filter reloads avoid status reads after initial connection load, capture filter values before awaiting, and defer refreshes while scan/apply/cancel/disconnect change the review. At operation completion the latest requested filter is read, without accepting an earlier in-flight review over the mutation result. Existing paging-generation/cancellation behavior remains. Three continuation-backed fixture tests cover connection-read counts, filtering during a held scan step, and filtering during a held Apply response with reduced pending count preserved. No hosted Trakt calls. These changes are uncompiled and not in build28; expected subsequent nativeunit112. Next: keep monitoring28; commit this coherent local subtask without pushing/cancelling28, then incorporate it in the following run after current results are reviewed.
+
+
+
 ### Build 27 reviewed; build 28 prepared
 
 Build27 / 40107203106 / 0efbc94 completes failure: Core54/54, zero-warning simulator/test-bundle compilation and earlyUI7/8 pass. Files footer clearance plus full scanner-match/location-return flow, and manual-create/Glance movie log/Undo now pass. Confirmed-write recovery/Undo, Explore native Back, retained/scoped search, moving full-bleed art/Notes and real episode-piece slider/movie/Undo all pass again. Device Release, IPA, full native/all-phone suites are correctly skipped. No build27 IPA or full acceptance claim. Logs/results/screenshots are complete under .local/ios-app-build-40107203106; full GHA log .local/build27-all.log.

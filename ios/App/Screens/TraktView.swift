@@ -26,7 +26,7 @@ import TwilDiaryCore
         }.background(.black).navigationTitle("Trakt").navigationBarTitleDisplayMode(.inline).navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
             .task(id: controller.kind.rawValue + "\n" + controller.query) {
-                do { try await Task.sleep(for: .milliseconds(250)); try Task.checkCancellation(); await controller.refresh() } catch { }
+                do { try await Task.sleep(for: .milliseconds(250)); try Task.checkCancellation(); await controller.refreshReview() } catch { }
             }
             .refreshable { await controller.refresh() }
             .task(id: controller.cooldownUntil) {

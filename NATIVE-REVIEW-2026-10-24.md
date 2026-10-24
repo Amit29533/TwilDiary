@@ -8,6 +8,8 @@ Two verified items now have local source changes and regression coverage, pendin
 
 Saved-title reveal now also has a local controller fix and four request-interleaving regressions, pending the next CI run. Per-season loading and coalescing replace the dropping global guard; per-episode spoiler consent remains unchanged.
 
+The Trakt filter/scan/Apply race also has a local-only barrier, review-only filtering and three interleaving tests, pending a later CI run (not build28).
+
 ## Main findings
 
 | Claim | Verdict | Current evidence / qualification |
