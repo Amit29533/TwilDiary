@@ -37,6 +37,7 @@ import UIKit
         private weak var popGesture: UIGestureRecognizer?
         private var popWasEnabled = false
         private func protectTracking() {
+            guard popGesture == nil else { return }
             var responder: UIResponder? = self
             while let current = responder {
                 if let controller = current as? UIViewController, let gesture = controller.navigationController?.interactiveContentPopGestureRecognizer {

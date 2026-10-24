@@ -216,6 +216,11 @@ import TwilDiaryCore
     func read<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil, timeout: TimeInterval? = nil) async throws -> T {
         #if DEBUG
         if let fixture {
+            let generation = sessionGeneration
+            if method != "GET", ProcessInfo.processInfo.arguments.contains("--ui-slow-writes") {
+                try await Task.sleep(for: .seconds(2))
+                guard generation == sessionGeneration else { throw CancellationError() }
+            }
             let value: T = try fixture.request(path, method: method, body: body)
             if method == "POST", path.hasSuffix("/watches"), ProcessInfo.processInfo.arguments.contains("--ui-refresh-failure") {
                 failNextFixtureRefresh = true

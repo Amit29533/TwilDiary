@@ -3,7 +3,7 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false, slowWrites: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
         if scanner { app.launchArguments.append("--ui-scanner") }
@@ -12,6 +12,7 @@ import UIKit
         if empty { app.launchArguments.append("--ui-empty") }
         if refreshFailure { app.launchArguments.append("--ui-refresh-failure") }
         if upcoming { app.launchArguments.append("--ui-upcoming") }
+        if slowWrites { app.launchArguments.append("--ui-slow-writes") }
         if let traktScenario { app.launchArguments.append("--ui-trakt=" + traktScenario) }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
@@ -745,6 +746,23 @@ import UIKit
         XCTAssertTrue(pickup.waitForExistence(timeout: 5))
         pickup.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.15)).tap()
         XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
+    }
+    func testSlowGlanceWriteKeepsOtherCardsUsableAndCategoryReturnRetainsCounts() {
+        let app = launch(mutations: true, slowWrites: true)
+        let again = app.buttons["Mark next watch for 18 Again"]
+        XCTAssertTrue(again.waitForExistence(timeout: 5))
+        // Locate the actual fixture label without depending on curly apostrophe spelling.
+        let other = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Mark next watch for Frieren'")).firstMatch
+        XCTAssertTrue(other.waitForExistence(timeout: 5)); XCTAssertTrue(other.isEnabled)
+        again.tap()
+        XCTAssertTrue(other.isEnabled, "An unrelated card must remain available during this write")
+        other.tap()
+        let firstCount = app.staticTexts["watch-count-again"], otherCount = app.staticTexts["watch-count-frieren"]
+        wait(for: [expectation(for: NSPredicate(format: "label == '9'"), evaluatedWith: firstCount), expectation(for: NSPredicate(format: "label == '13'"), evaluatedWith: otherCount)], timeout: 15)
+        XCTAssertTrue(again.isEnabled); XCTAssertTrue(other.isEnabled)
+        app.buttons["category-anime"].tap(); XCTAssertEqual(otherCount.label, "13")
+        app.buttons["category-movies"].tap(); app.buttons["category-anime"].tap()
+        XCTAssertEqual(otherCount.label, "13"); capture("Glance cached category counts")
     }
     private func sample(_ image: CGImage, at point: CGPoint, scale: CGFloat) -> [Int] {
         guard let pixel = image.cropping(to: CGRect(x: floor(point.x * scale), y: floor(point.y * scale), width: 1, height: 1)) else { XCTFail("Missing pixel sample"); return [0, 0, 0, 0] }
