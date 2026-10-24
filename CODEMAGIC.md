@@ -6,6 +6,8 @@ To use the linked app, manually select branch `ios-native` and workflow `native-
 
 The first actual run must confirm Xcode/tool versions, simulator inventory, Bash execution, all test counts, logs, exported screenshot/xcresult artifacts and the IPA build/hash/architecture before acceptance. The EXIT trap retains diagnostics and preserves the original failing exit status; an unsigned IPA produced before later tests fail is only a diagnostic/trial artifact. Do not call it a passed release. GitHub-specific `collect-build.py` run metadata cannot be fabricated for Codemagic; provider-specific completed-run provenance must be recorded before accepting its artifacts. No UI, domain behavior, API or server changes are involved in this fallback configuration.
 
+From build 30, `test-unit` runs before the early UI gate; `test` runs the complete primary UI suite. The manual fallback includes both stages and retains their separate xcresult/log evidence. This ordering does not bypass any failed test. No Codemagic execution has been started.
+
 Official references checked on 24 October 2026:
 
 - [Xcode 26.6 machine specifications](https://docs.codemagic.io/specs-macos/xcode-26-6/) list iOS 26.5 with iPhone 17 Pro, 17e and 17 Pro Max.

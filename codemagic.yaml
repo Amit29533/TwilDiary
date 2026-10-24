@@ -36,6 +36,7 @@ workflows:
           swift test --package-path ios/Packages/TwilDiaryCore 2>&1 | tee ios/.artifacts/logs/core-tests.log
           bash ios/scripts/ci.sh build-simulator
           bash ios/scripts/ci.sh boot
+          bash ios/scripts/ci.sh test-unit
           bash ios/scripts/ci.sh test-progress
           bash ios/scripts/ci.sh build-device
           bash ios/scripts/ci.sh package
