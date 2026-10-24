@@ -41,8 +41,12 @@ workflows:
           bash ios/scripts/ci.sh screenshots-progress
           bash ios/scripts/ci.sh build-device
           bash ios/scripts/ci.sh package
-          bash ios/scripts/ci.sh test
-          bash ios/scripts/ci.sh test-layouts
+          primary_status=0
+          layout_status=0
+          bash ios/scripts/ci.sh test || primary_status=$?
+          bash ios/scripts/ci.sh test-layouts || layout_status=$?
+          if [ "$primary_status" -ne 0 ]; then exit "$primary_status"; fi
+          if [ "$layout_status" -ne 0 ]; then exit "$layout_status"; fi
     artifacts:
       - ios/.artifacts/TwilDiary-unsigned.ipa
       - ios/.artifacts/TwilDiary-unsigned.ipa.sha256

@@ -70,6 +70,7 @@ jobs:
         timeout-minutes: 20
         run: bash ios/scripts/ci.sh test-unit
       - name: Verify progress, navigation and recent device regressions before Release
+        id: progress
         timeout-minutes: 20
         run: bash ios/scripts/ci.sh test-progress
       - name: Export passed early UI evidence
@@ -101,6 +102,7 @@ jobs:
         timeout-minutes: 60
         run: bash ios/scripts/ci.sh test
       - name: Run compact and large iPhone layout regression
+        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.progress.outcome == 'success' }}
         timeout-minutes: 25
         run: bash ios/scripts/ci.sh test-layouts
       - name: Save compiled native targets
