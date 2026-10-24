@@ -740,6 +740,11 @@ import UIKit
         XCTAssertTrue(cover.waitForExistence(timeout: 5))
         cover.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.86)).tap()
         XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["tab-home"].tap()
+        let pickup = app.buttons["progress-cover-again"]
+        XCTAssertTrue(pickup.waitForExistence(timeout: 5))
+        pickup.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.15)).tap()
+        XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
     }
     private func sample(_ image: CGImage, at point: CGPoint, scale: CGFloat) -> [Int] {
         guard let pixel = image.cropping(to: CGRect(x: floor(point.x * scale), y: floor(point.y * scale), width: 1, height: 1)) else { XCTFail("Missing pixel sample"); return [0, 0, 0, 0] }

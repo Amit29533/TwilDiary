@@ -20,7 +20,7 @@ struct UndoToast: View {
             Button("Undo") { Task { await store.undo() } }
                 .font(.system(size: 13, weight: .semibold)).foregroundStyle(theme.accent)
                 .frame(minWidth: 44, minHeight: 44).disabled(store.writesBlocked)
-            Button { store.dismissUndo() } label: { DiaryIcon(name: "x", size: 14).frame(width: 32, height: 44) }
+            Button { store.dismissUndo() } label: { DiaryIcon(name: "x", size: 14).frame(width: 44, height: 44) }
                 .foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel("Dismiss undo")
         }.buttonStyle(.plain).padding(.horizontal, 12).padding(.vertical, 2)
             .background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 22))

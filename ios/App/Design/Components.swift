@@ -304,6 +304,7 @@ struct ProgressCard: View {
     @Environment(DiaryStore.self) private var store
     @State private var loadedCard: WatchCard?
     private var card: WatchCard? { loadedCard ?? store.cachedCard(title) }
+    @State private var watchFeedback = 0
     @State private var drag: CGFloat = 0
     @State private var suppressNavigationUntil = Date.distantPast
     @Environment(AppRouter.self) private var router
@@ -332,6 +333,7 @@ struct ProgressCard: View {
                 if mark { Task { await markWatch() } }
             })
             .task(id: store.cardRevision(title.id)) { await loadCard() }
+            .sensoryFeedback(.success, trigger: watchFeedback)
     }
     private var compactContent: some View {
         VStack {
@@ -380,7 +382,7 @@ struct ProgressCard: View {
                     Text(title.isSeries ? "\(Int((fraction * 100).rounded()))% complete" : fraction > 0 ? "Watched" : "Not watched yet").font(.system(size: 13)).foregroundStyle(Color(webHex: "#c5c0cf"))
                 }
                 if title.isSeries {
-                    Button { let reviewed = card?.previous; Task { await store.removeLatest(title, expected: reviewed); await loadCard() } } label: { actionIcon(.remove, symbol: "minus", size: 18).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))) }.buttonStyle(.plain).disabled(cardBusy || store.needsMutationRefresh || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
+                    Button { Task { await removeWatch() } } label: { actionIcon(.remove, symbol: "minus", size: 18).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))) }.buttonStyle(.plain).disabled(cardBusy || store.needsMutationRefresh || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
                     Text("\(card?.progress.watched ?? 0)").font(.system(size: 17, weight: .semibold)).monospacedDigit().contentTransition(.numericText()).animation(reduceMotion ? nil : .snappy(duration: 0.2), value: card?.progress.watched).accessibilityIdentifier("watch-count-" + title.id)
                     Button { Task { await markWatch() } } label: { actionIcon(.mark, symbol: "plus", size: 20).foregroundStyle(theme.ink).frame(width: 34, height: 34).background(.tint, in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(DiaryPressStyle()).disabled(!canMark).accessibilityLabel("Mark next watch for \(title.name)")
                 } else {
@@ -402,7 +404,8 @@ struct ProgressCard: View {
     private var cardBusy: Bool { store.cardActions[title.id] != nil }
     @ViewBuilder private func actionIcon(_ action: DiaryStore.CardAction, symbol: String, size: CGFloat) -> some View {
         if store.cardActions[title.id] == action { ProgressView().controlSize(.small).tint(theme.ink).frame(width: size, height: size).accessibilityLabel("Saving") }
-        else { Image(systemName: symbol).font(.system(size: size)) }
+        else if reduceMotion { Image(systemName: symbol).font(.system(size: size)) }
+        else { Image(systemName: symbol).font(.system(size: size)).symbolEffect(.bounce, value: watchFeedback) }
     }
     private var canMark: Bool {
         guard !cardBusy, !store.needsMutationRefresh, let card else { return false }
@@ -422,5 +425,14 @@ struct ProgressCard: View {
         catch { if !Task.isCancelled { store.error = error.localizedDescription } }
     }
     private func openTitle() { guard Date.now >= suppressNavigationUntil else { return }; router.openTitle(title.id, tab: router.selectedTab) }
-    private func markWatch() async { await store.markNext(title, expectedEpisode: card?.next?.id); await loadCard() }
+    private func markWatch() async {
+        let previous = card?.progress.watched
+        await store.markNext(title, expectedEpisode: card?.next?.id); await loadCard()
+        if let previous, let current = card?.progress.watched, current > previous { watchFeedback += 1 }
+    }
+    private func removeWatch() async {
+        let previous = card?.progress.watched
+        await store.removeLatest(title, expected: card?.previous); await loadCard()
+        if let previous, let current = card?.progress.watched, current < previous { watchFeedback += 1 }
+    }
 }
