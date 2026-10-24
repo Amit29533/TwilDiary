@@ -309,7 +309,21 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace; store.hasLoadedWorkspace = true
         await store.refresh()
         XCTAssertEqual(store.error, "The diary returned a repeated page. Please refresh.")
-        XCTAssertEqual(StubProtocol.state.recorded().count, 2)
+        let requests = StubProtocol.state.recorded()
+        let groups = Dictionary(grouping: requests) { request in
+            URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "section" }?.value ?? ""
+        }
+        XCTAssertTrue(Set(groups.keys).isSubset(of: ["titles", "episodes", "events", "locations"]))
+        XCTAssertTrue((2...8).contains(requests.count), "Four concurrent sections may each fetch at most two pages")
+        XCTAssertTrue(groups.values.contains { $0.count == 2 }, "At least one section must actually encounter the repeated cursor")
+        for pages in groups.values {
+            XCTAssertTrue((1...2).contains(pages.count), "No section may continue around the cursor loop")
+            let cursors = pages.map { request in
+                URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "after" }?.value
+            }
+            XCTAssertNil(cursors.first ?? nil)
+            if cursors.count == 2 { XCTAssertEqual(cursors[1], "synthetic-loop") }
+        }
         XCTAssertEqual(store.workspace.titles.map(\.id), PreviewData.workspace.titles.map(\.id))
         XCTAssertTrue(store.hasLoadedWorkspace); XCTAssertFalse(store.loading)
     }

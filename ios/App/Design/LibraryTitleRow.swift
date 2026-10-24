@@ -30,8 +30,8 @@ struct LibraryTitleRow: View {
                 GeometryReader { geometry in
                     ZStack {
                         Color(webHex: "#101014")
-                        if let path = title.backdrop ?? title.poster {
-                            Artwork(path: path).frame(width: geometry.size.width, height: geometry.size.height).opacity(0.65)
+                        if let path = title.poster {
+                            LibraryCoverArtwork(path: path).frame(width: geometry.size.width, height: geometry.size.height).opacity(0.65)
                         }
                         LinearGradient(stops: [
                             .init(color: Color(webHex: "#09090c4d"), location: 0),
@@ -50,6 +50,30 @@ struct LibraryTitleRow: View {
                 title.queued == true ? "In Queue" : nil,
                 present ? "On your PC" : nil
             ].compactMap { $0 }.joined(separator: ", "))
+    }
+}
+
+/// Source TitleCard uses its raw poster behind list rows, independently of the foreground Poster crop.
+private struct LibraryCoverArtwork: View {
+    let path: String
+    var body: some View {
+        GeometryReader { geometry in
+            Group {
+                if path.hasPrefix("/demo/"), let image = DemoArtwork.image("asset:" + URL(fileURLWithPath: path).deletingPathExtension().lastPathComponent) {
+                    crop(Image(uiImage: image), size: geometry.size)
+                } else if let url = URL(string: path), url.scheme == "https" {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image { crop(image, size: geometry.size) }
+                    }
+                }
+            }.frame(width: geometry.size.width, height: geometry.size.height).clipped()
+        }.allowsHitTesting(false).accessibilityHidden(true)
+    }
+    private func crop(_ image: Image, size: CGSize) -> some View {
+        image.resizable().scaledToFill()
+            .alignmentGuide(VerticalAlignment.center) { dimensions in dimensions.height * 0.4 }
+            .frame(width: size.width, height: size.height)
+            .offset(y: -size.height * 0.1)
     }
 }
 

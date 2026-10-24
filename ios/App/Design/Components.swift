@@ -140,7 +140,7 @@ struct SearchField: View {
     }
 }
 
-@MainActor private enum DemoArtwork {
+@MainActor enum DemoArtwork {
     static let cache = NSCache<NSString, UIImage>()
     static func image(_ path: String) -> UIImage? {
         if let saved = cache.object(forKey: path as NSString) { return saved }

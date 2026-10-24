@@ -2,7 +2,9 @@
 
 Product source: the web /preview code at b43454e. Active native source: Amit29533/TwilDiary → ios-native → ios/. No hosted changes or deployments.
 
-Current build **22 / 40089027240 / b6b5b5f** is running. Core, simulator/device builds and the early real drag/Undo check pass; full primary and extra-device results are pending. Its unsigned arm64 IPA was supplied at the user's request as an explicitly unaccepted test build. Build 23 is prepared locally with Library/control/navigation geometry, upcoming-season routing and title menu/location actions, awaiting the current run before push.
+Build **22 / 40089027240 / b6b5b5f** completes with **50 Core, 88/89 native unit and 29/29 primary UI** passing, zero-warning simulator/device builds, and a passing early real drag/Undo check. Its sole failure is a repeated-cursor test that still expects two total calls after reload became four concurrent sections; the error/snapshot checks pass and each section stops after two pages. Build 23 corrects that test by checking each section's cursors and bounded page count. Extra-device layouts were skipped, so this is not a fully green release. The unsigned arm64 IPA was provided as an explicitly unaccepted trial.
+
+Build 23 is prepared locally with Library/control/navigation geometry, upcoming-season routing, title menu/location actions and movie-specific Glance controls. These new changes await compilation and runtime evidence.
 
 Last fully green remains **build 14 / 40056346004 / 9c4b527**: zero-warning builds, 25 Core + 32 native unit + 9 UI tests, 29 screenshots and a verified unsigned IPA. That is older source, not proof that the expanded port is finished.
 
