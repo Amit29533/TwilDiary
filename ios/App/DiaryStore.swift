@@ -17,6 +17,7 @@ import TwilDiaryCore
     private let api: DiaryAPI
     private let cache: any WorkspaceCaching
     private var sessionGeneration = UUID()
+    var sessionRevision: UUID { sessionGeneration }
     private var snapshotGeneration = UUID()
     private var pendingWatches: [String: [String: Any]] = [:]
     private var pendingProgress: [String: [String: Any]] = [:]
@@ -56,10 +57,18 @@ import TwilDiaryCore
         indexTitles()
     }
     func connect(_ credential: AccessCredential) async {
+        let previousScope = api.credential?.cacheScope
         let generation = UUID(); sessionGeneration = generation; snapshotGeneration = UUID()
         do {
             try await api.authenticate(credential)
             guard generation == sessionGeneration else { return }
+            communityRatings.reset()
+            if previousScope != credential.cacheScope {
+                workspace = Workspace(); hasLoadedWorkspace = false; showingCachedSnapshot = false; lastRefreshedAt = nil; cacheWarning = nil
+                pendingWatches.removeAll(); pendingProgress.removeAll(); pendingRemovals.removeAll(); pendingSeasonAdjustments.removeAll()
+                undoLabel = nil; undoAction = nil
+            }
+            loading = false; busy = false
             needsSignIn = false; error = nil; restoreCachedWorkspace(); await refresh()
         } catch { if generation == sessionGeneration { fail(error) } }
     }

@@ -9,16 +9,20 @@ import TwilDiaryCore
 
 @MainActor final class LiveDiscoveryService: DiscoveryServing {
     private let store: DiaryStore
+    private var session: UUID?
     private var cache: [String: (at: Date, page: CatalogPage)] = [:]
     init(store: DiaryStore) { self.store = store }
     func page(_ query: [String: String]) async throws -> CatalogPage {
         guard !store.needsSignIn else { clear(); throw APIError.signIn }
+        let revision = store.sessionRevision
+        if session != revision { clear(); session = revision }
         let key = CatalogTools.apiPath("/api/discovery", query: query)
         if let saved = cache[key], Date.now.timeIntervalSince(saved.at) < 300 { return saved.page }
         let result: CatalogPage
         if store.isPreview { result = PreviewCatalog.discovery(query) }
         else { result = try await store.read(key) }
         try Task.checkCancellation()
+        guard revision == store.sessionRevision, !store.needsSignIn else { throw CancellationError() }
         if cache.count >= 16, let oldest = cache.min(by: { $0.value.at < $1.value.at })?.key { cache.removeValue(forKey: oldest) }
         cache[key] = (.now, result)
         return result

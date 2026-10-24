@@ -38,7 +38,6 @@ struct TitleDetailView: View {
                         header(title)
                         progressPanel(title).padding(.top, -8)
                         if title.isSeries { episodeSection(title) }
-                        else { movieHistory(title) }
                         if let tmdbId = title.tmdbId { CastAndRelated(route: CatalogRoute(kind: title.isSeries ? .tv : .movie, id: tmdbId)) }
                         VStack(spacing: 20) {
                             DisclosureGroup("Notes", isExpanded: $showNotes) {
@@ -256,14 +255,6 @@ struct TitleDetailView: View {
         catch { if selected == season { episodeError = error.localizedDescription } }
     }
     private var movieViewings: [WatchEvent] { store.workspace.activeEvents.filter { $0.titleId == id && $0.episodeId == nil }.sorted { ($0.recordedAt, $0.id) > ($1.recordedAt, $1.id) } }
-    private func movieHistory(_ title: MediaTitle) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if !movieViewings.isEmpty { Text("Viewing history").font(.title2.bold()) }
-            ForEach(movieViewings) { event in
-                HStack { Image(systemName: "checkmark.circle.fill").foregroundStyle(theme.accent); Text(DiaryDate.parse(event.watchedAt).map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "Unknown date").font(.subheadline); Spacer(); if event.id == card?.previous?.id { Text("Latest").font(.caption).foregroundStyle(.secondary) } }.padding(.vertical, 8)
-            }
-        }
-    }
     private var displayedWatched: Int { sliderDraft.map(Int.init) ?? card?.progress.watched ?? 0 }
     private var watchInstant: Date { let calendar = DiaryDate.calendar(); return calendar.isDate(watchDate, inSameDayAs: store.now) ? store.now : calendar.date(bySettingHour: 12, minute: 0, second: 0, of: watchDate) ?? watchDate }
     private var displayedPercent: Int { guard let total = card?.progress.total, total > 0 else { return 0 }; return Int((Double(displayedWatched) / Double(total) * 100).rounded()) }

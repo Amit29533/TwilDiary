@@ -468,6 +468,38 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         await store.loadPublicRatings([title], source: .trakt)
         XCTAssertEqual(StubProtocol.state.recorded().count, 1)
     }
+    func testDifferentAccountCannotKeepThePreviousWorkspaceWhenItsReloadFails() async throws {
+        let cache = MemoryWorkspaceCache()
+        try cache.save(PreviewData.workspace, scope: credential.cacheScope, at: .now)
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage), cache: cache)
+        XCTAssertFalse(store.workspace.titles.isEmpty)
+        StubProtocol.state.reset { request in
+            request.url?.path == "/api/session" ? .init(#"{"authenticated":true}"#) : .init(503, #"{"error":{"message":"Synthetic offline"}}"#)
+        }
+        await store.connect(AccessCredential(token: "synthetic-other-owner", expires: .distantFuture))
+        XCTAssertFalse(store.needsSignIn); XCTAssertFalse(store.hasLoadedWorkspace)
+        XCTAssertTrue(store.workspace.titles.isEmpty); XCTAssertFalse(store.showingCachedSnapshot)
+        XCTAssertNil(store.lastRefreshedAt); XCTAssertNil(store.undoLabel)
+        XCTAssertEqual(storage.credential?.token, "synthetic-other-owner")
+        XCTAssertNotNil(cache.load(scope: credential.cacheScope), "Owner-scoped encrypted copies may remain, but must never be published for a different account")
+    }
+    func testDiscoveryCannotReusePreviousSessionsRecommendationCacheAfterReconnect() async throws {
+        StubProtocol.state.reset { request in
+            if request.url?.path == "/api/session" { return .init(#"{"authenticated":true}"#) }
+            if request.url?.path == "/api/workspace" { return .init(#"{"items":[],"next":null}"#) }
+            return .init(#"{"items":[],"page":1,"totalPages":1}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)), service = LiveDiscoveryService(store: store)
+        let query = DiscoveryFilters(section: .recommended).query(section: .recommended)
+        _ = try await service.page(query)
+        await store.connect(AccessCredential(token: "synthetic-other-owner", expires: .distantFuture))
+        _ = try await service.page(query)
+        let pages = StubProtocol.state.recorded().filter { $0.url?.path == "/api/discovery" }
+        XCTAssertEqual(pages.count, 2)
+        XCTAssertEqual(pages.last?.value(forHTTPHeaderField: "Cookie"), "CF_Authorization=synthetic-other-owner")
+    }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
                                        "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),
