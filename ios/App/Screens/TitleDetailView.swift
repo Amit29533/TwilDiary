@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import TwilDiaryCore
 
 struct TitleDetailView: View {
@@ -16,6 +17,7 @@ struct TitleDetailView: View {
     @State private var showOverview = false
     @State private var showNotes = false
     @State private var showLocation = false
+    @State private var copiedLocation: String?
     @State private var notes = ""
     @State private var notesVersion: Int?
     @State private var ratingVersion: Int?
@@ -54,11 +56,16 @@ struct TitleDetailView: View {
                                         if notes.utf16.count > 20_000 { Text("Keep notes within 20,000 characters.").font(.caption).foregroundStyle(.orange) }
                                         Button("Save notes") { Task { if await store.patch(title, values: ["notes": notes], expectedVersion: notesVersion) { notesVersion = store.title(id)?.version } } }.disabled(store.writesBlocked || notes == title.notes || notes.utf16.count > 20_000)
                                     }.padding(.top, 12)
-                                }
+                                }.id("notes")
                                 Divider()
-                                DisclosureGroup(isExpanded: $showLocation) { ForEach(locations) { location in
-                                    VStack(alignment: .leading, spacing: 7) { Text(location.evidence == "present" ? "Available · \(location.deviceName)" : location.evidence.capitalized).font(.subheadline.bold()); Text(location.path).font(.caption.monospaced()).textSelection(.enabled); Text("\(location.fileCount) files").font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 12)
-                                } } label: { Text(serverLabel).font(.subheadline.weight(.semibold)) }
+                                DisclosureGroup(isExpanded: $showLocation) {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        ForEach(locations) { location in locationRow(location, title: title) }
+                                        if locations.isEmpty { Text("No mapped files yet. A Windows scan will add matching locations here.").font(.system(size: 13)).foregroundStyle(.secondary) }
+                                        NavigationLink("All files & drives →", value: AppDestination.files).font(.system(size: 14, weight: .semibold)).frame(minHeight: 48).accessibilityIdentifier("title-all-files")
+                                    }.padding(.top, 12)
+                                } label: { Text(serverLabel).font(.subheadline.weight(.semibold)) }
+                                    .id("files").accessibilityIdentifier("title-locations")
                             }.diaryPanel()
                         }.padding(.horizontal, 14).padding(.bottom, 32)
                     }.scrollDismissesKeyboard(.interactively).background(alignment: .top) {
@@ -69,10 +76,10 @@ struct TitleDetailView: View {
                             ToolbarItemGroup(placement: .topBarTrailing) {
                                 Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
                                 Menu {
-                                    Button(title.queued == true ? "Remove from Queue" : "Add to Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }.disabled(store.writesBlocked)
-                                    Button("Notes") { showNotes = true }
-                                    Button("File locations") { showLocation = true }
-                                } label: { Image(systemName: "ellipsis") }
+                                    Button(title.queued == true ? "Remove from Queue" : "Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }.disabled(store.writesBlocked)
+                                    Button("Notes") { showNotes = true; Task { await Task.yield(); proxy.scrollTo("notes", anchor: .top) } }
+                                    Button("File locations") { showLocation = true; Task { await Task.yield(); proxy.scrollTo("files", anchor: .top) } }
+                                } label: { Image(systemName: "ellipsis") }.accessibilityLabel("More options for " + title.name).accessibilityIdentifier("title-more")
                             }
                         }
                         .toolbar { ToolbarItemGroup(placement: .keyboard) { if notesFocused { Spacer(); Button("Done") { notesFocused = false }.accessibilityIdentifier("notes-keyboard-done") } } }
@@ -99,6 +106,28 @@ struct TitleDetailView: View {
                 }
             } else { ContentUnavailableView("Title unavailable", systemImage: "film") }
         }
+    }
+    private func locationRow(_ location: FileLocation, title: MediaTitle) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(alignment: .top, spacing: 8) {
+                Text(location.driveLetter + " · " + (location.season.map { "Season \($0)" } ?? "Title folder")).font(.system(size: 13.6, weight: .semibold))
+                Spacer(minLength: 0)
+                HStack(spacing: 6) {
+                    Circle().frame(width: 5, height: 5)
+                    Text(location.evidence == "present" ? "Available" : location.evidence == "unavailable" ? "Drive offline" : location.evidence == "missing" ? "Not available" : "Not confirmed")
+                }.font(.system(size: 12.8)).foregroundStyle(Color(webHex: location.evidence == "present" ? "#9edbc4" : "#e7ca90"))
+            }
+            Text(location.path).font(.system(size: 12, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 8) {
+                Text("\(location.fileCount) files · \(location.deviceName)").font(.system(size: 12.8)).foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Button { UIPasteboard.general.string = location.path; copiedLocation = location.id } label: { DiaryIcon(name: copiedLocation == location.id ? "check" : "copy", size: 16).frame(width: 44, height: 44) }
+                    .buttonStyle(.plain).accessibilityLabel("Copy path for " + title.name).accessibilityValue(copiedLocation == location.id ? "Copied" : "Copy")
+                    .accessibilityIdentifier("title-copy-location-" + location.id)
+            }
+        }.padding(.horizontal, 15).padding(.top, 15).padding(.bottom, 7)
+            .background(theme.field, in: RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color(webHex: "#ffffff0d")))
     }
     private func header(_ title: MediaTitle) -> some View {
         TitleHero(name: title.name, poster: title.poster, year: title.year, category: title.categoryName, runtime: title.runtimeMinutes, series: title.isSeries, score: title.communityScore, summary: title.overview, expanded: $showOverview) { personalRating(title).frame(minHeight: 44) }

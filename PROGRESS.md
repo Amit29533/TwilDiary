@@ -31,6 +31,8 @@ Home later-season navigation follow-up (build 23, native CI pending): source Hom
 
 Build 22's physical IPA is now packaged and downloaded for the user's requested trial while full tests continue. Verified D:/Downloads/TwilDiary-native-build22-test.ipa, build 22, unsigned arm64, 4,858,960 bytes, SHA256 ab94489db0a0618e9a89ac5c844760fa423f917fbc706ee890a77fbb91867e60. Source b6b5b5f. Both native compilations and early drag/Undo pass; no claim of a full green run. Adjacent .verification.json records the ongoing status.
 
+Title menu follow-up (same build-23 batch, native CI pending): verified TitleMenu native choices and title-section.ts reveal-before-scroll helper. Native previously expanded Notes/File locations out of sight, and the location disclosure omitted the empty explanation, copy action and All files & drives destination. The new ScrollViewReader routes both menu choices to their revealed panel, keeps the source three menu choices, and includes full location identity/evidence/path/device copy controls and the Files destination. A synthetic UI flow checks both sections, empty fallback, Files return and copied-path feedback. No hosted data is read or changed by this test.
+
 ## Evidence and pending acceptance
 
 - Latest completed build 20 / 40078903285 / cb16e882980466fefb5df0f7694184ca3f68310e was cancelled by its time limit. Simulator and arm64 Release compiled with zero warnings; 42 Core + 76 native unit tests and 16 UI cases passed before interruption during Person. Remaining UI, including range drag, and both extra-device runs remain unverified. Partial xcresult lacks Info.plist; only final-screen.png exported. Artifacts under .local/ios-app-build-40078903285 are diagnostic only.
