@@ -536,7 +536,9 @@ import UIKit
         XCTAssertTrue(app.staticTexts["Facts & trivia"].waitForExistence(timeout: 10))
         let factLabel = app.staticTexts["person-fact-known-for-label"], factValue = app.staticTexts["person-fact-known-for-value"]
         XCTAssertTrue(factLabel.waitForExistence(timeout: 5)); XCTAssertTrue(factValue.exists)
-        XCTAssertGreaterThan(factLabel.frame.width, 80); XCTAssertLessThan(factLabel.frame.height, 60)
+        XCTAssertGreaterThan(factLabel.frame.width, 0); XCTAssertLessThan(factLabel.frame.height, 60)
+        // Text accessibility frames describe glyph ink, not its 104pt layout column.
+        XCTAssertEqual(factValue.frame.minX - factLabel.frame.minX, 120, accuracy: 2)
         XCTAssertLessThan(abs(factValue.frame.minY - factLabel.frame.minY), 8)
         XCTAssertLessThan(app.staticTexts["person-fact-birthplace-label"].frame.minY - factLabel.frame.minY, 75)
         capture("Person facts")

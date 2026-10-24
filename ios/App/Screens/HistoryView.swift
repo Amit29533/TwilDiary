@@ -138,6 +138,7 @@ struct HistoryRow: View {
                     LinearGradient(colors: [Color(webHex: "#05060980"), .clear], startPoint: .bottom, endPoint: .top)
                 }.allowsHitTesting(false)
             }.clipShape(RoundedRectangle(cornerRadius: 12)).overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.13)))
+            .contentShape(Rectangle())
     }
     private var backdrop: String? { ["again", "night", "severance"].contains(entry.title.id) ? "scene:" + entry.title.id : entry.title.backdrop }
 }
