@@ -68,6 +68,8 @@ struct SavedTitleRoute: Hashable {
 }
 
 struct RootView: View {
+    @Namespace private var navigationSelection
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(DiaryStore.self) private var store
     @Environment(AppRouter.self) private var router
     @State private var showSignIn = false
@@ -157,10 +159,11 @@ struct RootView: View {
                         Text(tab.label).font(.system(size: 11)).frame(height: 16.5)
                     }.frame(maxWidth: .infinity).frame(height: 57)
                         .foregroundStyle(theme == .glass ? Color(webHex: router.selectedTab == tab ? "#f5f5f7" : "#e0e0e6") : router.selectedTab == tab ? theme.accent : theme.muted)
-                        .background { DiaryNavigationSelection(selected: router.selectedTab == tab) }
+                        .background { if router.selectedTab == tab { DiaryNavigationSelection(selected: true).matchedGeometryEffect(id: "selected-tab", in: navigationSelection) } }
                 }.buttonStyle(DiaryPressStyle()).accessibilityLabel(tab.label).accessibilityIdentifier("tab-" + tab.rawValue).accessibilityAddTraits(router.selectedTab == tab ? .isSelected : [])
             }
         }.padding(4).background { DiaryNavigationSurface() }
+            .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.85), value: router.selectedTab)
     }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {

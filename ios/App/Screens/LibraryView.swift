@@ -12,7 +12,6 @@ struct LibraryView: View {
     @State private var status = "all"
     @State private var genre = ""
     @State private var drive = ""
-    @State private var search = ""
     @State private var showSearch = false
     @State private var showAdd = false
     @State private var list = false
@@ -25,26 +24,26 @@ struct LibraryView: View {
     @State private var confirmEmptyTrash = false
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: archived ? "Trash" : "Library", count: String(collection.count), onSearch: { showSearch.toggle(); if !showSearch { search = "" } }, height: 54)
+            PageHeader(name: archived ? "Trash" : "Library", count: String(collection.count), onSearch: { showSearch.toggle() }, height: 54)
             if showSearch {
                 ScrollView { CatalogSearchView(onClose: { showSearch = false }).padding(.top, 2) }
             } else {
-            CategoryPicker(selection: $category)
-            filterBar
-            if hasFilters {
-                HStack(spacing: 12) { Text("\(filtered.count) \(filtered.count == 1 ? "title" : "titles")").foregroundStyle(.secondary); Button("Clear filters") { category = .all; status = "all"; genre = ""; drive = ""; search = "" }; Spacer(minLength: 0) }.font(.system(size: 13)).padding(.horizontal, 14).padding(.bottom, 8)
-            }
-            orderingBar
-            if ratingSource == .trakt {
-                if store.communityRatings.loading { ratingStatus("Loading Trakt community ratings…") }
-                else if store.communityRatings.unavailable {
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("Some Trakt ratings are unavailable.").font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
-                        Button("Retry") { Task { await store.loadPublicRatings(collection, source: ratingSource, retry: true) } }.font(.system(size: 12, weight: .semibold)).accessibilityIdentifier("ratings-retry")
-                    }.padding(.horizontal, 14).padding(.bottom, 10)
+                CategoryPicker(selection: $category)
+                filterBar
+                if hasFilters {
+                    HStack(spacing: 12) { Text("\(filtered.count) \(filtered.count == 1 ? "title" : "titles")").foregroundStyle(.secondary); Button("Clear filters") { category = .all; status = "all"; genre = ""; drive = "" }; Spacer(minLength: 0) }.font(.system(size: 13)).padding(.horizontal, 14).padding(.bottom, 8)
                 }
-            }
-            collectionContent
+                orderingBar
+                if ratingSource == .trakt {
+                    if store.communityRatings.loading { ratingStatus("Loading Trakt community ratings…") }
+                    else if store.communityRatings.unavailable {
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("Some Trakt ratings are unavailable.").font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+                            Button("Retry") { Task { await store.loadPublicRatings(collection, source: ratingSource, retry: true) } }.font(.system(size: 12, weight: .semibold)).accessibilityIdentifier("ratings-retry")
+                        }.padding(.horizontal, 14).padding(.bottom, 10)
+                    }
+                }
+                collectionContent
             }
         }.background(theme == .glass ? .black : Color(webHex: "#0e0d13"))
             .task(id: collection.map(\.id).sorted().joined(separator: ",") + ratingSource.rawValue) { await store.loadPublicRatings(collection, source: ratingSource) }
@@ -158,7 +157,7 @@ struct LibraryView: View {
     private func applyShortcut() {
         guard !archived, router.libraryRevision > appliedShortcutRevision else { return }
         appliedShortcutRevision = router.libraryRevision
-        category = .all; search = ""; genre = router.libraryGenreShortcut; drive = router.libraryDiskShortcut; status = "all"
+        category = .all; genre = router.libraryGenreShortcut; drive = router.libraryDiskShortcut; status = "all"
         switch router.libraryShortcut { case "queue": status = "queue"; case "planned", "watching", "completed", "dropped": status = router.libraryShortcut ?? "all"; case "disk": drive = HomeDiskShortcut.all.first?.key ?? ""; case "add": showAdd = true; default: break }
     }
     @ViewBuilder private func poster(_ title: MediaTitle, row: Bool = false) -> some View {
@@ -183,7 +182,7 @@ struct LibraryView: View {
     }
     @ViewBuilder private func cardContent(_ title: MediaTitle, row: Bool) -> some View { if row { LibraryTitleRow(title: title, archived: archived) } else { PosterCard(title: title, archived: archived).contentShape(Rectangle()) } }
     private func prepareReview(_ change: CollectionChange) { let titles = filtered.filter { selected.contains($0.id) }; if !titles.isEmpty { review = CollectionReview(titles: titles, change: change) } }
-    private var filterScope: String { [category.rawValue, status, genre, drive, search, sort].joined(separator: "\n") }
+    private var filterScope: String { [category.rawValue, status, genre, drive, sort].joined(separator: "\n") }
     private var collection: [MediaTitle] { store.workspace.titles.filter { ($0.deletedAt != nil) == archived } }
     private var trashChip: some View { HStack(spacing: 6) { DiaryIcon(name: "trash-2", size: 15); Text("Trash") }.font(.system(size: 14, weight: .semibold)).padding(.horizontal, 14).frame(height: 40).background { DiaryControlSurface(shape: Capsule(), selected: archived) } }
     private func filterChip(_ label: String, selected: Bool) -> some View {
@@ -196,14 +195,14 @@ struct LibraryView: View {
             .overlay { if genre && selected { RoundedRectangle(cornerRadius: 14).strokeBorder(theme.accent.opacity(0.45)) } }
     }
     private var genres: [String] { LibraryShelf.make(collection).map(\.genre).filter { $0 != "Without a genre" } }
-    private var hasFilters: Bool { category != .all || status != "all" || !genre.isEmpty || !drive.isEmpty || !search.isEmpty }
+    private var hasFilters: Bool { category != .all || status != "all" || !genre.isEmpty || !drive.isEmpty }
     private var disks: [DiskSummary] { let ids = Set(collection.map(\.id)); return DiskSummary.make(store.workspace.locations.filter { ids.contains($0.titleId) }) }
     private var extraDisks: [DiskSummary] { disks.filter { disk in disk.key == drive || disk.letters.allSatisfy { letter in !HomeDiskShortcut.all.contains { $0.key == "drive:" + letter.uppercased() } } } }
     private var driveLabel: String { if drive.isEmpty { return "Disk" }; if drive == "mapped" { return "On disk" }; if drive == "unmapped" { return "No disk mapping" }; if let shortcut = HomeDiskShortcut.all.first(where: { $0.key == drive }) { return shortcut.label }; return disks.first { $0.key == drive }?.letters.joined(separator: " / ") ?? "Selected disk" }
     private var filtered: [MediaTitle] {
         var query = LibraryQuery()
         query.archived = archived
-        query.query = search; query.category = category == .movies ? "movie" : category == .shows ? "show" : category == .anime ? "anime" : "all"
+        query.category = category == .movies ? "movie" : category == .shows ? "show" : category == .anime ? "anime" : "all"
         query.status = status == "queue" ? "all" : status; query.queued = status == "queue"; query.genre = genre
         query.disk = drive.isEmpty ? "all" : ["mapped", "unmapped"].contains(drive) || drive.hasPrefix("[") || drive.hasPrefix("drive:") ? drive : "drive:" + drive.uppercased()
         query.sort = sort == "name" ? .title : sort == "rating" ? .score : sort == "year" ? .year : .library

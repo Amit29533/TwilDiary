@@ -17,19 +17,19 @@ struct TitleHero<PersonalRating: View>: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-        HStack(alignment: .top, spacing: 15) {
-            Artwork(path: poster, title: name, initialsOnly: false).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 12))
-            VStack(alignment: .leading, spacing: 0) {
-                Text(name).font(.system(size: 24, weight: .bold)).tracking(-1.08).fixedSize(horizontal: false, vertical: true)
-                Text([year.map(String.init) ?? "—", category, runtime.map { series ? "\($0) min per episode" : "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 14.4)).lineSpacing(4.3).foregroundStyle(.secondary).frame(minHeight: 21.6, alignment: .top).padding(.top, 14)
-                InlineFlowLayout {
-                    HStack(spacing: 5) { Image(systemName: "star.fill").font(.system(size: 20)).foregroundStyle(.yellow); Text(score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—").foregroundStyle(.yellow); Text("TMDb").font(.system(size: 14.4)).foregroundStyle(.secondary) }.frame(minHeight: 44)
-                    personalRating
-                }.font(.system(size: 15.2)).padding(.top, 14)
-                if !expanded { synopsis.padding(.top, 16) }
-            }.padding(.top, 14)
-        }
-        if expanded { synopsis.accessibilityIdentifier("expanded-synopsis") }
+            HStack(alignment: .top, spacing: 15) {
+                Artwork(path: poster, title: name, initialsOnly: false).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 12))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(name).font(.system(size: 24, weight: .bold)).tracking(-1.08).fixedSize(horizontal: false, vertical: true)
+                    Text([year.map(String.init) ?? "—", category, runtime.map { series ? "\($0) min per episode" : "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 14.4)).lineSpacing(4.3).foregroundStyle(.secondary).frame(minHeight: 21.6, alignment: .top).padding(.top, 14)
+                    InlineFlowLayout {
+                        HStack(spacing: 5) { Image(systemName: "star.fill").font(.system(size: 20)).foregroundStyle(.yellow); Text(score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—").foregroundStyle(.yellow); Text("TMDb").font(.system(size: 14.4)).foregroundStyle(.secondary) }.frame(minHeight: 44)
+                        personalRating
+                    }.font(.system(size: 15.2)).padding(.top, 14)
+                    if !expanded { synopsis.padding(.top, 16) }
+                }.padding(.top, 14)
+            }
+            if expanded { synopsis.accessibilityIdentifier("expanded-synopsis") }
         }.padding(.top, 82)
     }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

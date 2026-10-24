@@ -119,7 +119,7 @@ struct CatalogSearchView: View {
     private func requestPage(_ number: Int) { pageTask?.cancel(); pageTask = Task { await search(number: number) } }
     private func search(number: Int, reset: Bool = false) async {
         let request = UUID(); generation = request
-        if reset { results = []; identified = []; page = 1; totalPages = 0; libraryLimit = 20 }
+        if reset { completedQuery = nil; results = []; identified = []; page = 1; totalPages = 0; libraryLimit = 20 }
         failure = nil
         guard ready else { loading = false; return }
         let value = normalized; loading = true

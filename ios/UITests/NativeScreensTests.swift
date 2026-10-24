@@ -714,6 +714,8 @@ import UIKit
         app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
         XCTAssertTrue(field.waitForExistence(timeout: 5)); field.typeText("Clockmaker\n")
         XCTAssertTrue(app.buttons["search-movie:900001"].waitForExistence(timeout: 10))
+        app.buttons["Clear search"].tap(); field.typeText("Clockmaker\n")
+        XCTAssertTrue(app.buttons["search-movie:900001"].waitForExistence(timeout: 10), "Clearing and retyping the same query must fetch results again")
         app.buttons["tab-glance"].tap(); app.buttons["search-glance"].tap()
         let scoped = app.textFields["Find a current watch"]
         XCTAssertTrue(scoped.waitForExistence(timeout: 5)); scoped.typeText("Clockmaker\n")

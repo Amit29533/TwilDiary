@@ -49,7 +49,7 @@ struct DiaryNavigationSurface: View {
             if reduceTransparency {
                 Capsule().fill(Color(webHex: theme == .glass ? "#19191d" : "#111115"))
             } else {
-                Capsule().fill(.ultraThinMaterial)
+                Capsule().fill(.clear).glassEffect(in: Capsule())
                 if theme == .glass {
                     Capsule().fill(Color(webHex: "#242428a8"))
                     Capsule().fill(LinearGradient(stops: [

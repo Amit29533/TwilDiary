@@ -9,7 +9,6 @@ struct HistoryView: View {
     @State private var showRange: Bool
     @State private var limit = 12
     @State private var showSearch = false
-    @State private var searchFocus = 0
     @State private var dateSelection: HistoryDateSelection?
     init(initialDay: Date? = nil, initialUnknown: Bool = false) {
         let day = initialDay.map { DiaryDate.day($0) } ?? ""
@@ -31,7 +30,7 @@ struct HistoryView: View {
                             .buttonStyle(.plain).foregroundStyle(showRange || filters.filtered ? theme.accent : .secondary)
                             .accessibilityLabel("Date filters").accessibilityAddTraits(showRange ? .isSelected : [])
                     }
-                    SearchField(placeholder: "Filter watch history…", text: $filters.query, label: "Filter watch history", focusRevision: searchFocus)
+                    SearchField(placeholder: "Filter watch history…", text: $filters.query, label: "Filter watch history")
                     ScrollView(.horizontal) {
                         HStack(spacing: 8) {
                             ForEach(HistoryPreset.allCases) { preset in
