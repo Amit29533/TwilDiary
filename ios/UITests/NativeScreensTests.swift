@@ -269,8 +269,12 @@ import UIKit
         XCTAssertTrue(app.buttons["tab-glance"].isHittable); app.buttons["tab-glance"].tap()
         XCTAssertTrue(app.buttons["tab-glance"].isSelected)
         let quick = app.buttons["Log watch for Manual reference movie"]
-        for _ in 0..<10 { if quick.isHittable { break }; app.scrollViews.element(boundBy: 0).swipeUp() }
-        XCTAssertTrue(quick.isHittable)
+        for _ in 0..<10 {
+            if quick.isHittable && quick.frame.maxY < app.buttons["tab-glance"].frame.minY { break }
+            app.scrollViews["glance-content"].swipeUp()
+        }
+        XCTAssertTrue(quick.isHittable, app.debugDescription)
+        XCTAssertLessThan(quick.frame.maxY, app.buttons["tab-glance"].frame.minY, "The last Glance action must remain above the floating navigation")
         wait(for: [expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: quick)], timeout: 5)
         capture("Glance movie log action"); quick.tap()
         wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: quick)], timeout: 5)
@@ -455,8 +459,14 @@ import UIKit
         app.buttons["settings-files"].tap()
         XCTAssertTrue(app.staticTexts["Mapped folders"].waitForExistence(timeout: 5)); capture("Files and drives")
         let review = app.buttons["Fix mismatches →"]
-        for _ in 0..<8 { if review.isHittable { break }; app.scrollViews.element(boundBy: 0).swipeUp() }
-        XCTAssertTrue(review.isHittable); review.tap()
+        let filesContent = app.scrollViews["files-content"]
+        for _ in 0..<8 {
+            if review.isHittable && review.frame.maxY < app.buttons["tab-more"].frame.minY { break }
+            filesContent.swipeUp()
+        }
+        XCTAssertTrue(review.isHittable)
+        XCTAssertLessThan(review.frame.maxY, app.buttons["tab-more"].frame.minY, "The last Files action must scroll fully above the floating tab bar")
+        capture("Files final action above navigation"); review.tap()
         let match = app.buttons["match-scan-fixture-unmatched"]
         XCTAssertTrue(match.waitForExistence(timeout: 5)); capture("Unmatched scan"); match.tap()
         let search = app.textFields["Search library and online"]
@@ -471,7 +481,7 @@ import UIKit
         XCTAssertTrue(app.staticTexts["Mapped folders"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["tab-more"].isSelected)
         let path = app.staticTexts["R:\\Reference\\Unmatched Series"]
-        for _ in 0..<10 { if path.isHittable { break }; app.swipeUp() }
+        for _ in 0..<10 { if path.isHittable { break }; filesContent.swipeUp() }
         XCTAssertTrue(path.exists); capture("Confirmed scanned location")
         let filesDone = app.buttons["files-done"]
         XCTAssertTrue(filesDone.isHittable); filesDone.tap()

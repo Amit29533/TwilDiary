@@ -230,9 +230,9 @@ struct GlanceView: View {
             if showSearch { SearchField(placeholder: "Find a current watch…", text: $search, label: "Find a current watch", autoFocus: true).padding(.horizontal, 14).padding(.bottom, 10) }
             CategoryPicker(selection: $category)
             ScrollView {
-                LazyVStack(spacing: 8) { ForEach(titles) { ProgressCard(title: $0) } }.padding(.horizontal, 8).padding(.top, 12).padding(.bottom, 16)
+                LazyVStack(spacing: 8) { ForEach(titles) { ProgressCard(title: $0) } }.padding(.horizontal, 8).padding(.top, 12).padding(.bottom, 100)
                 if titles.isEmpty { DiaryEmptyState(title: "A clear little corner", description: "No current watches match these filters. Try another category or clear your search.").padding(.horizontal, 14).padding(.top, 20) }
-            }.refreshable { await store.refresh() }
+            }.accessibilityIdentifier("glance-content").refreshable { await store.refresh() }
         }
     }
     private var titles: [MediaTitle] { store.workspace.activeTitles.filter { $0.status == "watching" && category.includes($0) && (search.isEmpty || $0.name.localizedCaseInsensitiveContains(search)) } }

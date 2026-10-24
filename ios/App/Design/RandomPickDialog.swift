@@ -22,6 +22,7 @@ struct RandomPickDialog: View {
     @State private var selectedID: String?
     @State private var sequence = 0
     @State private var rolling = false
+    @State private var panelHeight: CGFloat?
     private var active: [MediaTitle] { titles.filter { $0.deletedAt == nil } }
     private var picked: MediaTitle? { active.first { $0.id == selectedID } }
 
@@ -32,9 +33,9 @@ struct RandomPickDialog: View {
                 ViewThatFits(in: .vertical) {
                     panel(compact: proxy.size.width < 359).fixedSize(horizontal: false, vertical: true)
                     ScrollView { panel(compact: proxy.size.width < 359) }
-                }.frame(width: min(480, max(0, proxy.size.width - 38)))
+                }.frame(width: min(480, max(0, proxy.size.width - 38)), height: min(panelHeight ?? max(0, proxy.size.height - 32), max(0, proxy.size.height - 32)))
                     .padding(.vertical, 16)
-                    .accessibilityElement(children: .contain).accessibilityAddTraits(.isModal).accessibilityIdentifier("random-pick-dialog")
+                    .accessibilityElement(children: .contain).accessibilityLabel("Random pick").accessibilityAddTraits(.isModal).accessibilityIdentifier("random-pick-dialog")
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }.onAppear { choose() }
             .onChange(of: active.map(\.id)) { _, _ in if picked == nil { rolling = false; choose() } }
@@ -73,6 +74,7 @@ struct RandomPickDialog: View {
                             }.multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.horizontal, 12).padding(.vertical, 28)
                         }
                     }.padding(16)
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { panelHeight = $0 }
                         .background(Color(webHex: "#0d0d12"), in: RoundedRectangle(cornerRadius: 26))
                         .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(theme.accent.opacity(0.3137)))
                         .shadow(color: .black.opacity(0.6), radius: 30, y: 15)

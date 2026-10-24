@@ -4,6 +4,16 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary â†’ ios-native â†
 
 ## Current request and exact next action
 
+
+### Build 26 reviewed; build 27 prepared
+
+Build 26 / 40104599130 / 71ebe48 completes **failure**: Core 54/54 and simulator/test-bundle compilation pass, zero build warnings. Early regression **5/8** pass: confirmed-write refresh + Undo, native Explore Done/tab/full-content Back, retained global/scoped Glance search, clear full-bleed hero moving away while scrolling to Notes, real episode-piece slider/watch/Undo/movie history. Full unit/primary/all-phone suites and device Release/IPA are correctly skipped after early failure. No accepted-release or build-26 IPA claim.
+
+Three failures verified against complete logs, all exported screenshots and actual final frames from simulator recordings: Files footer remains behind the floating bar at maximum scroll; manual-created movie reaches the correct Glance screen but its final Log watch action is not hittable at the bottom; surprise panel is visibly compact but its outer accessibility group reports the entire 874pt viewport. Build-26 diagnostics are in .local/ios-app-build-40104599130; full log .local/build26-all.log. Artwork before/after screenshots are reviewed, and the five checks above have actual runtime evidence.
+
+Build 27 is prepared locally: give Files and Glance content the same 100pt bottom clearance used by the other long screens, retain named content scroll views, require their final actions to be fully above the tab controls, and preserve all subsequent match/watch/Undo assertions. Measure the surprise panel's natural height and explicitly bound the fitting container to it (or available height for its scroll fallback), with a named modal accessibility group. Keep the existing strict compact-dialog bounds and child-button assertions; do not accept the full-screen group. Build version 27. Swift remains CI-only. Next: self-review/local checks, commit/push this coherent batch, follow the exact eight-test gate plus full native/phone regression, then download/review artifacts. No product fixes from the second pasted review have been mixed into this batch. Codemagic is recognized on ios-native but has not run.
+
+
 ### Optional Codemagic permission
 
 User permits occasional Codemagic builds. Initially no connection was available; the user has now linked Codemagic app 6adcc927390bc3069c9e5490 to Amit29533/TwilDiary and opened its settings tab. Browser use is now working in IAB. Settings initially checked main (no YAML); selected ios-native and fetched the committed manual workflow, now visibly recognized with Start your first build. Proof saved/shared from .local/codemagic-native-workflow.png. No Codemagic build started and no account security/billing settings changed. Official specs confirm Xcode26.6 / iOS26.5 and our three phone sizes on the M2 image. Prepared root codemagic.yaml and CODEMAGIC.md as a manual-only fallback reusing the complete existing ci.sh/XcodeGen pipeline, retaining failure diagnostics and unsigned IPA without signing/deployments. No account integration, credentials, paid tier, automatic runs or Codemagic success is claimed; first real execution must be verified and its provider provenance recorded. GitHub build26 continues unchanged; root-only config/docs do not trigger its ios/** workflow.

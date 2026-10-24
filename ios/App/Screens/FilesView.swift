@@ -25,8 +25,9 @@ struct FilesView: View {
                         DiaryIcon(name: "info", size: 18)
                         VStack(alignment: .leading, spacing: 8) { Text("Availability reflects the last confirmed scan. Disconnected drives keep their mappings and never change watch history.").font(.system(size: 13)).foregroundStyle(.secondary); NavigationLink("Fix mismatches →") { ScannerReviewView() }.font(.system(size: 13, weight: .semibold)) }
                     }.diaryPanel()
-                }.padding(14).padding(.bottom, 20)
-            }.refreshable { await store.refresh() }
+                // Keep the final action above the floating tab bar, matching the web shell's bottom clearance.
+                }.padding(14).padding(.bottom, 100)
+            }.accessibilityIdentifier("files-content").refreshable { await store.refresh() }
         }.navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
 
     }
