@@ -103,11 +103,18 @@ struct RootView: View {
                         if showNavigation { navigation.padding(.horizontal, 12).padding(.bottom, 10) }
                     }.overlay(alignment: .bottom) {
                         if let label = store.undoLabel {
-                            HStack { DiaryIcon(name: "check", size: 18).foregroundStyle(.mint); Text(label); Spacer(); Button("Undo") { Task { await store.undo() } }.disabled(store.busy); Button("Dismiss undo", systemImage: "xmark") { store.dismissUndo() }.labelStyle(.iconOnly) }
+                            HStack { DiaryIcon(name: "check", size: 18).foregroundStyle(.mint); Text(label); Spacer(); Button("Undo") { Task { await store.undo() } }.disabled(store.writesBlocked); Button("Dismiss undo", systemImage: "xmark") { store.dismissUndo() }.labelStyle(.iconOnly) }
                                 .font(.system(size: 13, weight: .semibold)).padding(14).glassEffect(in: RoundedRectangle(cornerRadius: 18)).padding(.horizontal, 14).padding(.bottom, showNavigation ? 84 : 14)
                         }
                     }.overlay(alignment: .top) {
-                        if let error = store.error {
+                        if let notice = store.mutationRefreshNotice {
+                            HStack(alignment: .top, spacing: 12) {
+                                Text(notice).font(.caption).accessibilityIdentifier("confirmed-write-notice")
+                                Spacer(minLength: 0)
+                                Button("Refresh") { Task { await store.refresh() } }
+                                    .disabled(store.loading).accessibilityIdentifier("confirmed-write-refresh")
+                            }.padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding()
+                        } else if let error = store.error {
                             HStack { Text(error).font(.caption); Button("Dismiss", systemImage: "xmark") { store.error = nil }.labelStyle(.iconOnly) }
                                 .padding(12).background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14)).padding()
                         } else if store.showingCachedSnapshot {

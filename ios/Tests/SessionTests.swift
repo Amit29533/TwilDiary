@@ -354,6 +354,94 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertEqual(firstBody["watchedAt"] as? String, secondBody["watchedAt"] as? String)
         XCTAssertEqual(secondBody["rewatch"] as? Bool, true)
     }
+    func testConfirmedRewatchRefreshFailureAcknowledgesSaveAndBlocksAnotherWriteUntilReconciled() async throws {
+        let workspace = PreviewData.workspace
+        let title = try XCTUnwrap(workspace.titles.first { !$0.isSeries })
+        let date = try XCTUnwrap(DiaryDate.parse("2026-10-23T12:00:00Z"))
+        let event = try JSONDecoder().decode(WatchEvent.self, from: Data(#"{"id":"confirmed-rewatch","operationId":"confirmed-operation","titleId":"TITLE","episodeId":null,"watchedAt":"2026-10-23T12:00:00Z","recordedAt":"2026-10-23T12:00:00Z","revokedAt":null,"origin":"manual","version":1}"#.replacingOccurrences(of: "TITLE", with: title.id).utf8))
+        let eventObject = try JSONSerialization.jsonObject(with: JSONEncoder().encode(event))
+        let receipt = String(decoding: try JSONSerialization.data(withJSONObject: ["event": eventObject, "added": true]), as: UTF8.self)
+        StubProtocol.state.reset { request in
+            if request.httpMethod == "POST" { return .init(receipt) }
+            return .init(503, #"{"error":{"message":"Synthetic refresh outage"}}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = workspace; store.hasLoadedWorkspace = true
+        let saved = await store.recordViewing(title, rewatch: true, watchedAt: date)
+        XCTAssertTrue(saved, "A confirmed POST must not become an unconfirmed write because a subsequent GET fails")
+        XCTAssertNil(store.error); XCTAssertNotNil(store.mutationRefreshNotice)
+        XCTAssertTrue(store.needsMutationRefresh); XCTAssertTrue(store.writesBlocked); XCTAssertFalse(store.canMutate)
+        XCTAssertEqual(store.undoLabel, "Watch marked"); XCTAssertFalse(store.busy)
+        XCTAssertEqual(store.workspace.events.map(\.id), workspace.events.map(\.id))
+        let repeated = await store.recordViewing(title, rewatch: true, watchedAt: date)
+        XCTAssertFalse(repeated)
+        await store.undo()
+        XCTAssertEqual(StubProtocol.state.recorded().filter { $0.httpMethod != "GET" }.count, 1)
+        XCTAssertEqual(StubProtocol.state.recorded().filter { $0.url?.path == "/api/workspace" }.count, 1, "Do not silently retry the refresh after acknowledging a confirmed write")
+        var reconciled = workspace; reconciled.events.append(event)
+        let pages = try workspacePages(reconciled)
+        StubProtocol.state.reset { request in
+            if request.httpMethod == "PATCH" { return .init(receipt) }
+            return .init(pages[request.url?.query ?? ""] ?? #"{"items":[],"next":null}"#)
+        }
+        await store.refresh()
+        XCTAssertFalse(store.needsMutationRefresh); XCTAssertFalse(store.writesBlocked); XCTAssertTrue(store.canMutate)
+        XCTAssertNil(store.mutationRefreshNotice); XCTAssertNil(store.error)
+        XCTAssertEqual(store.workspace.events.filter { $0.id == event.id }.count, 1)
+        XCTAssertTrue(StubProtocol.state.recorded().allSatisfy { $0.httpMethod == "GET" })
+        await store.undo()
+        XCTAssertEqual(StubProtocol.state.recorded().filter { $0.httpMethod == "PATCH" }.map { $0.url?.path }, ["/api/watch-events/confirmed-rewatch"])
+        XCTAssertNil(store.undoLabel)
+    }
+    func testConfirmedPatchWithRejectedRefreshKeepsSaveReceiptAndRequestsSignIn() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let workspace = PreviewData.workspace, title = try XCTUnwrap(PreviewData.workspace.titles.first)
+        StubProtocol.state.reset { request in
+            request.httpMethod == "PATCH" ? .init("{}") : .init(401, "Sign in", contentType: "text/plain")
+        }
+        let store = DiaryStore(api: api(storage)); store.workspace = workspace; store.hasLoadedWorkspace = true
+        let saved = await store.patch(title, values: ["favorite": !title.favorite])
+        XCTAssertTrue(saved); XCTAssertTrue(store.needsSignIn); XCTAssertTrue(store.needsMutationRefresh)
+        XCTAssertNotNil(store.mutationRefreshNotice); XCTAssertFalse(store.busy)
+        XCTAssertEqual(StubProtocol.state.recorded().map(\.httpMethod), ["PATCH", "GET"])
+        store.signOut()
+        XCTAssertFalse(store.needsMutationRefresh); XCTAssertNil(store.mutationRefreshNotice)
+        XCTAssertNil(store.undoLabel); XCTAssertTrue(store.workspace.titles.isEmpty)
+    }
+    func testFailedReconciliationRetainsTheWriteGateAndOldCompleteWorkspace() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace; store.hasLoadedWorkspace = true
+        StubProtocol.state.reset { request in
+            request.httpMethod == "PATCH" ? .init("{}") : .init(503, #"{"error":{"message":"Synthetic offline"}}"#)
+        }
+        let title = try XCTUnwrap(store.workspace.titles.first)
+        let saved = await store.patch(title, values: ["notes": "Confirmed server note"])
+        XCTAssertTrue(saved)
+        await store.refresh()
+        XCTAssertTrue(store.needsMutationRefresh); XCTAssertNotNil(store.mutationRefreshNotice)
+        XCTAssertEqual(store.workspace.titles.first?.notes, title.notes)
+        XCTAssertEqual(StubProtocol.state.recorded().filter { $0.httpMethod == "PATCH" }.count, 1)
+    }
+    func testSignOutDuringConfirmedWriteRefreshCannotRestoreTheSaveNoticeOrWorkspace() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace; store.hasLoadedWorkspace = true
+        let title = try XCTUnwrap(store.workspace.titles.first)
+        StubProtocol.state.reset { request in
+            if request.httpMethod == "PATCH" { return .init("{}") }
+            var reply = StubProtocol.Reply(#"{"items":[],"next":null}"#); reply.delay = 0.15
+            return reply
+        }
+        let saving = Task { await store.patch(title, values: ["favorite": !title.favorite]) }
+        guard await waitForRegressionCondition({ StubProtocol.state.recorded().contains { $0.httpMethod == "GET" } }) else {
+            saving.cancel(); XCTFail("The confirmed write did not reach its refresh"); return
+        }
+        store.signOut()
+        let savedForCurrentSession = await saving.value
+        XCTAssertFalse(savedForCurrentSession)
+        XCTAssertFalse(store.needsMutationRefresh); XCTAssertNil(store.mutationRefreshNotice)
+        XCTAssertTrue(store.workspace.titles.isEmpty); XCTAssertNil(store.error)
+        XCTAssertFalse(store.busy); XCTAssertTrue(store.needsSignIn)
+    }
     func testRemovingLatestRejectsChangedDisplayedEventBeforeAnyWrite() async throws {
         let workspace = PreviewData.workspace, title = try XCTUnwrap(PreviewData.workspace.titles.first { $0.id == "again" })
         let displayed = PreviewData.card(title, workspace: workspace).previous

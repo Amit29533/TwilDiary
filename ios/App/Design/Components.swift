@@ -258,7 +258,7 @@ struct ProgressCard: View {
                 .offset(x: drag)
         }.background(.green.opacity(0.15), in: RoundedRectangle(cornerRadius: 14)).clipShape(RoundedRectangle(cornerRadius: 14))
             .simultaneousGesture(DragGesture(minimumDistance: 22).onChanged { value in
-                guard !compact, value.startLocation.x > 24, !store.busy, card?.next != nil || !title.isSeries else { return }
+                guard !compact, value.startLocation.x > 24, !store.writesBlocked, card?.next != nil || !title.isSeries else { return }
                 if value.translation.width > abs(value.translation.height) * 1.3 { drag = min(120, max(0, value.translation.width)); suppressNavigationUntil = .now.addingTimeInterval(0.35) }
             }.onEnded { _ in
                 let mark = drag > 80; if drag > 22 { suppressNavigationUntil = .now.addingTimeInterval(0.35) }; withAnimation(.easeOut(duration: 0.18)) { drag = 0 }
@@ -277,7 +277,7 @@ struct ProgressCard: View {
                     GeometryReader { proxy in Capsule().fill(.white.opacity(0.15)).overlay(alignment: .leading) { Capsule().fill(.tint).frame(width: proxy.size.width * fraction) } }.frame(height: 4)
                 }.padding(.bottom, 4)
                 Button { Task { await markWatch() } } label: { Image(systemName: "plus").font(.system(size: 24, weight: .regular)).frame(width: 36, height: 36) }
-                    .buttonStyle(.plain).foregroundStyle(theme.ink).background(.tint, in: RoundedRectangle(cornerRadius: 10)).disabled(store.busy || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
+                    .buttonStyle(.plain).foregroundStyle(theme.ink).background(.tint, in: RoundedRectangle(cornerRadius: 10)).disabled(store.writesBlocked || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
             }
         }.padding(12).frame(height: 142)
     }
@@ -300,9 +300,9 @@ struct ProgressCard: View {
                     GeometryReader { proxy in Capsule().fill(.white.opacity(0.16)).overlay(alignment: .leading) { Capsule().fill(.tint).frame(width: proxy.size.width * fraction) } }.frame(height: 6)
                     Text("\(Int((fraction * 100).rounded()))% complete").font(.system(size: 13)).foregroundStyle(Color(webHex: "#c5c0cf"))
                 }
-                Button { let reviewed = card?.previous; Task { await store.removeLatest(title, expected: reviewed); await loadCard() } } label: { Image(systemName: "minus").font(.system(size: 18)).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))) }.buttonStyle(.plain).disabled(store.busy || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
+                Button { let reviewed = card?.previous; Task { await store.removeLatest(title, expected: reviewed); await loadCard() } } label: { Image(systemName: "minus").font(.system(size: 18)).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))) }.buttonStyle(.plain).disabled(store.writesBlocked || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
                 Text("\(card?.progress.watched ?? 0)").font(.system(size: 17, weight: .semibold)).monospacedDigit().accessibilityIdentifier("watch-count-" + title.id)
-                Button { Task { await markWatch() } } label: { Image(systemName: "plus").font(.system(size: 20)).foregroundStyle(theme.ink).frame(width: 34, height: 34).background(.tint, in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(.plain).disabled(store.busy || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
+                Button { Task { await markWatch() } } label: { Image(systemName: "plus").font(.system(size: 20)).foregroundStyle(theme.ink).frame(width: 34, height: 34).background(.tint, in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(.plain).disabled(store.writesBlocked || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
             }
         }.padding(10)
     }

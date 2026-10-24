@@ -101,7 +101,7 @@ struct LibraryView: View {
         ScrollView {
                 if archived {
                     VStack(alignment: .leading, spacing: 10) {
-                        Button("Empty Trash", systemImage: "trash", role: .destructive) { confirmEmptyTrash = true }.buttonStyle(.bordered).disabled(store.busy || collection.isEmpty).accessibilityIdentifier("empty-trash")
+                        Button("Empty Trash", systemImage: "trash", role: .destructive) { confirmEmptyTrash = true }.buttonStyle(.bordered).disabled(store.writesBlocked || collection.isEmpty).accessibilityIdentifier("empty-trash")
                         Text("Removed titles stay here with their history. Deleting permanently only removes diary records; your disk files stay untouched.").font(.caption).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.bottom, 14)
                 }
@@ -135,7 +135,7 @@ struct LibraryView: View {
         } else if archived {
             VStack(spacing: 8) {
                 cardContent(title, row: row)
-                HStack { Button("Restore") { review = CollectionReview(titles: [title], change: .restore) }.font(.caption.bold()); Spacer(); Button("Delete permanently", systemImage: "trash", role: .destructive) { review = CollectionReview(titles: [title], change: .purge) }.labelStyle(.iconOnly) }.buttonStyle(.bordered).disabled(store.busy)
+                HStack { Button("Restore") { review = CollectionReview(titles: [title], change: .restore) }.font(.caption.bold()); Spacer(); Button("Delete permanently", systemImage: "trash", role: .destructive) { review = CollectionReview(titles: [title], change: .purge) }.labelStyle(.iconOnly) }.buttonStyle(.bordered).disabled(store.writesBlocked)
             }.contextMenu { Button("Select") { selecting = true; selected = [title.id] } }.accessibilityIdentifier("archived-title-" + title.id)
         } else {
             NavigationLink(value: title.id) { cardContent(title, row: row) }.buttonStyle(.plain).contentShape(Rectangle()).accessibilityIdentifier("title-" + title.id)

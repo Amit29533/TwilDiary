@@ -7,6 +7,11 @@ import TwilDiaryCore
     var cachedPeople: [Int: (at: Date, value: PersonResponse)] = [:]
     var loading = false
     var busy = false
+    private(set) var needsMutationRefresh = false
+    var writesBlocked: Bool { busy || needsMutationRefresh }
+    var mutationRefreshNotice: String? {
+        needsMutationRefresh ? "Saved, but refreshing failed. Refresh your diary before making another change." : nil
+    }
     var needsSignIn = true
     var hasLoadedWorkspace = false
     var error: String?
@@ -27,8 +32,10 @@ import TwilDiaryCore
     let isPreview: Bool
     #if DEBUG
     private var fixture: FixtureDiaryBackend?
+    private var failNextFixtureRefresh = false
     #endif
     var canMutate: Bool {
+        guard !needsMutationRefresh else { return false }
         #if DEBUG
         if isPreview { return fixture != nil }
         #endif
@@ -70,6 +77,7 @@ import TwilDiaryCore
             communityRatings.reset(); cachedPeople = [:]
             if previousScope != credential.cacheScope {
                 workspace = Workspace(); hasLoadedWorkspace = false; showingCachedSnapshot = false; lastRefreshedAt = nil; cacheWarning = nil
+                needsMutationRefresh = false
                 pendingWatches.removeAll(); pendingProgress.removeAll(); pendingRemovals.removeAll(); pendingSeasonAdjustments.removeAll()
                 undoLabel = nil; undoAction = nil
             }
@@ -80,8 +88,10 @@ import TwilDiaryCore
     func signOut() {
         #if DEBUG
         fixture = nil
+        failNextFixtureRefresh = false
         #endif
         sessionGeneration = UUID(); snapshotGeneration = UUID()
+        needsMutationRefresh = false
         api.signOut(); workspace = Workspace(); communityRatings.reset(); cachedPeople = [:]; hasLoadedWorkspace = false; error = nil
         showingCachedSnapshot = false; lastRefreshedAt = nil; loading = false; busy = false
         do { try cache.removeAll(); cacheWarning = nil }
@@ -91,7 +101,12 @@ import TwilDiaryCore
         needsSignIn = true
     }
     func refresh() async {
-        guard !isPreview, !loading, !needsSignIn else { return }
+        guard !loading, !needsSignIn else { return }
+        #if DEBUG
+        if isPreview && fixture == nil { return }
+        #else
+        if isPreview { return }
+        #endif
         let session = sessionGeneration
         loading = true; defer { if session == sessionGeneration { loading = false } }
         do { try await reload(); if session == sessionGeneration { error = nil } }
@@ -100,7 +115,14 @@ import TwilDiaryCore
     }
     func reload() async throws {
         #if DEBUG
-        if let fixture { workspace = fixture.workspace; hasLoadedWorkspace = true; return }
+        if let fixture {
+            if failNextFixtureRefresh {
+                failNextFixtureRefresh = false
+                throw APIError.message("Synthetic refresh outage")
+            }
+            workspace = fixture.workspace; hasLoadedWorkspace = true; needsMutationRefresh = false
+            return
+        }
         #endif
         let session = sessionGeneration, revision = UUID()
         snapshotGeneration = revision
@@ -112,6 +134,7 @@ import TwilDiaryCore
         guard session == sessionGeneration, revision == snapshotGeneration, !needsSignIn else { throw CancellationError() }
         let snapshot = Workspace(titles: titles, episodes: episodes, events: events, locations: locations)
         workspace = snapshot; hasLoadedWorkspace = true; showingCachedSnapshot = false; lastRefreshedAt = .now
+        needsMutationRefresh = false
         if let scope = api.credential?.cacheScope {
             do { try cache.save(snapshot, scope: scope, at: .now); cacheWarning = nil }
             catch { cacheWarning = "Your diary is loaded, but its protected offline copy could not be updated." }
@@ -127,7 +150,13 @@ import TwilDiaryCore
     func browserCredential() -> AccessCredential? { api.credential }
     func read<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> T {
         #if DEBUG
-        if let fixture { return try fixture.request(path, method: method, body: body) }
+        if let fixture {
+            let value: T = try fixture.request(path, method: method, body: body)
+            if method == "POST", path.hasSuffix("/watches"), ProcessInfo.processInfo.arguments.contains("--ui-refresh-failure") {
+                failNextFixtureRefresh = true
+            }
+            return value
+        }
         if isPreview { throw APIError.message("The browsing fixture is read-only.") }
         #endif
         let generation = sessionGeneration
@@ -312,7 +341,17 @@ import TwilDiaryCore
         do {
             try await action()
             guard generation == sessionGeneration else { return false }
-            try await reload(); error = nil; return true
+            // The action's receipt confirms the write. A later read failure cannot undo that fact.
+            do {
+                try await reload()
+                error = nil
+            } catch {
+                guard generation == sessionGeneration else { return false }
+                needsMutationRefresh = true
+                if case APIError.signIn = error { fail(error) }
+                else { self.error = nil }
+            }
+            return true
         } catch is CancellationError { return false }
         catch {
             if generation == sessionGeneration {

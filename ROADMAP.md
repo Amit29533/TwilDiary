@@ -140,6 +140,7 @@ Done: every mobile control works or exactly mirrors an explicit web limitation w
 Goal: release a verified native client with an honest parity and device checklist.
 
 - [ ] Offline/reconnect/conflicts, persistence recovery, protected cache lifecycle and authentication-expiry tests.
+  - Next batch pending: confirmed mutation versus failed refresh acknowledgement, retained Undo, stale-write gating and explicit reconciliation; four transport regressions and one isolated UI recovery flow.
 - [ ] Full screen/state screenshot regression on SE/390/Pro Max; long text, keyboard, accessibility, reduced motion/transparency.
 - [ ] Animations/haptics, memory/network/image performance, app icon/launch screen and zero warnings.
 - [ ] Complete `IOS-PARITY.md`, `DEVICE-CHECKS.md`, release checklist, artifact checksums and installation guide.

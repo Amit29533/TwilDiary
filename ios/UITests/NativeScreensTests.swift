@@ -3,13 +3,14 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
         if scanner { app.launchArguments.append("--ui-scanner") }
         if ratingsUnavailable { app.launchArguments.append("--ui-ratings-unavailable") }
         if titleMetadata { app.launchArguments.append("--ui-title-metadata") }
         if empty { app.launchArguments.append("--ui-empty") }
+        if refreshFailure { app.launchArguments.append("--ui-refresh-failure") }
         if let traktScenario { app.launchArguments.append("--ui-trakt=" + traktScenario) }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
@@ -468,6 +469,29 @@ import UIKit
         app.buttons["Undo"].tap()
         wait(for: [expectation(for: NSPredicate(format: "label == '8'"), evaluatedWith: count)], timeout: 10)
         capture("Glance Undo restored")
+    }
+    func testConfirmedWatchRefreshFailureRecoversWithoutAnotherWatchAndPreservesUndo() {
+        let app = launch(mutations: true, refreshFailure: true)
+        app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
+        let progress = app.sliders["episode-progress"]
+        XCTAssertTrue(progress.waitForExistence(timeout: 5))
+        XCTAssertEqual(progress.value as? String, "8 of 16 episodes watched")
+        let mark = app.buttons["mark-title-watch"]
+        if !mark.isHittable { app.swipeUp() }
+        mark.tap()
+        XCTAssertTrue(app.staticTexts["confirmed-write-notice"].waitForExistence(timeout: 10))
+        XCTAssertFalse(mark.isEnabled)
+        XCTAssertTrue(app.buttons["Undo"].exists); XCTAssertFalse(app.buttons["Undo"].isEnabled)
+        capture("Confirmed watch refresh pending")
+        app.buttons["confirmed-write-refresh"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.staticTexts["confirmed-write-notice"])], timeout: 10)
+        wait(for: [expectation(for: NSPredicate(format: "value == '9 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        XCTAssertFalse(app.staticTexts["confirmed-write-notice"].exists)
+        XCTAssertTrue(mark.isEnabled); XCTAssertTrue(app.buttons["Undo"].isEnabled)
+        capture("Confirmed watch reconciled")
+        app.buttons["Undo"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "value == '8 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        capture("Confirmed watch recovery undone")
     }
     func testTitleWatchAndUndoUpdateTheEpisodePiecesAndMovieHistory() {
         let app = launch(mutations: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
