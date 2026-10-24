@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build-test-artifacts:
     runs-on: macos-26-intel
-    timeout-minutes: 65
+    timeout-minutes: 100
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       HOMEBREW_NO_AUTO_UPDATE: '1'
@@ -45,6 +45,7 @@ jobs:
           unzip -q "$xcodegen_archive" -d "$RUNNER_TEMP/twildiary-tools"
           "$RUNNER_TEMP/twildiary-tools/xcodegen/bin/xcodegen" generate --spec ios/project.yml
       - name: Test core calculations and catalog contracts
+        timeout-minutes: 20
         run: swift test --package-path ios/Packages/TwilDiaryCore 2>&1 | tee ios/.artifacts/logs/core-tests.log
       - name: Save passing core regression build
         if: ${{ success() && steps.core-cache.outputs.cache-hit != 'true' }}
@@ -75,7 +76,7 @@ jobs:
         timeout-minutes: 15
         run: bash ios/scripts/ci.sh boot
       - name: Run unit and UI tests
-        timeout-minutes: 35
+        timeout-minutes: 45
         run: bash ios/scripts/ci.sh test
       - name: Run compact and large iPhone layout regression
         timeout-minutes: 18

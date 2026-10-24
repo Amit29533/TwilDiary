@@ -119,6 +119,8 @@ Screens/files: `ios/Features/Glance`, `ios/Features/Stats`, `ios/Features/Histor
 
 Done: calculations agree with exported web fixtures and each chart/filter/history state passes visual and interaction regression.
 
+Pending History follow-up: exact activity.ts ordering/date/search/unknown rules and independent rewatch evidence, visible source shortcuts, clearable date inputs and 12-row pagination. Nineteen generated source scenarios and a return/filter/paging UI flow await native CI.
+
 ## 9. Locations, More, provider setup and Trakt
 
 Goal: reproduce every mobile management view and reviewed synchronization safely.

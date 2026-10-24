@@ -92,6 +92,36 @@ import UIKit
         XCTAssertTrue(app.staticTexts["Nothing here just yet"].waitForExistence(timeout: 5))
     }
 
+    func testHistoryUnknownDatesSearchPagingAndReturnKeepTheSourceFilters() {
+        let app = launch(); app.buttons["tab-home"].tap()
+        let history = app.buttons["All history →"]
+        for _ in 0..<12 { if history.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(history.isHittable); history.tap()
+        let count = app.staticTexts["history-count"]
+        XCTAssertTrue(count.waitForExistence(timeout: 5)); capture("History first page")
+        app.buttons["Date filters"].tap()
+        let unknown = app.switches["Unknown dates only"]
+        XCTAssertTrue(unknown.waitForExistence(timeout: 5)); unknown.tap()
+        XCTAssertEqual(count.label, "1 watch")
+        XCTAssertTrue(app.staticTexts["Watch date unknown"].waitForExistence(timeout: 5)); capture("History unknown dates")
+        app.buttons["Clear filters"].tap()
+        let search = app.textFields["Search watch history"]
+        search.tap(); search.typeText("Ｆｒｉｅｒｅｎ\n")
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'history-event-'")).firstMatch.waitForExistence(timeout: 5))
+        let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'history-event-'")).firstMatch
+        XCTAssertTrue(row.label.contains("Frieren")); row.tap()
+        XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertEqual(search.value as? String, "Ｆｒｉｅｒｅｎ")
+        XCTAssertEqual(unknown.value as? String, "0"); capture("History retained search")
+        app.buttons["Clear filters"].tap()
+        let more = app.buttons["history-load-more"]
+        for _ in 0..<12 { if more.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(more.isHittable); let before = more.label; more.tap()
+        XCTAssertTrue(!more.exists || more.label != before, "Paging must reveal the next twelve watches")
+        capture("History expanded page")
+    }
+
     func testLibrarySearchAndSelectionPersistAcrossTabs() {
         let app = launch()
         app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
@@ -322,7 +352,7 @@ import UIKit
         if !review.isHittable { app.swipeDown() }
         review.tap()
         XCTAssertTrue(app.staticTexts["Recently watched"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["1 watches"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["1 watch"].waitForExistence(timeout: 5))
         capture("Undated history")
     }
     func testLibraryBulkQueueTrashRestoreAndPermanentDeleteInIsolatedFixture() {

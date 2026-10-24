@@ -1,7 +1,7 @@
 [
   {
-    "id": "library-add-search",
-    "path": "/preview/library?add=1",
+    "id": "history-normalized-search",
+    "path": "/preview/recently-watched",
     "scenario": "default",
     "theme": "twilight",
     "engine": "chromium",
@@ -11,7 +11,7 @@
       "width": 390,
       "height": 844,
       "documentWidth": 390,
-      "documentHeight": 844,
+      "documentHeight": 1721,
       "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
     },
     "errors": [],
@@ -23,6 +23,68 @@
       },
       {
         "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Date filters",
+        "value": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": "Search watch history",
+        "value": "Ｆｒｉｅｒｅｎ"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Any date",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Today",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Last 7 days",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "This month",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Clear filters",
+        "value": ""
+      }
+    ],
+    "file": "history-normalized-search.png",
+    "sha256": "37ea3c742518b866f542a07fc0d84945b15131a83eb32fb9798a41a594f4703a",
+    "passed": true
+  },
+  {
+    "id": "history-expanded",
+    "path": "/preview/recently-watched",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 3071,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
         "label": "Spin TwilDiary logo",
         "value": ""
       },
@@ -33,68 +95,65 @@
       },
       {
         "tag": "BUTTON",
-        "label": "All",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Movies",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Shows",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Anime",
-        "value": ""
-      },
-      {
-        "tag": "SELECT",
-        "label": "Watch status filter",
-        "value": "all"
-      },
-      {
-        "tag": "SELECT",
-        "label": "Genre filter",
-        "value": ""
-      },
-      {
-        "tag": "SELECT",
-        "label": "Disk filter",
-        "value": "all"
-      },
-      {
-        "tag": "SELECT",
-        "label": "Sort library",
-        "value": "library"
-      },
-      {
-        "tag": "BUTTON",
-        "label": "List view",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Browse by genre",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Close add title",
+        "label": "Date filters",
         "value": ""
       },
       {
         "tag": "INPUT",
-        "label": "",
+        "label": "Search watch history",
         "value": ""
       },
       {
-        "tag": "SELECT",
-        "label": "Search type",
-        "value": "all"
+        "tag": "BUTTON",
+        "label": "Any date",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Today",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Last 7 days",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "This month",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Show more watches (4)",
+        "value": ""
+      }
+    ],
+    "file": "history-expanded.png",
+    "sha256": "6cce5d8ef79d7a4f0ff60e2a20f924b76471b1362c0b6d33fce1a76d6c032a11",
+    "passed": true
+  },
+  {
+    "id": "history-week",
+    "path": "/preview/recently-watched",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1783,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
       },
       {
         "tag": "BUTTON",
@@ -103,16 +162,47 @@
       },
       {
         "tag": "BUTTON",
-        "label": "Add manually",
+        "label": "Date filters",
         "value": ""
       },
       {
-        "tag": "SUMMARY",
-        "label": "Metadata by TMDb"
+        "tag": "INPUT",
+        "label": "Search watch history",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Any date",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Today",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Last 7 days",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "This month",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Clear filters",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Show more watches (1)",
+        "value": ""
       }
     ],
-    "file": "library-add-search.png",
-    "sha256": "b16fd7bc3defff515724427e024b064523ad7d45d12f1ea83c9960467ab7d0b0",
+    "file": "history-week.png",
+    "sha256": "1f1a4bfc847241f3e7c787e360877ec676a0247411f5439e201b982f8c97a6aa",
     "passed": true
   }
 ]

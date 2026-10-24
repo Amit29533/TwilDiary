@@ -13,7 +13,7 @@ struct HomeView: View {
         let now = store.isPreview ? store.now : clock
         let overview = HomeOverview(workspace: store.workspace, now: now)
         let watching = store.workspace.activeTitles.filter { $0.status == "watching" }
-        let recent = sortedHistory(store.workspace.activeEvents).prefix(4)
+        let recent = HistoryQuery().entries(in: store.workspace).prefix(4)
         VStack(spacing: 0) {
             PageHeader(name: "TwilDiary", onSearch: { showSearch.toggle() })
             ScrollView {
@@ -71,8 +71,8 @@ struct HomeView: View {
                     }
                     if !recent.isEmpty { VStack(spacing: 10) {
                         SectionHeading(name: "Recently watched") { NavigationLink("All history →", value: AppDestination.history) }
-                        ForEach(recent) { event in
-                            if let title = store.title(event.titleId) { NavigationLink(value: title.id) { historyRow(event, title: title, workspace: store.workspace) }.buttonStyle(.plain) }
+                        ForEach(recent) { entry in
+                            NavigationLink(value: entry.title.id) { HistoryRow(entry: entry) }.buttonStyle(.plain)
                         }
                     } }
                 }.padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 24)
@@ -125,86 +125,5 @@ struct QueueView: View {
     var planned = false
     var body: some View {
         ScrollView { LazyVStack { ForEach(store.workspace.activeTitles.filter { planned ? $0.status == "planned" : $0.queued == true }) { title in NavigationLink(value: title.id) { titleRow(title) }.buttonStyle(.plain) } }.padding(14) }.navigationTitle(planned ? "Planned" : "Queue").toolbar(.visible, for: .navigationBar)
-    }
-}
-
-func sortedHistory(_ events: [WatchEvent]) -> [WatchEvent] {
-    events.sorted {
-        let left = DiaryDate.parse($0.watchedAt), right = DiaryDate.parse($1.watchedAt)
-        if let left, let right, left != right { return left > right }
-        if (left != nil) != (right != nil) { return left != nil }
-        return $0.recordedAt == $1.recordedAt ? $0.id < $1.id : $0.recordedAt > $1.recordedAt
-    }
-}
-
-@MainActor func historyRow(_ event: WatchEvent, title: MediaTitle, workspace: Workspace) -> some View {
-    HStack(alignment: .top, spacing: 12) {
-        Artwork(path: title.poster, title: title.name).frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 8))
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title.name).font(.system(size: 15, weight: .semibold)).lineLimit(2)
-            Text(workspace.episodes.first(where: { $0.id == event.episodeId }).map { "S\($0.season) E\($0.number)" } ?? title.categoryName).font(.system(size: 13)).foregroundStyle(.secondary)
-            Spacer(minLength: 0)
-            Text(DiaryDate.parse(event.watchedAt).map { $0.formatted(.dateTime.day().month(.abbreviated).year()) } ?? "Date unknown").font(.system(size: 12)).foregroundStyle(.secondary)
-        }.frame(height: 90, alignment: .topLeading)
-        Spacer(minLength: 0); DiaryIcon(name: "chevron-right", size: 16).foregroundStyle(.secondary).frame(height: 90)
-    }.padding(6).foregroundStyle(.white).frame(maxWidth: .infinity, alignment: .leading).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 13)).overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.13)))
-}
-
-struct HistoryView: View {
-    @Environment(DiaryStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
-    var initialDay: Date? = nil
-    var initialUnknown = false
-    @State private var showSearch = false
-    @State private var query = ""
-    @State private var period = "all"
-    @State private var showRange = false
-    @State private var from = Date.now
-    @State private var to = Date.now
-    @State private var includeUnknown = false
-    var body: some View {
-        VStack(spacing: 0) {
-            PageHeader(name: "Recently watched", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "history-done")
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
-                    HStack {
-                        Text("Your watch history").font(.system(size: 17, weight: .semibold)); Spacer(minLength: 2)
-                        Picker("Date filter", selection: $period) { Text("Any date").tag("all"); Text("Today").tag("today"); Text("Last 7 days").tag("7d"); Text("This month").tag("month"); Text("Date range").tag("range"); Text("Undated").tag("unknown") }.pickerStyle(.menu).fixedSize().font(.system(size: 13))
-                    }
-                    SearchField(placeholder: "Find a watched title…", text: $query, label: "Find a watched title")
-                    DisclosureGroup("Date filters", isExpanded: $showRange) {
-                        VStack(spacing: 12) {
-                            DatePicker("From", selection: $from, displayedComponents: .date)
-                            DatePicker("To", selection: $to, displayedComponents: .date)
-                            Toggle("Include undated watches", isOn: $includeUnknown)
-                            Button("Apply date range") { if to < from { to = from }; period = "range" }
-                        }.font(.subheadline).padding(.top, 12)
-                    }.font(.system(size: 13)).foregroundStyle(.secondary)
-                    Text("\(events.count) watches").font(.caption).foregroundStyle(.secondary)
-                    if period != "all" || !query.isEmpty { Button("Clear filters") { query = ""; period = "all"; includeUnknown = false } }
-                    LazyVStack(spacing: 8) { ForEach(events) { event in if let title = store.title(event.titleId) { NavigationLink(value: title.id) { historyRow(event, title: title, workspace: store.workspace) }.buttonStyle(.plain) } } }
-                    if events.isEmpty { ContentUnavailableView("No watches found", systemImage: "clock") }
-                }.padding(14)
-            }
-        }.navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
-            .task { if let initialDay { from = initialDay; to = initialDay; period = "range" }; if initialUnknown { period = "unknown" } }
-
-    }
-    private var events: [WatchEvent] {
-        let calendar = DiaryDate.calendar()
-        return sortedHistory(store.workspace.activeEvents.filter { event in
-            guard query.isEmpty || (store.title(event.titleId)?.name.localizedCaseInsensitiveContains(query) ?? false) else { return false }
-            if period == "all" { return true }
-            if period == "unknown" { return DiaryDate.parse(event.watchedAt) == nil }
-            guard let date = DiaryDate.parse(event.watchedAt) else { return period == "range" && includeUnknown }
-            guard calendar.startOfDay(for: date) <= calendar.startOfDay(for: store.now) else { return false }
-            switch period {
-            case "today": return calendar.isDate(date, inSameDayAs: store.now)
-            case "month": return calendar.isDate(date, equalTo: store.now, toGranularity: .month)
-            case "7d": return date >= calendar.date(byAdding: .day, value: -6, to: calendar.startOfDay(for: store.now))!
-            default: return date >= calendar.startOfDay(for: from) && date < calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: to))!
-            }
-        })
     }
 }
