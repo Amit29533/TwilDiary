@@ -957,6 +957,28 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertFalse(StubProtocol.state.recorded().contains { $0.url?.path == "/api/titles/bulk" })
         XCTAssertEqual(store.workspace.episodes.filter { $0.titleId == "again" && $0.season == 2 }.count, 3)
     }
+    func testAnOffscreenCardCanCacheItsValidReadWithoutPublishingIntoTheCancelledView() async throws {
+        let gate = StubProtocol.ResponseGate()
+        StubProtocol.state.reset { _ in
+            var response = StubProtocol.Reply(#"{"progress":{"watched":8,"total":16},"next":null,"previous":null}"#)
+            response.gate = gate; return response
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace
+        let title = try XCTUnwrap(store.title("again"))
+        let disappearing = Task { () -> Bool in
+            do { _ = try await store.card(title); return true }
+            catch is CancellationError { return false }
+            catch { XCTFail("Unexpected card error: \(error)"); return false }
+        }
+        guard await waitForRegressionCondition({ !StubProtocol.state.recorded().isEmpty }) else { disappearing.cancel(); gate.release(); XCTFail("Card read never started"); return }
+        disappearing.cancel(); gate.release()
+        let published = await disappearing.value
+        XCTAssertFalse(published); XCTAssertNotNil(store.cachedCard(title))
+        let retained = try await store.card(title)
+        XCTAssertEqual(retained.progress.watched, 8)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+    }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
                                        "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),

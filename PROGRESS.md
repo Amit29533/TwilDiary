@@ -4,6 +4,12 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native �
 
 ## Current request and exact next action
 
+### Latest device feedback — next batch after build 24
+
+The user supplied two more phone screenshots: hero art remains pinned under scrolled title/episode content, and requests a springy Liquid Glass navigation lens that can be held and dragged across all five tabs, committing the tab on release. These extend the existing 18-point task; do not replace it or cancel running build 24 prematurely.
+
+Prepared locally, not yet compiled/pushed: move saved-title, catalog and person artwork into their scrolling content instead of the viewport background (matching source TitleScreen .detail-backdrop absolute positioning); replace the bar with a single press/scrub surface, continuously following spring lens with restrained stretch/tilt, hover selection haptics, commit-on-release and outside cancellation. Normal taps retain active-tab return-to-root; scrubbing back to the currently selected tab preserves its state. VoiceOver Button actions remain native and Reduce Motion removes spring/tilt/stretch. Add pure geometry tests across phone widths/invalid/cancel cases, plus physical UI drag and scrolled-art pixel regressions (prepared; native CI still pending). A small card-cache follow-up retains a valid coalesced read after its view disappears, while still throwing cancellation to that view and rejecting account/revision changes.
+
 ### New device feedback — priority for build 24 and following
 
 The user tested build 22 and supplied 18 concrete requests, overriding strict PWA parity where native behavior is preferable. Work through all of them; do not continue the unrelated carousel auto-rotation idea first. Build 24 is pushed: run 40096455786, source 8e15e9a, https://github.com/Amit29533/TwilDiary/actions/runs/40096455786. It includes the entire device-feedback batch plus both build-23 UI corrections. Do not cancel it with another ios/** push; root-only progress commits do not trigger the workflow.

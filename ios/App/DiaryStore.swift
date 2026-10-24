@@ -297,11 +297,11 @@ import TwilDiaryCore
             guard key.session == sessionGeneration, key.revision == (cardRevisions[title.id] ?? snapshotGeneration) else { throw CancellationError() }
             throw error
         }
-        try Task.checkCancellation()
         guard key.session == sessionGeneration, !needsSignIn,
               key.revision == (cardRevisions[title.id] ?? snapshotGeneration) else { throw CancellationError() }
         if cachedCards.count >= 128, let oldest = cachedCards.min(by: { $0.value.at < $1.value.at })?.key { cachedCards.removeValue(forKey: oldest) }
         cachedCards[key] = (.now, value)
+        try Task.checkCancellation()
         return value
     }
     func loadSeason(_ title: MediaTitle, number: Int) async {

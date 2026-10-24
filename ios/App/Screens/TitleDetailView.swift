@@ -71,9 +71,10 @@ struct TitleDetailView: View {
                                     .id("files")
                             }.diaryPanel()
                         }.padding(.horizontal, 14).padding(.bottom, 32)
-                    }.scrollDismissesKeyboard(.interactively).background(alignment: .top) {
-                        TitleArtworkBackdrop(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, name: title.name)
-                    }.background(.black)
+                            .background(alignment: .top) {
+                                TitleArtworkBackdrop(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, name: title.name)
+                            }
+                    }.scrollDismissesKeyboard(.interactively).background(.black)
                         .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItemGroup(placement: .topBarTrailing) {

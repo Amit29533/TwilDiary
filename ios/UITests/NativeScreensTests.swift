@@ -781,6 +781,42 @@ import UIKit
         wait(for: [expectation(for: NSPredicate(format: "value == '0 of 3 episodes watched'"), evaluatedWith: progress)], timeout: 10)
         capture("Glance complete Undo preserves later season")
     }
+    func testTitleArtworkScrollsAwayBeforeTheEpisodeAndNotesContent() {
+        let app = launch(); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
+        XCTAssertTrue(app.buttons["title-more"].waitForExistence(timeout: 5))
+        guard let topImage = XCUIScreen.main.screenshot().image.cgImage else { XCTFail("Missing top screenshot"); return }
+        let scale = CGFloat(topImage.width) / app.frame.width
+        for y in [30.0, 180] {
+            let initialArt = sample(topImage, at: CGPoint(x: 5, y: y), scale: scale)
+            XCTAssertGreaterThan(initialArt.prefix(3).max() ?? 0, 30, "The clear hero art must retain its full-bleed top coverage")
+        }
+        capture("Title clear art before scroll")
+        app.swipeUp(); app.swipeUp()
+        app.buttons["title-more"].tap(); app.buttons["title-menu-notes"].tap()
+        XCTAssertTrue(app.textViews["title-notes"].waitForExistence(timeout: 5)); XCTAssertTrue(app.textViews["title-notes"].isHittable)
+        guard let scrolled = XCUIScreen.main.screenshot().image.cgImage else { XCTFail("Missing scrolled screenshot"); return }
+        for y in [170.0, 220, 270] {
+            let margin = sample(scrolled, at: CGPoint(x: 5, y: y), scale: scale)
+            XCTAssertLessThan(margin.prefix(3).max() ?? 255, 18, "The hero must scroll away, not remain pinned behind episodes/notes")
+        }
+        capture("Title scrolled clean Episodes and Notes")
+    }
+    func testNavigationLensCanBeHeldAndSlidAcrossTheBarAndCancelledOutsideIt() {
+        let app = launch()
+        let library = app.buttons["tab-library"], more = app.buttons["tab-more"]
+        XCTAssertTrue(library.waitForExistence(timeout: 5))
+        library.press(forDuration: 0.3, thenDragTo: more)
+        XCTAssertTrue(more.isSelected); XCTAssertTrue(app.staticTexts["Appearance & region"].exists)
+        capture("Glass navigation scrub More")
+        more.press(forDuration: 0.3, thenDragTo: app.buttons["tab-home"])
+        XCTAssertTrue(app.buttons["tab-home"].isSelected)
+        XCTAssertTrue(app.staticTexts["Pick up where you left off"].exists)
+        let start = library.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.3, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -170)))
+        XCTAssertTrue(app.buttons["tab-home"].isSelected, "Releasing outside the bar must cancel the preview")
+        app.buttons["tab-library"].tap(); XCTAssertTrue(app.buttons["tab-library"].isSelected)
+        capture("Glass navigation cancelled and tap restored")
+    }
     private func sample(_ image: CGImage, at point: CGPoint, scale: CGFloat) -> [Int] {
         guard let pixel = image.cropping(to: CGRect(x: floor(point.x * scale), y: floor(point.y * scale), width: 1, height: 1)) else { XCTFail("Missing pixel sample"); return [0, 0, 0, 0] }
         var bytes = [UInt8](repeating: 0, count: 4)

@@ -26,3 +26,9 @@ Hosted mutation tests require the owner's explicit authorization. Simulator chec
 - Swipe back from Explore/search/title anywhere outside an actively dragged episode control. Confirm the slider still adjusts without navigating and search returns immediately without showing Home first.
 - Check real Trakt public ratings with the existing hosted configuration; fixture/network timeout tests cannot establish provider uptime or missing server credentials. No backend deploy is authorized.
 - Review native glass contrast, short press/card springs, selection haptics, Reduce Motion and Reduce Transparency on the physical iPhone; no simulated smoothness/battery claim.
+
+## Scroll artwork and scrub navigation follow-up
+
+- Verify hero art remains full bleed at the top and scrolls completely out before lower episode/notes content; check saved titles, online previews and person pages.
+- Hold Library and slide through all five tabs; the lens should follow the finger, with one final destination on release. Release above/outside the bar to cancel; normal active-tab taps should still return to the tab root. Test VoiceOver activation, Reduce Motion, all six themes and a phone with a Home indicator.
+- The scrub lens uses one shared native glass bar plus light/shape feedback rather than an extra live image blur per tab. Physical spring, haptic and touch comfort require real-phone validation.

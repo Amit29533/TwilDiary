@@ -167,8 +167,9 @@ struct CatalogDetailView: View {
                 } else if loading { ProgressView("Loading title…").frame(maxWidth: .infinity).padding(40) }
                 if let failure { RetryNotice(message: failure) { Task { await load() } } }
             }.padding(.horizontal, 14).padding(.bottom, 32)
-        }.background(alignment: .top) {
-            if let details { TitleArtworkBackdrop(path: CatalogTools.image(details.details.backdropPath, size: "w780"), name: details.details.name) }
+                .background(alignment: .top) {
+                    if let details { TitleArtworkBackdrop(path: CatalogTools.image(details.details.backdropPath, size: "w780"), name: details.details.name) }
+                }
         }.background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .task(id: route) { await load() }
     }

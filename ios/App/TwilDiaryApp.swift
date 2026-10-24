@@ -68,8 +68,6 @@ struct SavedTitleRoute: Hashable {
 }
 
 struct RootView: View {
-    @Namespace private var navigationSelection
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(DiaryStore.self) private var store
     @Environment(AppRouter.self) private var router
     @State private var showSignIn = false
@@ -137,8 +135,7 @@ struct RootView: View {
                         }
                     }
             }
-        }.sensoryFeedback(.selection, trigger: router.selectedTab)
-            .accessibilityHidden(router.randomPick != nil)
+        }.accessibilityHidden(router.randomPick != nil)
             .overlay {
                 if let scope = router.randomPick {
                     RandomPickDialog(titles: scope.candidates(in: store.workspace),
@@ -150,21 +147,7 @@ struct RootView: View {
             .task { await store.refresh() }
     }
     private var showNavigation: Bool { !router.detailTabs.contains(router.selectedTab) }
-    private var navigation: some View {
-        HStack(spacing: 0) {
-            ForEach(AppTab.allCases, id: \.self) { tab in
-                Button { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil); router.select(tab) } label: {
-                    VStack(spacing: 0) {
-                        DiaryIcon(name: tab.icon, size: 23).frame(width: 40, height: 33)
-                        Text(tab.label).font(.system(size: 11)).frame(height: 16.5)
-                    }.frame(maxWidth: .infinity).frame(height: 57)
-                        .foregroundStyle(theme == .glass ? Color(webHex: router.selectedTab == tab ? "#f5f5f7" : "#e0e0e6") : router.selectedTab == tab ? theme.accent : theme.muted)
-                        .background { if router.selectedTab == tab { DiaryNavigationSelection(selected: true).matchedGeometryEffect(id: "selected-tab", in: navigationSelection) } }
-                }.buttonStyle(DiaryPressStyle()).accessibilityLabel(tab.label).accessibilityIdentifier("tab-" + tab.rawValue).accessibilityAddTraits(router.selectedTab == tab ? .isSelected : [])
-            }
-        }.padding(4).background { DiaryNavigationSurface() }
-            .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.85), value: router.selectedTab)
-    }
+    private var navigation: some View { DiaryNavigationBar() }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {
             content().background(tab == .library && theme != .glass ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }

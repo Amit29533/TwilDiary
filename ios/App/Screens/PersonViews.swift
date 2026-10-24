@@ -32,13 +32,12 @@ struct PersonView: View {
                         Link("Biography, credits and artwork: TMDB", destination: URL(string: "https://www.themoviedb.org/person/\(person.id)")!).font(.system(size: 13)).foregroundStyle(.secondary)
                     }.padding(.horizontal, 14)
                 }.padding(.bottom, 28)
+                    .background(alignment: .top) {
+                        Artwork(path: CatalogTools.image(person.profilePath, size: "w780"), title: person.name).frame(height: 310)
+                            .overlay(LinearGradient(stops: [.init(color: .black.opacity(2.0 / 15), location: 0), .init(color: .black.opacity(7.0 / 15), location: 0.55), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top).accessibilityHidden(true)
+                    }
             } else if let failure { RetryNotice(message: failure) { Task { await load() } }.padding(14) }
             else { ProgressView("Loading person…").frame(maxWidth: .infinity).padding(40) }
-        }.background(alignment: .top) {
-            if let person {
-                Artwork(path: CatalogTools.image(person.profilePath, size: "w780"), title: person.name).frame(height: 310)
-                    .overlay(LinearGradient(stops: [.init(color: .black.opacity(2.0 / 15), location: 0), .init(color: .black.opacity(7.0 / 15), location: 0.55), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
-            }
         }.background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .task(id: route.id) { if person == nil { await load() } }
     }
