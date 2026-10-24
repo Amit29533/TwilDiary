@@ -561,13 +561,13 @@ import UIKit
         if !mark.isHittable { app.swipeUp() }
         mark.tap()
         waitForProgress("9 of 16 episodes watched", slider: progress)
-        app.buttons["Undo"].tap()
+        tapVisibleUndo(app)
         waitForProgress("8 of 16 episodes watched", slider: progress)
         let start = progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
         XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 10), "A range edit must produce a real Undo receipt, not only a draft value")
         waitForProgress("10 of 16 episodes watched", slider: progress)
-        app.buttons["Undo"].tap()
+        tapVisibleUndo(app)
         waitForProgress("8 of 16 episodes watched", slider: progress)
         app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["title-quiet-orbit"].tap()
         let movieMark = app.buttons["mark-title-watch"]
@@ -735,6 +735,7 @@ import UIKit
             app.buttons["search-library-frieren"].tap()
             XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
             XCTAssertFalse(app.keyboards.firstMatch.exists)
+            XCTAssertFalse(app.buttons["tab-home"].exists, "The presented title must hide root chrome before a native Back gesture")
             completeContentBack(app, beside: app.staticTexts["title-hero-name"])
             XCTAssertTrue(field.waitForExistence(timeout: 5)); XCTAssertEqual(field.value as? String, "Frieren")
         }
@@ -765,7 +766,14 @@ import UIKit
         // window. Poll the same actual accessibility value without that extra dump.
         let condition = NSPredicate { _, _ in (slider.value as? String) == value }
         wait(for: [expectation(for: condition, evaluatedWith: "episode progress")], timeout: 10)
-        XCTAssertEqual(slider.value as? String, value)
+    }
+    private func tapVisibleUndo(_ app: XCUIApplication) {
+        // The floating toast is already onscreen. A semantic tap can ask XCTest
+        // to scroll its gesture-containing ancestor, consuming the short window.
+        // Touch the actual action's current bounds instead; never extend expiry.
+        let bounds = app.buttons["undo-action"].frame
+        XCTAssertFalse(bounds.isEmpty)
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: bounds.midX, dy: bounds.midY)).tap()
     }
     private func completeContentBack(_ app: XCUIApplication, beside anchor: XCUIElement) {
         XCTAssertTrue(anchor.waitForExistence(timeout: 5))

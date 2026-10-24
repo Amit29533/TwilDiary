@@ -122,6 +122,11 @@ PY
     ;;
   screenshots)
     mkdir -p "$ARTIFACTS/screenshots"
+    # DEBUG app diagnostics contain only native stack/gesture flags, never title
+    # names, account data, URLs or credentials. Retain them even after UI failure.
+    xcrun simctl spawn "$SIMULATOR_ID" log show --style compact --last 2h \
+      --predicate 'subsystem == "com.amit29533.TwilDiary.navigation"' \
+      > "$ARTIFACTS/logs/navigation-runtime.log" 2>&1 || true
     xcrun simctl io "$SIMULATOR_ID" screenshot "$ARTIFACTS/screenshots/final-screen.png" || true
     if [ -f "$ARTIFACTS/Tests.xcresult/Info.plist" ]; then
       xcrun xcresulttool export attachments --path "$ARTIFACTS/Tests.xcresult" --output-path "$ARTIFACTS/screenshots"

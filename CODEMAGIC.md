@@ -1,4 +1,7 @@
-# Optional native iOS builds on Codemagic
+# Native iOS builds on Codemagic
+
+On25October local time the user explicitly authorized concurrent providers. First Codemagic run [6add160a4a72334e32e4d39f](https://codemagic.io/app/6adcc927390bc3069c9e5490/build/6add160a4a72334e32e4d39f) checks out72f081cf59b13f23a17fb4626cef522222ff2b94, the native build32 source. Its M2 baseline runs while the next GitHub revision is prepared; completion/results/artifacts remain pending. Earlier setup checkpoints below are historical, not the current run state. No billing/signing/publishing/SSH settings changed.
+
 
 GitHub Actions on `ios-native` remains the established pipeline. The user additionally permits Codemagic; root `codemagic.yaml` prepares a **manual-only** fallback. The user has linked Codemagic app `6adcc927390bc3069c9e5490` to `Amit29533/TwilDiary`. Its authenticated browser settings now select `ios-native` and recognize the committed YAML, showing Start your first build. No Codemagic run or successful artifact is claimed; the current GitHub build is allowed to finish without duplicate execution. No API token was requested, read or stored. Do not cancel an active GitHub run or use a second provider to bypass a failing test.
 

@@ -32,7 +32,9 @@ struct DiaryNavigationBar: View {
                     .scaleEffect(x: reduceMotion || scrub == nil ? 1 : 1.045, y: reduceMotion || scrub == nil ? 1 : 0.965)
                     .rotationEffect(.degrees(tilt))
                     .offset(x: center - cell / 2, y: inset)
-                    .animation(reduceMotion ? nil : .interactiveSpring(response: 0.26, dampingFraction: 0.76), value: center)
+                    // Follow the finger directly. Retargeting a spring for every
+                    // touch sample makes the lens lag and constantly catch up.
+                    .animation(reduceMotion || scrub != nil ? nil : .spring(response: 0.3, dampingFraction: 0.78), value: center)
                     .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.65), value: scrub != nil)
                     .allowsHitTesting(false).accessibilityHidden(true)
                 HStack(spacing: 0) {
