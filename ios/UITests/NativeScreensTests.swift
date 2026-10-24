@@ -423,7 +423,13 @@ import UIKit
         let actor = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Reference Actor 1'")).firstMatch
         for _ in 0..<5 { if actor.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(actor.isHittable); actor.tap()
-        XCTAssertTrue(app.staticTexts["Facts & trivia"].waitForExistence(timeout: 10)); capture("Person facts")
+        XCTAssertTrue(app.staticTexts["Facts & trivia"].waitForExistence(timeout: 10))
+        let factLabel = app.staticTexts["person-fact-known-for-label"], factValue = app.staticTexts["person-fact-known-for-value"]
+        XCTAssertTrue(factLabel.waitForExistence(timeout: 5)); XCTAssertTrue(factValue.exists)
+        XCTAssertGreaterThan(factLabel.frame.width, 80); XCTAssertLessThan(factLabel.frame.height, 60)
+        XCTAssertLessThan(abs(factValue.frame.minY - factLabel.frame.minY), 8)
+        XCTAssertLessThan(app.staticTexts["person-fact-birthplace-label"].frame.minY - factLabel.frame.minY, 75)
+        capture("Person facts")
         let more = app.buttons["person-more-shows"]
         for _ in 0..<12 { if more.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(more.isHittable); capture("Person credit shelves"); more.tap()

@@ -125,13 +125,13 @@ struct TitleDetailView: View {
                         .accessibilityIdentifier("movie-progress")
                         .frame(height: 44)
                         .overlay {
-                            Slider(value: Binding(get: { Double(percent) }, set: { value in
+                            EpisodeRangeInput(value: Double(percent) / 100, maximum: 1, enabled: !store.busy && store.canMutate, label: "Movie watched", valueText: percent > 0 ? "Watched" : "Not watched", identifier: "movie-watch-input", onChange: { _ in }, onCommit: { value in
                                 Task {
-                                    if value < 50, let previous = card.previous { await store.removeLatest(title, expected: previous) }
-                                    else if value >= 50, card.progress.watched == 0 { await store.recordViewing(title, watchedAt: watchInstant) }
+                                    if value < 1, let previous = card.previous { await store.removeLatest(title, expected: previous) }
+                                    else if value >= 1, card.progress.watched == 0 { await store.recordViewing(title, watchedAt: watchInstant) }
                                     await loadCard(title)
                                 }
-                            }), in: 0...100, step: 100).opacity(0.02).disabled(store.busy || !store.canMutate).accessibilityLabel("Movie watched")
+                            }, onCancel: {})
                         }
                 }
                 if let next = card.next, let episode = episodes.first(where: { $0.id == next.id }) { nextPreview(title, episode: episode).padding(.top, 8).padding(.bottom, 12) }
@@ -162,14 +162,11 @@ struct TitleDetailView: View {
         let states = sliderDraft.map { draft in (0..<max(0, card.progress.total)).map { $0 < Int(draft) ? EpisodeSegment.watched : .unwatched } }
             ?? EpisodeSegment.make(episodes: episodes, total: card.progress.total, watched: watched, nextID: card.next?.id)
         return ZStack {
-            EpisodeProgressTrack(segments: states, season: season).accessibilityHidden(true)
+            EpisodeProgressTrack(segments: states, season: season).accessibilityHidden(true).allowsHitTesting(false)
             if !episodes.isEmpty {
-                Slider(value: Binding(get: { sliderDraft ?? Double(card.progress.watched) }, set: { sliderDraft = $0 }), in: 0...Double(max(1, episodes.count)), step: 1) { editing in
-                    if !editing, let count = sliderDraft {
-                        Task { await store.setSeasonProgress(title, season: season, count: Int(count), watchedAt: watchInstant); sliderDraft = nil; await loadCard(title) }
-                    }
-                }.opacity(0.02).disabled(store.busy || !store.canMutate || !seasonCanEdit(title))
-                    .accessibilityLabel("Season \(season) episodes watched").accessibilityValue("\(displayedWatched) of \(card.progress.total) episodes watched").accessibilityIdentifier("episode-progress")
+                EpisodeRangeInput(value: sliderDraft ?? Double(card.progress.watched), maximum: episodes.count, enabled: !store.busy && store.canMutate && seasonCanEdit(title), label: "Season \(season) episodes watched", valueText: "\(displayedWatched) of \(card.progress.total) episodes watched", identifier: "episode-progress", onChange: { sliderDraft = $0 }, onCommit: { count in
+                    Task { await store.setSeasonProgress(title, season: season, count: Int(count), watchedAt: watchInstant); sliderDraft = nil; await loadCard(title) }
+                }, onCancel: { sliderDraft = nil })
             }
         }.frame(height: 44)
     }

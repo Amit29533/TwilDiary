@@ -34,6 +34,11 @@ struct PersonView: View {
                 }.padding(.bottom, 28)
             } else if let failure { RetryNotice(message: failure) { Task { await load() } }.padding(14) }
             else { ProgressView("Loading person…").frame(maxWidth: .infinity).padding(40) }
+        }.background(alignment: .top) {
+            if let person {
+                Artwork(path: CatalogTools.image(person.profilePath, size: "w780"), title: person.name).frame(height: 310)
+                    .overlay(LinearGradient(stops: [.init(color: .black.opacity(2.0 / 15), location: 0), .init(color: .black.opacity(7.0 / 15), location: 0.55), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
+            }
         }.background(.black).background(EdgeSwipeBackOnly()).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .task(id: route.id) { if person == nil { await load() } }
     }
@@ -47,10 +52,6 @@ struct PersonView: View {
             }
             Spacer(minLength: 0)
         }.padding(.horizontal, 14).padding(.top, 145).padding(.bottom, 10)
-            .background(alignment: .top) {
-                Artwork(path: CatalogTools.image(person.profilePath, size: "w780"), title: person.name).frame(height: 310)
-                    .overlay(LinearGradient(stops: [.init(color: .black.opacity(2.0 / 15), location: 0), .init(color: .black.opacity(7.0 / 15), location: 0.55), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
-            }
     }
     private func facts(_ person: PersonDetails) -> some View {
         let sections = PersonSections(person: person, workspace: store.workspace)
@@ -68,7 +69,14 @@ struct PersonView: View {
         }
     }
     private func fact(_ label: String, _ value: String) -> some View {
-        VStack(spacing: 0) { HStack(alignment: .top, spacing: 16) { Text(label).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading); Text(value).frame(maxWidth: .infinity, alignment: .leading).layoutPriority(1) }.font(.system(size: 13)).padding(.vertical, 12); Divider().overlay(.white.opacity(0.02)) }
+        let key = label.lowercased().replacingOccurrences(of: " ", with: "-")
+        return VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 16) {
+                Text(label).foregroundStyle(.secondary).frame(width: 104, alignment: .leading).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("person-fact-" + key + "-label")
+                Text(value).frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("person-fact-" + key + "-value")
+            }.font(.system(size: 13)).padding(.vertical, 12)
+            Rectangle().fill(.white.opacity(0.06)).frame(height: 1)
+        }
     }
     private func server(_ person: PersonDetails) -> some View {
         let sections = PersonSections(person: person, workspace: store.workspace)
