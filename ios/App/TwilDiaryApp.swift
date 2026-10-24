@@ -141,14 +141,15 @@ struct RootView: View {
         HStack(spacing: 0) {
             ForEach(AppTab.allCases, id: \.self) { tab in
                 Button { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil); router.selectedTab = tab } label: {
-                    VStack(spacing: 2) { DiaryIcon(name: tab.icon, size: 23); Text(tab.label).font(.system(size: 11)) }
-                        .frame(maxWidth: .infinity).frame(height: 57)
-                        .foregroundStyle(router.selectedTab == tab ? theme.accent : Color(webHex: "#a09aa9"))
-                        .background(router.selectedTab == tab ? theme.accent.opacity(0.13) : .clear, in: Capsule())
-                        .overlay(Capsule().strokeBorder(router.selectedTab == tab ? theme.accent.opacity(0.28) : .clear))
+                    VStack(spacing: 0) {
+                        DiaryIcon(name: tab.icon, size: 23).frame(width: 40, height: 33)
+                        Text(tab.label).font(.system(size: 11)).frame(height: 16.5)
+                    }.frame(maxWidth: .infinity).frame(height: 57)
+                        .foregroundStyle(theme == .glass ? Color(webHex: router.selectedTab == tab ? "#f5f5f7" : "#e0e0e6") : router.selectedTab == tab ? theme.accent : theme.muted)
+                        .background { DiaryNavigationSelection(selected: router.selectedTab == tab) }
                 }.buttonStyle(.plain).accessibilityLabel(tab.label).accessibilityIdentifier("tab-" + tab.rawValue).accessibilityAddTraits(router.selectedTab == tab ? .isSelected : [])
             }
-        }.padding(4).background(.ultraThinMaterial, in: Capsule()).overlay(Capsule().strokeBorder(.white.opacity(0.16)))
+        }.padding(4).background { DiaryNavigationSurface() }
     }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {

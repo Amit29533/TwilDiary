@@ -113,3 +113,8 @@ Workspace reload now launches titles/episodes/events/locations concurrently, mat
 
 
 Library presentation indices rebuild with each complete workspace value: title identities, active events and episodes grouped by title, per-title LibraryProgress and confirmed-location ID set. Visible grid/list cards and their accessibility values use those lookups instead of repeatedly scanning all watches/locations. The Core full-workspace LibraryProgress function delegates to the same per-title calculation; manifest totals, distinct regular episodes and movie history semantics stay unchanged. Sign-out replaces the workspace and clears all projections. A regression covers repeated viewings and replacement. Other rendering projections and main-actor cache/JSON work remain open; no measured frame-rate claim is made before CI/device profiling.
+
+
+## Navigation surface parity follow-up (build 23, not compiled)
+
+The source phone bar uses a near-black gradient over a blurred backdrop in every ordinary accent theme, with separate glass fill and sheen tokens. Native previously exposed the uncolored system material and therefore appeared too gray in the build-21 side-by-side. DiaryNavigationSurface retains the first-party material, layers source nav fills/edges and honors reduced transparency. DiaryNavigationSelection uses the source accent gradient or glass white highlight; Liquid Glass labels are neutral white rather than tinted accent. Native material blur is an approximation of CSS backdrop-filter, not a claim of identical WebKit sampling. Existing all-theme screenshots and all-size navigation hit-bound checks remain acceptance gates. No private UIKit API or third-party blur library is used.
