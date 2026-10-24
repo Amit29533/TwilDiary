@@ -96,7 +96,7 @@ import UIKit
         let actor = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Reference Actor 1'")).firstMatch
         if !actor.isHittable { app.swipeUp() }
         XCTAssertTrue(actor.waitForExistence(timeout: 5)); actor.tap()
-        XCTAssertTrue(app.staticTexts["Filmography"].waitForExistence(timeout: 10)); capture("Cast profile")
+        XCTAssertTrue(app.staticTexts["Facts & trivia"].waitForExistence(timeout: 10)); capture("Cast profile")
     }
     func testExploreAndHomeStatsShortcut() {
         let app = launch(); app.buttons["tab-home"].tap()
@@ -318,6 +318,29 @@ import UIKit
         app.buttons["Undo"].tap()
         XCTAssertTrue(app.buttons["Log a watch"].waitForExistence(timeout: 5)); capture("Movie watch undone")
     }
+    func testPersonShelvesOpenFilteredFilmographyAndPreserveReturnNavigation() {
+        let app = launch(); app.buttons["tab-home"].tap(); app.buttons["search-twildiary"].tap()
+        let search = app.textFields["Search library and online"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5)); search.typeText("Clockmaker\n")
+        let result = app.buttons["search-movie:900001"]
+        XCTAssertTrue(result.waitForExistence(timeout: 10)); result.tap()
+        let actor = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Reference Actor 1'")).firstMatch
+        for _ in 0..<5 { if actor.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(actor.isHittable); actor.tap()
+        XCTAssertTrue(app.staticTexts["Facts & trivia"].waitForExistence(timeout: 10)); capture("Person facts")
+        let more = app.buttons["person-more-shows"]
+        for _ in 0..<12 { if more.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(more.isHittable); capture("Person credit shelves"); more.tap()
+        let count = app.staticTexts["person-result-count"]
+        XCTAssertTrue(count.waitForExistence(timeout: 5)); XCTAssertEqual(count.label, "16 titles"); capture("Person show filmography")
+        app.buttons["person-filters"].tap(); app.buttons["person-minimum"].tap(); app.buttons["9+"].tap()
+        XCTAssertTrue(app.staticTexts["No titles in this mix"].waitForExistence(timeout: 5)); capture("Person filtered empty")
+        app.buttons["person-reset"].tap(); app.buttons["person-collection"].tap(); app.buttons["On your server"].tap()
+        XCTAssertTrue(app.staticTexts["No titles in this mix"].waitForExistence(timeout: 5)); XCTAssertEqual(count.label, "0 titles · On your server")
+        capture("Person server filmography empty")
+        app.buttons["person-filmography-done"].tap()
+        XCTAssertTrue(app.buttons["person-more-shows"].waitForExistence(timeout: 5))
+    }
     func testTitleRatingEditsInlineWithoutChangingItsWatchCount() {
         let app = launch(mutations: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
         let personal = app.buttons["title-personal-rating"]
@@ -344,7 +367,7 @@ import UIKit
         let actor = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Reference Actor 1'")).firstMatch
         for _ in 0..<10 { if actor.isHittable { break }; app.swipeDown() }
         XCTAssertTrue(actor.isHittable); actor.tap()
-        XCTAssertTrue(app.staticTexts["Filmography"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Facts & trivia"].waitForExistence(timeout: 10))
         app.navigationBars.buttons.element(boundBy: 0).tap()
         for _ in 0..<10 { if editor.isHittable { break }; app.swipeUp() }
         XCTAssertTrue((editor.value as? String)?.contains("Native draft survives cast navigation") == true)

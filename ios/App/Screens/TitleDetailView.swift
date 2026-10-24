@@ -38,7 +38,7 @@ struct TitleDetailView: View {
                         header(title)
                         progressPanel(title).padding(.top, -8)
                         if title.isSeries { episodeSection(title) }
-                        if let tmdbId = title.tmdbId { CastAndRelated(route: CatalogRoute(kind: title.isSeries ? .tv : .movie, id: tmdbId)) }
+                        if let tmdbId = title.tmdbId { CastAndRelated(route: CatalogRoute(kind: title.isSeries ? .tv : .movie, id: tmdbId), sourceTitle: title.name) }
                         VStack(spacing: 20) {
                             DisclosureGroup("Notes", isExpanded: $showNotes) {
                                 VStack(alignment: .leading, spacing: 12) {

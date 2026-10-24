@@ -23,8 +23,18 @@ extension DiaryStore {
         return try await read(CatalogTools.apiPath("/api/metadata/related", query: ["type": route.kind.rawValue, "id": String(route.id)]))
     }
     func person(_ id: Int) async throws -> PersonResponse {
-        if isPreview { return PreviewCatalog.person }
-        return try await read(CatalogTools.apiPath("/api/metadata/person", query: ["id": String(id)]))
+        guard !needsSignIn else { throw APIError.signIn }
+        if let saved = cachedPeople[id], Date.now.timeIntervalSince(saved.at) < 900 { return saved.value }
+        let revision = sessionRevision
+        let response: PersonResponse
+        if isPreview { response = PreviewCatalog.person }
+        else { response = try await read(CatalogTools.apiPath("/api/metadata/person", query: ["id": String(id)])) }
+        try Task.checkCancellation()
+        guard revision == sessionRevision, !needsSignIn else { throw CancellationError() }
+        cachedPeople.removeValue(forKey: id)
+        if cachedPeople.count >= 32, let oldest = cachedPeople.min(by: { $0.value.at < $1.value.at })?.key { cachedPeople.removeValue(forKey: oldest) }
+        cachedPeople[id] = (.now, response)
+        return response
     }
     func importTitle(_ details: CatalogDetails, category: String) async -> String? {
         guard !busy, !isPreview else { return nil }

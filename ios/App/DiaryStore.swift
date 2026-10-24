@@ -4,6 +4,7 @@ import TwilDiaryCore
 @MainActor @Observable final class DiaryStore {
     var workspace = Workspace() { didSet { indexTitles() } }
     private var titleIndex: [String: MediaTitle] = [:]
+    var cachedPeople: [Int: (at: Date, value: PersonResponse)] = [:]
     var loading = false
     var busy = false
     var needsSignIn = true
@@ -62,7 +63,7 @@ import TwilDiaryCore
         do {
             try await api.authenticate(credential)
             guard generation == sessionGeneration else { return }
-            communityRatings.reset()
+            communityRatings.reset(); cachedPeople = [:]
             if previousScope != credential.cacheScope {
                 workspace = Workspace(); hasLoadedWorkspace = false; showingCachedSnapshot = false; lastRefreshedAt = nil; cacheWarning = nil
                 pendingWatches.removeAll(); pendingProgress.removeAll(); pendingRemovals.removeAll(); pendingSeasonAdjustments.removeAll()
@@ -77,7 +78,7 @@ import TwilDiaryCore
         fixture = nil
         #endif
         sessionGeneration = UUID(); snapshotGeneration = UUID()
-        api.signOut(); workspace = Workspace(); communityRatings.reset(); hasLoadedWorkspace = false; error = nil
+        api.signOut(); workspace = Workspace(); communityRatings.reset(); cachedPeople = [:]; hasLoadedWorkspace = false; error = nil
         showingCachedSnapshot = false; lastRefreshedAt = nil; loading = false; busy = false
         do { try cache.removeAll(); cacheWarning = nil }
         catch { cacheWarning = "The saved diary could not be removed. It remains encrypted on this device." }

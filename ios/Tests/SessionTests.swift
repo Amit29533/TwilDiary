@@ -500,6 +500,20 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertEqual(pages.count, 2)
         XCTAssertEqual(pages.last?.value(forHTTPHeaderField: "Cookie"), "CF_Authorization=synthetic-other-owner")
     }
+    func testPersonMetadataUsesBoundedSharedCacheAndNeverSurvivesSignOut() async throws {
+        let data = try Data(contentsOf: XCTUnwrap(Bundle.main.url(forResource: "catalog-person", withExtension: "json")))
+        let json = String(decoding: data, as: UTF8.self)
+        StubProtocol.state.reset { _ in .init(json) }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage))
+        _ = try await store.person(700001); _ = try await store.person(700001)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+        for id in 700002...700034 { _ = try await store.person(id) }
+        XCTAssertEqual(store.cachedPeople.count, 32); XCTAssertNil(store.cachedPeople[700001])
+        store.signOut(); XCTAssertTrue(store.cachedPeople.isEmpty)
+        do { _ = try await store.person(700034); XCTFail("A signed-out view cannot read cached metadata") } catch { XCTAssertTrue(store.needsSignIn) }
+        XCTAssertEqual(StubProtocol.state.recorded().count, 34)
+    }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
                                        "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),

@@ -13,7 +13,9 @@ public struct CatalogRoute: Hashable, Sendable {
 
 public struct PersonRoute: Hashable, Sendable {
     public let id: Int
-    public init(id: Int) { self.id = id }
+    public let sourceTitle: String?
+    public let sourceRole: String?
+    public init(id: Int, sourceTitle: String? = nil, sourceRole: String? = nil) { self.id = id; self.sourceTitle = sourceTitle; self.sourceRole = sourceRole }
 }
 
 /// Search, discovery, recommendations and filmography share this provider contract.
@@ -34,15 +36,17 @@ public struct CatalogItem: Decodable, Hashable, Sendable {
     public let backdrop: String?
     public let character: String?
     public let job: String?
+    public let popularity: Double?
+    public let episodeCount: Int?
     public var key: String { "\(mediaType.rawValue):\(id)" }
     public var route: CatalogRoute { CatalogRoute(kind: mediaType, id: id) }
     public var displayKey: String { inLibraryId ?? key }
     public var artwork: String? { poster ?? CatalogTools.image(posterPath) }
-    public init(id: Int, mediaType: MediaKind, name: String, year: Int? = nil, overview: String = "", posterPath: String? = nil, backdropPath: String? = nil, rating: Double? = nil, votes: Int? = nil, genres: [String] = [], inLibraryId: String? = nil, poster: String? = nil, backdrop: String? = nil) {
+    public init(id: Int, mediaType: MediaKind, name: String, year: Int? = nil, overview: String = "", posterPath: String? = nil, backdropPath: String? = nil, rating: Double? = nil, votes: Int? = nil, genres: [String] = [], inLibraryId: String? = nil, poster: String? = nil, backdrop: String? = nil, character: String? = nil, job: String? = nil, popularity: Double? = nil, episodeCount: Int? = nil) {
         self.id = id; self.mediaType = mediaType; self.name = name; self.year = year; self.overview = overview
         self.posterPath = posterPath; self.backdropPath = backdropPath; self.rating = rating; self.votes = votes
         self.genres = genres; self.inLibraryId = inLibraryId; self.poster = poster; self.backdrop = backdrop
-        character = nil; job = nil
+        self.character = character; self.job = job; self.popularity = popularity; self.episodeCount = episodeCount
     }
 }
 
@@ -87,6 +91,8 @@ public struct PersonDetails: Decodable, Sendable {
     public let name: String
     public let biography: String
     public let birthday: String?
+    public let deathday: String?
+    public let aliases: [String]?
     public let birthplace: String
     public let department: String
     public let profilePath: String?
@@ -98,6 +104,9 @@ public struct PersonDetails: Decodable, Sendable {
 }
 
 public enum CatalogTools {
+    public static func libraryIdentity(_ item: CatalogItem, in workspace: Workspace) -> String? {
+        workspace.titles.first { $0.id == item.inLibraryId || ($0.tmdbId == item.id && $0.isSeries == (item.mediaType == .tv)) }?.id
+    }
     public static func image(_ path: String?, size: String = "w500") -> String? {
         guard let path, ["w185", "w500", "w780"].contains(size),
               path.range(of: #"^/[a-zA-Z0-9_-]+\.(jpg|png|webp)$"#, options: .regularExpression) != nil else { return nil }

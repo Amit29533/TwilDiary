@@ -2,12 +2,13 @@ import SwiftUI
 import TwilDiaryCore
 
 struct CatalogGrid: View {
+    @Environment(DiaryStore.self) private var store
     let items: [CatalogItem]
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), alignment: .leading, spacing: 20) {
             ForEach(items, id: \.displayKey) { item in
                 Group {
-                    if let saved = item.inLibraryId { NavigationLink(value: saved) { CatalogPoster(item: item) } }
+                    if let saved = CatalogTools.libraryIdentity(item, in: store.workspace) { NavigationLink(value: saved) { CatalogPoster(item: item) } }
                     else { NavigationLink(value: item.route) { CatalogPoster(item: item) } }
                 }.buttonStyle(.plain).accessibilityIdentifier("catalog-" + item.displayKey)
             }
@@ -160,7 +161,7 @@ struct CatalogDetailView: View {
                             Button { Task { if let id = await store.importTitle(details.details, category: category) { accepted(id) } } } label: { Label(store.busy ? "Adding…" : "Add to Planned", systemImage: "plus").font(.subheadline.bold()).frame(maxWidth: .infinity).padding(.vertical, 7) }.buttonStyle(.borderedProminent).disabled(store.busy || store.isPreview)
                         }.diaryPanel()
                     }
-                    CastAndRelated(route: route)
+                    CastAndRelated(route: route, sourceTitle: details.details.name)
                 } else if loading { ProgressView("Loading title…").frame(maxWidth: .infinity).padding(40) }
                 if let failure { RetryNotice(message: failure) { Task { await load() } } }
             }.padding(.horizontal, 14).padding(.bottom, 30)
@@ -192,6 +193,7 @@ private struct CatalogHero: View {
 
 struct CastAndRelated: View {
     let route: CatalogRoute
+    var sourceTitle: String? = nil
     @Environment(DiaryStore.self) private var store
     @State private var cast: [CastPerson] = []
     @State private var related: [CatalogItem] = []
@@ -203,7 +205,7 @@ struct CastAndRelated: View {
                 ScrollView(.horizontal) {
                     HStack(alignment: .top, spacing: 18) {
                         ForEach(cast) { person in
-                            NavigationLink(value: PersonRoute(id: person.id)) {
+                            NavigationLink(value: PersonRoute(id: person.id, sourceTitle: sourceTitle, sourceRole: person.character)) {
                                 VStack(spacing: 8) {
                                     Artwork(path: CatalogTools.image(person.profilePath, size: "w185"), title: person.name).frame(width: 82, height: 82).clipShape(Circle())
                                     Text(person.name).font(.system(size: 13, weight: .semibold)).lineLimit(2)
@@ -223,34 +225,6 @@ struct CastAndRelated: View {
         do { cast = try await store.cast(route).cast } catch { if !Task.isCancelled { failure = error.localizedDescription } }
         do { related = try await store.related(route).items } catch { if !Task.isCancelled { failure = error.localizedDescription } }
     }
-}
-
-struct PersonView: View {
-    let id: Int
-    @Environment(DiaryStore.self) private var store
-    @State private var person: PersonDetails?
-    @State private var failure: String?
-    @State private var kind = MediaKind.tv
-    @State private var query = ""
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                if let person {
-                    HStack(alignment: .bottom, spacing: 16) {
-                        Artwork(path: CatalogTools.image(person.profilePath), title: person.name).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 12))
-                        VStack(alignment: .leading, spacing: 8) { Text(person.name).font(.title2.bold()); Text(person.department).font(.subheadline).foregroundStyle(.secondary); Text(person.birthplace).font(.caption).foregroundStyle(.secondary) }
-                    }
-                    if !person.biography.isEmpty { DisclosureGroup("Biography") { Text(person.biography).font(.subheadline).foregroundStyle(.secondary).padding(.top, 10) } }
-                    Text("Filmography").font(.title3.bold())
-                    Picker("Filmography", selection: $kind) { ForEach(MediaKind.allCases, id: \.self) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
-                    SearchField(placeholder: "Search filmography…", text: $query, label: "Search filmography")
-                    CatalogGrid(items: person.filmography(kind, query: query))
-                } else if failure == nil { ProgressView("Loading cast profile…").frame(maxWidth: .infinity).padding(40) }
-                if let failure { RetryNotice(message: failure) { Task { await load() } } }
-            }.padding(14)
-        }.background(.black).navigationTitle(person?.name ?? "Cast").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar).task { await load() }
-    }
-    private func load() async { failure = nil; do { person = try await store.person(id).person } catch { failure = error.localizedDescription } }
 }
 
 struct ManualTitleView: View {
