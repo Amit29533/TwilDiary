@@ -17,7 +17,7 @@ struct LibraryTitleRow: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(title.name).font(.system(size: 15, weight: .semibold)).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                InlineFlowLayout(spacing: 10) {
+                InlineFlowLayout(spacing: 10, rowSpacing: 10) {
                     if let score { RatingBadge(score: score) }
                     DiaryIcon(name: archived ? "trash-2" : title.statusIconName, size: 16)
                     if title.queued == true { DiaryIcon(name: "download", size: 15) }

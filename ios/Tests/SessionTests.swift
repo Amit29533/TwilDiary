@@ -371,6 +371,22 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
             XCTAssertTrue(message.contains("unexpected response"))
         } catch { XCTFail("Unexpected error: \(error)") }
     }
+    func testHTTPFallbackDistinguishesAFailedReadFromAnUnconfirmedWrite() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { _ in .init(503, "Synthetic offline", contentType: "text/plain") }
+        let client = api(storage)
+        for (method, expected) in [
+            ("GET", "The diary could not be loaded. Please try refreshing."),
+            ("PATCH", "The change was not confirmed. Refresh before trying again.")
+        ] {
+            do {
+                let _: EmptyResponse = try await client.request("/api/titles/synthetic", method: method)
+                XCTFail("The failing transport was accepted")
+            } catch APIError.rejected(let status, let message) {
+                XCTAssertEqual(status, 503); XCTAssertEqual(message, expected)
+            } catch { XCTFail("Unexpected error: \(error)") }
+        }
+    }
     func testCachedDiaryRestoresOnlyForCurrentSessionAndSignOutErasesIt() async throws {
         let cache = MemoryWorkspaceCache()
         try cache.save(PreviewData.workspace, scope: credential.cacheScope, at: .now)

@@ -136,7 +136,10 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
                 let reset = envelope?.error.resetAt.flatMap { ISO8601DateFormatter().date(from: $0) ?? ISO8601DateFormatter.fractional.date(from: $0) }
                 throw APIError.databaseLimit(reset)
             }
-            throw APIError.rejected(http.statusCode, envelope?.error.message ?? "The change was not confirmed. Refresh before trying again.")
+            let fallback = method == "GET"
+                ? "The diary could not be loaded. Please try refreshing."
+                : "The change was not confirmed. Refresh before trying again."
+            throw APIError.rejected(http.statusCode, envelope?.error.message ?? fallback)
         }
         guard isJSON else { throw APIError.message("The diary returned an unexpected response. Please try again.") }
         return try JSONDecoder().decode(T.self, from: data)
