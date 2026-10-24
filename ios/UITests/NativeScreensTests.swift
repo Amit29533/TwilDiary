@@ -766,6 +766,21 @@ import UIKit
         app.buttons["category-movies"].tap(); app.buttons["category-anime"].tap()
         XCTAssertEqual(otherCount.label, "13"); capture("Glance cached category counts")
     }
+    func testGlanceCurrentSeasonCompletionAndUndoPreserveTheUnwatchedLaterSeason() {
+        let app = launch(mutations: true, upcoming: true)
+        let count = app.staticTexts["watch-count-again"]
+        XCTAssertTrue(count.waitForExistence(timeout: 5)); XCTAssertEqual(count.label, "8")
+        app.buttons["progress-menu-again"].tap(); app.buttons["Mark season 1 complete"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "label == '16'"), evaluatedWith: count)], timeout: 10)
+        XCTAssertTrue(app.buttons["Undo"].exists); app.buttons["Undo"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "label == '8'"), evaluatedWith: count)], timeout: 10)
+        app.buttons["progress-title-again"].tap()
+        let season = app.buttons["title-season"]
+        XCTAssertTrue(season.waitForExistence(timeout: 5)); season.tap(); app.buttons["Season 2"].tap()
+        let progress = app.sliders["episode-progress"]
+        wait(for: [expectation(for: NSPredicate(format: "value == '0 of 3 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        capture("Glance complete Undo preserves later season")
+    }
     private func sample(_ image: CGImage, at point: CGPoint, scale: CGFloat) -> [Int] {
         guard let pixel = image.cropping(to: CGRect(x: floor(point.x * scale), y: floor(point.y * scale), width: 1, height: 1)) else { XCTFail("Missing pixel sample"); return [0, 0, 0, 0] }
         var bytes = [UInt8](repeating: 0, count: 4)
