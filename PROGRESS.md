@@ -10,7 +10,9 @@ Latest run **40035195084**, source **a0e171c**, compiled simulator and unsigned 
 
 Prepared **build 14** moves Files/Scanner/History Done into the fixed header, above content and navigation, and replaces the duplicate Trakt action subtrees with a single adaptive AnyLayout tree. Regression asserts the selected More tab after dismissal, non-overlapping Done bounds, a unique Trakt conflict action and confirmed completion. Builds 12 and the subsequent scanner commit both carried CFBundleVersion 12 because a Windows text-encoding failure prevented the intended version/docs edit; build 14 restores distinct numbering without rewriting history.
 
-Build-14 run **40056346004**, source **9c4b527**, is running: simulator/device compilation and packaging finished; unit/UI execution is in progress. Do not cancel it merely to publish the next batch. Its Files/Trakt regressions must be inspected and fixed through green.
+Build-14 run **40056346004**, source **9c4b527**, is fully green: **25 core + 32 native unit + 9 UI = 66 tests**, zero warnings. Downloaded all artifacts and reviewed the 29-image contact sheet plus full Scanner/Trakt states. Evidence: ios/docs/screenshots/step-9/build-14. Verified unsigned arm64 build-14 IPA is D:/Downloads/TwilDiary-native-build14.ipa, SHA-256 224455180e83af72393c205584c2f1f7d245b0ea048ed9333c03fe39f38e7080. It is a preview, not full parity acceptance.
+
+Visual review found another issue not caught by green interaction tests: Trakt’s sticky Apply panel overlapped the capsule. Current web code places Apply after the review list (the earlier mockup was sticky). Build 15 follows the actual source flow, includes bottom clearance, and requires the entire Apply button to lie above the capsule before tapping. Files Done/header return and explicit conflict completion passed in build 14.
 
 Prepared **build 15** ports the actual Explore daily recommendation, four named shelves, source section pages, local unwatched list, Trakt recommendations, media-specific genre/year/minimum/sort controls, bounded paging, stable identities and retry/error/empty states. A generation-protected results controller ignores late filters and preserves confirmed pages on append failure. Query-scoped provider read cache is bounded to 16 entries/5 minutes and rejects reads after sign-out. Catalog ratings/layout now follow DiscoveryCard rather than the Library badge style.
 
@@ -18,7 +20,7 @@ Combined search now uses the existing /api/search endpoint, preserving identifie
 
 Pending build-15 checks: **31 core + 40 native unit + 10 UI tests planned**, not yet executed. Added 20 web discovery golden scenarios/five deterministic daily picks; controller tests for late filters/paging/retry/partial recommendations; URLProtocol tests for unified search/cache authentication; UI coverage for Explore filters/second page and shared inline search. Windows local-reference Vite now handles canonical and 8.3 paths without weakening deny rules. Provider fixtures now honor filters/paging and the combined-search schema. Refreshed five affected primary captures and added eight states: **78/78 primary records pass**; secondary Explore/title/Home/Library/Glance/Stats inputs are captured. Native comparison acceptance is still pending.
 
-Exact next action: finish inspecting run 40056346004; download/review its screenshots and verify its IPA if green; publish build 15 as one coherent batch, then fix every CI diagnostic and compare its new screenshots before further parity work. No full roadmap step is claimed complete.
+Exact next action: commit passed-build evidence and the source-matched Trakt Apply correction; publish build 15 as one coherent batch, then fix every CI diagnostic and compare its new screenshots before further parity work. No full roadmap step is claimed complete.
 
 ## Source audit corrections
 

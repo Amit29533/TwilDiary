@@ -2,7 +2,7 @@
 
 Product source: the web /preview code at b43454e. Active native source: Amit29533/TwilDiary → ios-native → ios/. No hosted changes or deployments.
 
-Latest run 40035195084 compiled both targets with zero warnings: 25 core and 32 native unit tests passed, 7/9 UI passed. Files dismissal and Trakt conflict accessibility failed. Build 8 (40020975007) remains the last complete green run. The new screenshots are diagnostic evidence, not release acceptance. Pixel parity remains unfinished.
+Run 40056346004 (build 14) compiled both targets with zero warnings: 25 core, 32 native unit and all 9 UI tests passed. Downloaded 29 screenshots and verified the arm64 IPA; evidence is in screenshots/step-9/build-14. Files dismissal/conflict accessibility fixes pass. Visual review found Trakt Apply overlaps the capsule; build 15 adopts the actual source's in-list action and strengthens the geometric assertion. Full pixel parity remains unfinished.
 
 | Screen / area | Native work present | Remaining parity / validation |
 | --- | --- | --- |

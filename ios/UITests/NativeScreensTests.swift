@@ -118,9 +118,16 @@ import UIKit
         capture("Trakt ratings")
         filter.buttons["All"].tap()
         let ready = app.buttons["trakt-apply-ready"]
-        XCTAssertTrue(ready.waitForExistence(timeout: 5)); ready.tap()
+        for _ in 0..<12 {
+            if ready.isHittable && ready.frame.maxY < app.buttons["tab-more"].frame.minY { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(ready.isHittable)
+        XCTAssertLessThan(ready.frame.maxY, app.buttons["tab-more"].frame.minY, "The entire Apply button must clear the capsule")
+        capture("Trakt Apply visible"); ready.tap()
         XCTAssertTrue(app.staticTexts["1 remaining"].waitForExistence(timeout: 5))
         let useTrakt = app.buttons["trakt-trakt-change-2"]
+        for _ in 0..<8 { if useTrakt.isHittable { break }; app.swipeDown() }
         for _ in 0..<8 { if useTrakt.isHittable { break }; app.swipeUp() }
         XCTAssertEqual(app.buttons.matching(identifier: "trakt-trakt-change-2").count, 1, "One conflict must expose exactly one Trakt action")
         XCTAssertTrue(useTrakt.isHittable); useTrakt.tap()

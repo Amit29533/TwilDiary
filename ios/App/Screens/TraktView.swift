@@ -22,17 +22,9 @@ import TwilDiaryCore
                     if let sync = controller.sync, sync.run != nil { review(sync) }
                 }
                 if let error = controller.error { VStack(alignment: .leading, spacing: 8) { Text(error).font(.subheadline).foregroundStyle(.secondary); Button("Retry") { Task { await controller.refresh() } }.disabled(controller.busy) }.diaryPanel().accessibilityIdentifier("trakt-error") }
-            }.padding(16).padding(.bottom, 24)
+            }.padding(16).padding(.bottom, 100)
         }.background(.black).navigationTitle("Trakt").navigationBarTitleDisplayMode(.inline).navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
-            .safeAreaInset(edge: .bottom) {
-                if let sync = controller.sync, sync.reviewing, (sync.counts["safe"] ?? 0) > 0 {
-                    VStack(spacing: 6) {
-                        Button { Task { await controller.apply(); await store.refresh() } } label: { Text(sync.readyChanges > 0 ? "Apply all ready changes (\(sync.readyChanges))" : "Link existing items (\(sync.counts["links"] ?? 0))").font(.subheadline.bold()).frame(maxWidth: .infinity).frame(minHeight: 50) }.buttonStyle(.borderedProminent).disabled(controller.busy || coolingDown).accessibilityIdentifier("trakt-apply-ready")
-                        Text("Conflicts need your choice above. Filters only change what’s shown.").font(.caption2).foregroundStyle(.secondary)
-                    }.padding(16).background(.black.opacity(0.9))
-                }
-            }
             .task(id: controller.kind.rawValue + "\n" + controller.query) {
                 do { try await Task.sleep(for: .milliseconds(250)); try Task.checkCancellation(); await controller.refresh() } catch { }
             }
@@ -110,8 +102,19 @@ import TwilDiaryCore
                 LazyVStack(spacing: 10) { ForEach(Array(controller.visibleItems.prefix(controller.limit))) { change in reviewItem(change, sync: sync) } }
                 if controller.visibleItems.isEmpty { Text("No matching changes in this review.").font(.subheadline).foregroundStyle(.secondary) }
                 HStack { Text("Showing \(min(controller.limit, controller.visibleItems.count)) of \(controller.visibleItems.count) loaded changes").font(.caption).foregroundStyle(.secondary); Spacer(); if controller.limit < controller.visibleItems.count || sync.next != nil { Button("Load more") { Task { await controller.loadMore() } }.font(.subheadline).disabled(controller.busy) } }
+                if sync.reviewing && (sync.counts["safe"] ?? 0) > 0 { applyPanel(sync).padding(.top, 10) }
                 if sync.reviewing || sync.run?.state == "building" { Button("Stop this scan") { Task { await controller.cancel() } }.font(.subheadline).disabled(controller.busy) }
             }
+        }
+    }
+    private func applyPanel(_ sync: TraktSync) -> some View {
+        VStack(spacing: 9) {
+            Button { Task { await controller.apply(); await store.refresh() } } label: {
+                Text(sync.readyChanges > 0 ? "Apply all ready changes (\(sync.readyChanges))" : "Link existing items (\(sync.counts["links"] ?? 0))")
+                    .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(minHeight: 50)
+                    .foregroundStyle(Color(webHex: "#21182e")).background(theme.accent, in: RoundedRectangle(cornerRadius: 12))
+            }.buttonStyle(.plain).disabled(controller.busy || coolingDown).accessibilityIdentifier("trakt-apply-ready")
+            Text("Conflicts need your choice above. Filters only change what’s shown.").font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }
     }
     private func reviewItem(_ change: TraktChange, sync: TraktSync) -> some View {

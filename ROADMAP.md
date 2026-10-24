@@ -153,3 +153,5 @@ Done: no unfinished native placeholders/dead controls; all tests/builds/warnings
 - Existing source sections, filters, deterministic unwatched daily choice, real Trakt recommendation reads and provider paging are ported. Combined /api/search replaces metadata-only search; scoped Library/Glance search stays unchanged.
 - 20 web golden cases/five daily picks and controller/transport/UI regressions are added. Await CI before checking acceptance boxes.
 - Reference inventory expands from 70 to 78 passing states. Read-only provider fixtures honor source filter/paging and search response contracts. No web product file changed.
+
+Build 14 evidence checkpoint: run 40056346004 passes all 66 tests/zero warnings; 29 screenshots and verified IPA saved. Visual review still found sticky Trakt Apply overlap; build 15 follows the current source in-list action and asserts full bounds above navigation.
