@@ -204,33 +204,65 @@ struct Artwork: View {
 
 struct RatingBadge: View {
     let score: Double
+    var community = true
     var body: some View {
-        HStack(spacing: 3) { Image(systemName: "star.fill").foregroundStyle(Color(webHex: "#ffe341")); Text(score, format: .number.precision(.fractionLength(1))) }
-            .font(.system(size: 11, weight: .semibold)).foregroundStyle(.white).shadow(color: .black.opacity(0.9), radius: 3, y: 1)
-            .padding(.horizontal, 6).padding(.vertical, 4).background(.black.opacity(0.65), in: Capsule())
+        HStack(spacing: 3) {
+            Image(systemName: "star.fill").font(.system(size: community ? 10 : 12))
+                .foregroundStyle(Color(webHex: community ? "#ffe030" : "#f4d06a"))
+            Text(score, format: .number.precision(.fractionLength(1)))
+        }.font(.system(size: community ? 11.5 : 12, weight: community ? .medium : .semibold))
+            .foregroundStyle(Color(webHex: community ? "#f5f5f5" : "#f3f0f7"))
+            .shadow(color: .black.opacity(0.9), radius: community ? 3 : 0, y: 1)
+            .padding(.horizontal, community ? 6 : 4).padding(.vertical, 3)
+            .background(Color(webHex: community ? "#00000099" : "#07090cdd"), in: RoundedRectangle(cornerRadius: community ? 99 : 7))
     }
 }
 
 struct PosterCard: View {
     let title: MediaTitle
     var personalRating = false
+    var archived = false
     @Environment(DiaryStore.self) private var store
     @AppStorage("publicRatingSource") private var ratingSource = PublicRatingSource.tmdb
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 8) {
             Artwork(path: title.poster, title: title.name, initialsOnly: !personalRating).aspectRatio(2 / 3, contentMode: .fit)
-                .overlay(alignment: .topLeading) { if let score = displayedScore { RatingBadge(score: score).padding(6) } }
-                .overlay(alignment: .bottom) { if title.status == "watching" { GeometryReader { proxy in Rectangle().fill(.white.opacity(0.2)).overlay(alignment: .leading) { Rectangle().fill(.tint).frame(width: proxy.size.width * progress) } }.frame(height: 4) } }
-                .overlay(alignment: .bottomTrailing) { if title.status == "completed" { Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(.black).frame(width: 25, height: 25).background(Color(webHex: "#6ce3a5"), in: Circle()).padding(7) } }
-                .overlay(alignment: .bottomLeading) { if present || title.queued == true { DiaryIcon(name: present ? "monitor" : "download", size: 13).foregroundStyle(Color(webHex: present ? "#9edbc4" : "#b795f6")).padding(6).background(.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 6)).padding(7) } }
+                .overlay(alignment: personalRating ? .bottomLeading : .topLeading) { if let score = displayedScore { RatingBadge(score: score, community: !personalRating).padding(6) } }
+                .overlay(alignment: .bottom) { if !personalRating && title.status != "completed" && progress > 0 { GeometryReader { proxy in Rectangle().fill(theme.accent.opacity(0.267)).overlay(alignment: .leading) { Rectangle().fill(theme.accent).frame(width: proxy.size.width * progress) } }.frame(height: 4) } }
+                .overlay(alignment: .bottomTrailing) { statusBadge }
+                .overlay(alignment: personalRating ? .topLeading : .bottomLeading) { availabilityBadges.padding(8) }
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-            Text(title.name).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color(webHex: "#f3f0f7")).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
+            Text(title.name).font(.system(size: 15, weight: .semibold)).lineSpacing(2.3).foregroundStyle(Color(webHex: "#f3f0f7")).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
         }.contentShape(Rectangle()).accessibilityElement(children: .ignore).accessibilityLabel(title.name).accessibilityValue(accessibleDetails)
     }
     private var displayedScore: Double? { personalRating ? title.score : store.publicScore(title, source: ratingSource) }
-    private var present: Bool { store.workspace.locations.contains { $0.titleId == title.id && $0.evidence == "present" } }
+    private var present: Bool { !archived && store.workspace.locations.contains { $0.titleId == title.id && $0.evidence == "present" } }
     private var accessibleDetails: String {
-        [title.categoryName, title.status.capitalized, displayedScore.map { "Rating " + $0.formatted(.number.precision(.fractionLength(1))) }, title.status == "watching" ? "\(Int((progress * 100).rounded())) percent watched" : nil].compactMap { $0 }.joined(separator: ", ")
+        [title.categoryName, archived ? "In Trash" : title.status.capitalized, displayedScore.map { "Rating " + $0.formatted(.number.precision(.fractionLength(1))) }, title.status != "completed" && progress > 0 ? "\(Int((progress * 100).rounded())) percent watched" : nil, title.queued == true ? "In Queue" : nil, !personalRating && present ? "On your PC" : nil].compactMap { $0 }.joined(separator: ", ")
+    }
+    @ViewBuilder private var statusBadge: some View {
+        if personalRating {
+            DiaryIcon(name: title.statusIconName, size: 18).foregroundStyle(Color(webHex: title.status == "planned" ? "#b9dcff" : "#d3d4dc"))
+                .frame(width: 26, height: 26).background(Color(webHex: "#080a10e8"), in: Circle())
+                .overlay(Circle().strokeBorder(.white.opacity(0.42))).padding(6)
+        } else if title.status == "completed" && !archived {
+            Image(systemName: "checkmark").font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Color(webHex: "#10291b")).frame(width: 26, height: 26)
+                .background(Color(webHex: "#78e4ab"), in: Circle()).padding(8)
+        }
+    }
+    private var availabilityBadges: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            if title.queued == true {
+                DiaryIcon(name: "download", size: 14).foregroundStyle(theme.accent).frame(width: 27, height: 27)
+                    .background(Color(webHex: "#080c10d9"), in: RoundedRectangle(cornerRadius: 7))
+            }
+            if present && !personalRating {
+                DiaryIcon(name: "monitor", size: 14).foregroundStyle(Color(webHex: "#9edbc4"))
+                    .frame(width: 27, height: 27).background(Color(webHex: "#080c10b8"), in: RoundedRectangle(cornerRadius: 7))
+            }
+        }
     }
     private var progress: Double {
         LibraryProgress.fraction(title: title, workspace: store.workspace)

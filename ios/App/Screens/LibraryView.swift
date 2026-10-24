@@ -115,7 +115,7 @@ struct LibraryView: View {
                         }
                     }.padding(.horizontal, 14)
                 } else if list {
-                    LazyVStack(spacing: 8) { ForEach(filtered) { title in poster(title, row: true) } }.padding(.horizontal, 14)
+                    LazyVStack(spacing: 10) { ForEach(filtered) { title in poster(title, row: true) } }.padding(.horizontal, 14)
                 } else {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), alignment: .leading, spacing: 20) { ForEach(filtered) { poster($0) } }.padding(.horizontal, 14)
                 }
@@ -148,7 +148,7 @@ struct LibraryView: View {
                 }
         }
     }
-    @ViewBuilder private func cardContent(_ title: MediaTitle, row: Bool) -> some View { if row { titleRow(title) } else { PosterCard(title: title).contentShape(Rectangle()) } }
+    @ViewBuilder private func cardContent(_ title: MediaTitle, row: Bool) -> some View { if row { LibraryTitleRow(title: title, archived: archived) } else { PosterCard(title: title, archived: archived).contentShape(Rectangle()) } }
     private func prepareReview(_ change: CollectionChange) { let titles = filtered.filter { selected.contains($0.id) }; if !titles.isEmpty { review = CollectionReview(titles: titles, change: change) } }
     private var filterScope: String { [category.rawValue, status, genre, drive, search, sort].joined(separator: "\n") }
     private var collection: [MediaTitle] { store.workspace.titles.filter { ($0.deletedAt != nil) == archived } }
