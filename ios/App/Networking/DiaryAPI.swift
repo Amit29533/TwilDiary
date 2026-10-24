@@ -4,7 +4,7 @@ import TwilDiaryCore
 
 enum AppConfiguration {
     // No credentials are compiled into the app or supplied to CI.
-    static let backend = URL(string: "https://twildiary-v2.amit29533.workers.dev")!
+    static let backend = BackendEndpoint.production
 }
 
 struct AccessCredential: Codable {

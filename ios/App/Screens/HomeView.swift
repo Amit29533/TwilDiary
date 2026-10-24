@@ -9,6 +9,9 @@ struct HomeView: View {
     @State private var pick: MediaTitle?
     @State private var upcomingLimit = 3
     var body: some View {
+        let overview = HomeOverview(workspace: store.workspace, now: store.now)
+        let watching = store.workspace.activeTitles.filter { $0.status == "watching" }
+        let recent = sortedHistory(store.workspace.activeEvents).prefix(4)
         VStack(spacing: 0) {
             PageHeader(name: "TwilDiary", onSearch: { showSearch.toggle() })
             ScrollView {
@@ -33,7 +36,7 @@ struct HomeView: View {
                     }.scrollIndicators(.hidden)
                     VStack(spacing: 10) {
                         SectionHeading(name: "This week") { Button("Stats →") { router.statsToday() }.accessibilityIdentifier("home-stats") }
-                        weekPanel
+                        weekPanel(overview)
                     }
                     VStack(spacing: 10) {
                         SectionHeading(name: "Up next") { Button("Planned →") { router.library("planned") } }
@@ -64,9 +67,9 @@ struct HomeView: View {
                         if overview.upcoming.count > upcomingLimit { Button("Show more episodes") { upcomingLimit += 5 } }
                         Text("Based on your saved episode dates. Air dates may change.").font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    if !store.workspace.activeEvents.isEmpty { VStack(spacing: 10) {
+                    if !recent.isEmpty { VStack(spacing: 10) {
                         SectionHeading(name: "Recently watched") { NavigationLink("All history →", value: AppDestination.history) }
-                        ForEach(sortedHistory(store.workspace.activeEvents).prefix(4)) { event in
+                        ForEach(recent) { event in
                             if let title = store.title(event.titleId) { NavigationLink(value: title.id) { historyRow(event, title: title, workspace: store.workspace) }.buttonStyle(.plain) }
                         }
                     } }
@@ -83,8 +86,6 @@ struct HomeView: View {
         }
     }
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3)
-    private var overview: HomeOverview { HomeOverview(workspace: store.workspace, now: store.now) }
-    private var watching: [MediaTitle] { store.workspace.activeTitles.filter { $0.status == "watching" } }
     private func shortcut(_ name: String, _ icon: String) -> some View {
         HStack(spacing: 6) { DiaryIcon(name: icon, size: 17); Text(name).font(.system(size: 12, weight: .semibold)) }.foregroundStyle(Color(webHex: "#c5c0cf")).padding(.horizontal, 14).frame(height: 42).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(.white.opacity(0.13)))
     }
@@ -96,8 +97,9 @@ struct HomeView: View {
             VStack(alignment: .trailing, spacing: 5) { Text(item.daysAway == 0 ? "Today" : item.daysAway == 1 ? "Tomorrow" : "In \(item.daysAway) days").font(.system(size: 12, weight: .semibold)).foregroundStyle(.tint); Text(item.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated)).font(.system(size: 11)).foregroundStyle(.secondary) }
         }.foregroundStyle(.primary).diaryPanel()
     }
-    private var weekPanel: some View {
-        VStack(alignment: .leading, spacing: 16) {
+    private func weekPanel(_ overview: HomeOverview) -> some View {
+        let maximum = max(1, overview.days.map(\.minutes).max() ?? 0)
+        return VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 20) { metric(DiaryDate.duration(overview.minutes), "Watch time", accent: true); metric(String(overview.watches), "Watches"); metric("\(overview.streak) \(overview.streak == 1 ? "day" : "days")", "Current streak") }
             Rectangle().fill(.white.opacity(0.08)).frame(height: 1)
             HStack(alignment: .top, spacing: 0) { ForEach(overview.days) { day in
@@ -105,7 +107,7 @@ struct HomeView: View {
                     VStack(spacing: 6) {
                         Text(day.date, format: .dateTime.weekday(.narrow)).font(.system(size: 10)).foregroundStyle(.secondary)
                         Text(day.date, format: .dateTime.day()).font(.system(size: 16, weight: .semibold)).foregroundStyle(DiaryDate.calendar().isDate(day.date, inSameDayAs: store.now) ? theme.accent : .primary)
-                        VStack { Spacer(minLength: 0); RoundedRectangle(cornerRadius: 3).fill(day.minutes > 0 ? theme.accent : .white.opacity(0.12)).frame(width: 10, height: day.minutes > 0 ? max(4, 30 * CGFloat(day.minutes) / CGFloat(max(1, overview.days.map(\.minutes).max() ?? 0))) : 2) }.frame(height: 30)
+                        VStack { Spacer(minLength: 0); RoundedRectangle(cornerRadius: 3).fill(day.minutes > 0 ? theme.accent : .white.opacity(0.12)).frame(width: 10, height: day.minutes > 0 ? max(4, 30 * CGFloat(day.minutes) / CGFloat(maximum)) : 2) }.frame(height: 30)
                     }.frame(maxWidth: .infinity).foregroundStyle(.primary).opacity(day.future ? 0.4 : 1)
                 }.buttonStyle(.plain).disabled(day.future).accessibilityLabel("\(day.date.formatted(date: .abbreviated, time: .omitted)), \(day.count) watches")
             } }

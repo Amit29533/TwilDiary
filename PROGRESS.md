@@ -4,7 +4,9 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary â†’ ios-native â†
 
 ## Current request and exact next action
 
-**Build 19 is running: run 40072178351, native source 2b4618a5d4470fed522cb37ab125c96c9f336f7d.** URL: https://github.com/Amit29533/TwilDiary/actions/runs/40072178351. It is pushed to ios-native in Amit29533/TwilDiary. No native code is pending locally. A subsequent root-only progress commit does not change the compiled iOS source or trigger another run.
+Prepared local follow-up while build 19 runs: Home computes its daily/weekly/upcoming projection and recent-history sort once per render, then passes the same value to its weekly chart. The prior computed property reran full event/episode parsing for every metric, bar and caption. Reuses the existing canonical backend URL for networking, removing a duplicate literal. These are unpushed, uncompiled changes; reconcile the next CI result before including them in a later batch.
+
+**Build 19 is running: run 40072178351, native source 2b4618a5d4470fed522cb37ab125c96c9f336f7d.** URL: https://github.com/Amit29533/TwilDiary/actions/runs/40072178351. It is pushed to ios-native in Amit29533/TwilDiary. The compiled source excludes the explicitly noted local follow-up above. A subsequent root-only progress commit does not change the compiled iOS source or trigger another run.
 
 **Latest completed run: build 18 / 40067854460 / 99b84af failed one UI regression.** All 36 Core + 63 native unit tests pass, both target builds have zero warnings, and 18/19 primary UI tests pass. The two base-device layout/theme tests pass; compact/Pro Max runs were skipped after the primary failure. Downloaded all results/63 retained screenshots/recordings/unsigned IPA under .local/ios-app-build-40067854460. This run is diagnostic, never accepted as a passed build. Last full green remains build 14, run 40056346004 (66 tests, zero warnings), with verified IPA D:/Downloads/TwilDiary-native-build14.ipa.
 
