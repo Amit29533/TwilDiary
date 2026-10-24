@@ -11,7 +11,7 @@ import TwilDiaryCore
             batches.append(batch)
             return [batch[0]: PublicRating(score: 7.3, state: "rated"), "unrequested": PublicRating(score: 9.9, state: "rated")]
         }
-        XCTAssertEqual(batches.map(\.count), [24, 24, 2])
+        XCTAssertEqual(batches.map(\.count), Array(repeating: 4, count: 12) + [2])
         XCTAssertEqual(batches.flatMap { $0 }, ids)
         XCTAssertEqual(ratings.entries.count, 50)
         XCTAssertNil(ratings.entries["unrequested"])
@@ -88,4 +88,34 @@ import TwilDiaryCore
         await ratings.prepare(["one"]) { _ in ["one": PublicRating(score: 8.1, state: "rated")] }
         XCTAssertEqual(ratings.entries["one"]?.score, 8.1)
     }
+    func testProviderOutageStopsRemainingBatchesAndExplicitRetryBypassesShortFailureCache() async {
+        let ratings = CommunityRatingsController()
+        let ids = (0..<100).map { "title-\($0)" }
+        var calls = 0
+        await ratings.prepare(ids) { _ in calls += 1; throw APIError.message("Offline") }
+        XCTAssertEqual(calls, 1); XCTAssertEqual(ratings.entries.count, 100)
+        XCTAssertFalse(ratings.loading); XCTAssertTrue(ratings.unavailable)
+        ratings.retryUnavailable()
+        await ratings.prepare(ids) { batch in calls += 1; return Dictionary(uniqueKeysWithValues: batch.map { ($0, PublicRating(score: nil, state: "unrated")) }) }
+        XCTAssertEqual(calls, 26); XCTAssertFalse(ratings.unavailable)
+    }
+    func testUnavailableEnvelopeAlsoStopsFutileBatchesWithoutTreatingUnratedAsAnOutage() async {
+        let ratings = CommunityRatingsController()
+        var calls = 0
+        await ratings.prepare((0..<60).map(String.init)) { batch in calls += 1; return Dictionary(uniqueKeysWithValues: batch.map { ($0, PublicRating(score: nil, state: "unavailable")) }) }
+        XCTAssertEqual(calls, 1); XCTAssertEqual(ratings.entries.count, 60); XCTAssertFalse(ratings.loading)
+    }
+
+    func testSlowSuccessfulProviderStopsAtTheWholeLoadBudgetAndPublishesItsFirstBatch() async {
+        var now = Date(timeIntervalSince1970: 1_000_000)
+        let ratings = CommunityRatingsController(clock: { now })
+        var calls = 0
+        await ratings.prepare((0..<60).map(String.init)) { batch in
+            calls += 1; now = now.addingTimeInterval(13)
+            return Dictionary(uniqueKeysWithValues: batch.map { ($0, PublicRating(score: 8.1, state: "rated")) })
+        }
+        XCTAssertEqual(calls, 1); XCTAssertEqual(ratings.entries["0"]?.score, 8.1)
+        XCTAssertEqual(ratings.entries["59"]?.state, "unavailable"); XCTAssertFalse(ratings.loading)
+    }
+
 }

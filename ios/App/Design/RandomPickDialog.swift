@@ -29,7 +29,21 @@ struct RandomPickDialog: View {
         GeometryReader { proxy in
             ZStack {
                 Color(webHex: "#020106bf").background(.ultraThinMaterial).ignoresSafeArea().onTapGesture { onClose() }.accessibilityHidden(true)
-                ScrollView {
+                ViewThatFits(in: .vertical) {
+                    panel(compact: proxy.size.width < 359).fixedSize(horizontal: false, vertical: true)
+                    ScrollView { panel(compact: proxy.size.width < 359) }
+                }.frame(width: min(480, max(0, proxy.size.width - 38)))
+                    .padding(.vertical, 16)
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+        }.onAppear { choose() }
+            .onChange(of: active.map(\.id)) { _, _ in if picked == nil { rolling = false; choose() } }
+            .task(id: sequence) {
+                guard rolling else { return }
+                do { try await Task.sleep(for: .milliseconds(650)) } catch { return }
+                rolling = false
+            }.accessibilityAction(.escape) { onClose() }
+    }
+    private func panel(compact: Bool) -> some View {
                     VStack(alignment: .leading, spacing: 0) {
                         HStack(spacing: 8) {
                             DiaryIcon(name: "sparkles", size: 17)
@@ -39,7 +53,7 @@ struct RandomPickDialog: View {
                                 .buttonStyle(.plain).accessibilityLabel("Close random pick")
                         }.foregroundStyle(theme.accent).padding(.bottom, 7)
                         if let picked {
-                            pickCard(picked, compact: proxy.size.width < 359).id(sequence)
+                            pickCard(picked, compact: compact).id(sequence)
                                 .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 14)))
                             HStack(spacing: 10) {
                                 Button { choose() } label: { HStack(spacing: 7) { DiaryIcon(name: "shuffle", size: 18); Text("Pick again") }.frame(maxWidth: .infinity).frame(minHeight: 44) }
@@ -58,21 +72,10 @@ struct RandomPickDialog: View {
                             }.multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.horizontal, 12).padding(.vertical, 28)
                         }
                     }.padding(16)
-                }.fixedSize(horizontal: false, vertical: true).frame(maxHeight: max(0, proxy.size.height - 32))
-                    .frame(width: min(480, max(0, proxy.size.width - 38)))
-                    .background(Color(webHex: "#0d0d12"), in: RoundedRectangle(cornerRadius: 26))
-                    .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(theme.accent.opacity(0.3137)))
-                    .shadow(color: theme.accent.opacity(0.11), radius: 45)
-                    .shadow(color: .black.opacity(0.8), radius: 50, y: 30)
-                    .accessibilityElement(children: .contain).accessibilityAddTraits(.isModal).accessibilityIdentifier("random-pick-dialog")
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.onAppear { choose() }
-            .onChange(of: active.map(\.id)) { _, _ in if picked == nil { rolling = false; choose() } }
-            .task(id: sequence) {
-                guard rolling else { return }
-                do { try await Task.sleep(for: .milliseconds(650)) } catch { return }
-                rolling = false
-            }.accessibilityAction(.escape) { onClose() }
+                        .background(Color(webHex: "#0d0d12"), in: RoundedRectangle(cornerRadius: 26))
+                        .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(theme.accent.opacity(0.3137)))
+                        .shadow(color: .black.opacity(0.6), radius: 30, y: 15)
+                        .accessibilityElement(children: .contain).accessibilityAddTraits(.isModal).accessibilityIdentifier("random-pick-dialog")
     }
 
     private func pickCard(_ title: MediaTitle, compact: Bool) -> some View {

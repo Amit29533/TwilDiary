@@ -81,6 +81,7 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
 @MainActor final class DiaryAPI {
     var credential: AccessCredential?
     private let session: URLSession
+    private let boundedReadSession: URLSession
     private let storage: any SessionStoring
     private var sessionGeneration = UUID()
     init(configuration: URLSessionConfiguration = .ephemeral, storage: any SessionStoring = KeychainSessionStorage()) {
@@ -90,6 +91,10 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
         config.urlCache = nil; config.requestCachePolicy = .reloadIgnoringLocalCacheData
         config.timeoutIntervalForRequest = 30
         session = URLSession(configuration: config, delegate: StopRedirects(), delegateQueue: nil)
+        let bounded = config.copy() as! URLSessionConfiguration
+        bounded.timeoutIntervalForRequest = 8
+        bounded.timeoutIntervalForResource = 10
+        boundedReadSession = URLSession(configuration: bounded, delegate: StopRedirects(), delegateQueue: nil)
         credential = storage.read()
     }
     func authenticate(_ value: AccessCredential) async throws {
@@ -111,12 +116,13 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
         storage.delete()
         credential = nil
     }
-    func request<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> T {
+    func request<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil, timeout: TimeInterval? = nil) async throws -> T {
         let generation = sessionGeneration
         guard path.hasPrefix("/api/"), let url = URL(string: path, relativeTo: AppConfiguration.backend)?.absoluteURL,
               BackendEndpoint.isPrivateAPI(url) else { throw APIError.message("Invalid diary request.") }
         guard let credential, credential.isValid else { throw APIError.signIn }
         var request = URLRequest(url: url)
+        if let timeout { request.timeoutInterval = timeout }
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("CF_Authorization=\(credential.token)", forHTTPHeaderField: "Cookie")
@@ -125,7 +131,7 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             if let body { request.httpBody = try JSONSerialization.data(withJSONObject: body) }
         }
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await (timeout == nil ? session : boundedReadSession).data(for: request)
         guard generation == sessionGeneration else { throw CancellationError() }
         guard let http = response as? HTTPURLResponse else { throw APIError.message("No response from the diary.") }
         guard http.statusCode != 401 && http.statusCode != 403 && !(300..<400).contains(http.statusCode) else { throw APIError.signIn }

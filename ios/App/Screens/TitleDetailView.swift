@@ -6,6 +6,9 @@ struct TitleDetailView: View {
     let id: String
     var linkedSeason: Int? = nil
     var focusEpisodes = false
+    var focusNotes = false
+    @State private var didFocusNotes = false
+    @State private var choosingWatchDate = false
     @State private var didFocusEpisodes = false
     @Environment(DiaryStore.self) private var store
     @AppStorage("theme") private var theme = DiaryTheme.twilight
@@ -70,7 +73,7 @@ struct TitleDetailView: View {
                         }.padding(.horizontal, 14).padding(.bottom, 32)
                     }.scrollDismissesKeyboard(.interactively).background(alignment: .top) {
                         TitleArtworkBackdrop(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, name: title.name)
-                    }.background(.black).background(EdgeSwipeBackOnly())
+                    }.background(.black)
                         .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -95,6 +98,21 @@ struct TitleDetailView: View {
                             if !hideSpoilers { await revealSeason(title) }
                         }
                         .task(id: cardRevision(title)) { await loadCard(title) }
+                        .task {
+                            if focusNotes && !didFocusNotes {
+                                showNotes = true
+                                await Task.yield()
+                                guard !Task.isCancelled else { return }
+                                didFocusNotes = true; proxy.scrollTo("notes", anchor: .top)
+                            }
+                        }
+                        .sheet(isPresented: $choosingWatchDate) {
+                            NavigationStack {
+                                ScrollView { DatePicker("Watch date", selection: $watchDate, in: ...store.now, displayedComponents: .date).datePickerStyle(.graphical).padding(16) }
+                                    .navigationTitle("Watch date").navigationBarTitleDisplayMode(.inline)
+                                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { choosingWatchDate = false } } }
+                            }.presentationDetents([.medium, .large])
+                        }
                         .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
                         .onChange(of: title.version) { _, version in
                             // A confirmed notes save may be followed by delayed snapshot reconciliation.
@@ -196,7 +214,16 @@ struct TitleDetailView: View {
                         HStack(spacing: 7) { DiaryIcon(name: "star", size: 16).foregroundStyle(theme.accent); Text(title.isSeries ? "Rate show" : "Rate movie") }.frame(maxWidth: .infinity, minHeight: 44)
                     }
                 }.font(.system(size: 14)).foregroundStyle(Color(webHex: "#c5c0cf")).buttonStyle(.plain).padding(.top, 6)
-                if showDate { DatePicker("Watch date", selection: $watchDate, in: ...store.now, displayedComponents: .date).datePickerStyle(.compact).font(.subheadline).frame(maxWidth: .infinity).clipped().disabled(store.writesBlocked); Text("Used for your next watch or progress update.").font(.caption).foregroundStyle(.secondary) }
+                if showDate {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Watch date").font(.system(size: 13)).foregroundStyle(.secondary)
+                        Button { choosingWatchDate = true } label: {
+                            HStack(spacing: 8) { DiaryIcon(name: "calendar-days", size: 17); Text(watchDate.formatted(.dateTime.day().month(.abbreviated).year())).fixedSize(horizontal: false, vertical: true); Spacer(minLength: 0); DiaryIcon(name: "chevron-down", size: 13) }
+                                .font(.system(size: 15)).padding(.horizontal, 12).frame(minHeight: 44)
+                        }.buttonStyle(.plain).background { DiaryControlSurface(shape: RoundedRectangle(cornerRadius: 12), field: true) }.accessibilityIdentifier("title-watch-date-value").disabled(store.writesBlocked)
+                        Text("Used for your next watch or progress update.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
                 if showRating { ratingPanel(title).padding(.top, 10) }
             } else { ProgressView("Loading progress…") }
         }.diaryPanel(padding: 15, radius: 24, accentBorder: true)
@@ -363,7 +390,7 @@ struct TitleDetailView: View {
     private var locations: [FileLocation] { store.workspace.locations.filter { $0.titleId == id } }
     private var serverLabel: String { ServerAvailability.label(locations) }
     private var percent: Int { guard let card, card.progress.total > 0 else { return 0 }; return Int((Double(card.progress.watched) / Double(card.progress.total) * 100).rounded()) }
-    private func remaining(_ title: MediaTitle) -> Int? { title.isSeries ? SeasonProgress.calculate(title: title, workspace: store.workspace, season: season).remainingMinutes : title.runtimeMinutes.map { card?.progress.watched == 1 ? 0 : $0 } }
+    private func remaining(_ title: MediaTitle) -> Int? { title.isSeries ? store.seasonProgress(title, season: season).remainingMinutes : title.runtimeMinutes.map { card?.progress.watched == 1 ? 0 : $0 } }
     private func loadCard(_ title: MediaTitle) async {
         let request = UUID(), requestedSeason = season
         cardRequest = request

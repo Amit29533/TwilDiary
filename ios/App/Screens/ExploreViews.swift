@@ -3,10 +3,11 @@ import TwilDiaryCore
 
 struct ExploreView: View {
     @Environment(DiaryStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     @State private var showSearch = false
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Explore", onSearch: { showSearch.toggle() })
+            PageHeader(name: "Explore", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "explore-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }

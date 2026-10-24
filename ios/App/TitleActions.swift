@@ -14,7 +14,19 @@ import TwilDiaryCore
 
 extension DiaryStore {
     @discardableResult func setSeasonProgress(_ title: MediaTitle, season: Int, count: Int, watchedAt: Date) async -> Bool {
-        await perform {
+        await perform { try await self.applySeasonProgress(title, season: season, count: count, watchedAt: watchedAt) }
+    }
+    @discardableResult func completeCardSeason(_ titleID: String, season: Int) async -> Bool {
+        await perform(cardID: titleID) {
+            guard let title = self.title(titleID), title.isSeries else { throw APIError.message("Choose a show season.") }
+            try await self.prepareSavedSeason(title, number: season)
+            guard let refreshed = self.title(titleID) else { throw CancellationError() }
+            let progress = SeasonProgress.calculate(title: refreshed, workspace: self.workspace, season: season)
+            // This intentionally completes only this season. Future/unknown episodes are rejected by the existing plan.
+            try await self.applySeasonProgress(refreshed, season: season, count: progress.total, watchedAt: self.now)
+        }
+    }
+    private func applySeasonProgress(_ title: MediaTitle, season: Int, count: Int, watchedAt: Date) async throws {
             guard DiaryDate.day(watchedAt) <= DiaryDate.day(self.now) else { throw APIError.message("Choose today or a past watch date") }
             let key = title.id + ":" + String(season)
             if self.pendingSeasonAdjustments[key] == nil {
@@ -43,7 +55,6 @@ extension DiaryStore {
             }
             self.pendingSeasonAdjustments.removeValue(forKey: key)
             } catch { self.rejectPendingSeason(key: key, error: error); throw error }
-        }
     }
 
     @discardableResult func recordViewing(_ title: MediaTitle, episode: Episode? = nil, rewatch: Bool = false, watchedAt: Date) async -> Bool {

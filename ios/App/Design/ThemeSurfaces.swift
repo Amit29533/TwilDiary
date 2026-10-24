@@ -28,7 +28,7 @@ struct DiaryControlSurface<SurfaceShape: Shape>: View {
         ZStack {
             if theme == .glass {
                 if reduceTransparency { shape.fill(Color(webHex: "#222226")) }
-                else { shape.fill(.ultraThinMaterial).overlay(shape.fill(Color(webHex: "#28282c").opacity(0.5))) }
+                else { shape.fill(.clear).glassEffect(in: shape).overlay(shape.fill(Color(webHex: "#19191d").opacity(0.16))) }
                 shape.fill(LinearGradient(stops: [.init(color: .white.opacity(0.065), location: 0), .init(color: .white.opacity(0.012), location: 0.5), .init(color: .white.opacity(0.047), location: 1)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 shape.fill(RadialGradient(colors: [.white.opacity(0.12), .clear], center: .topLeading, startRadius: 0, endRadius: 180))
                 shape.stroke(.white.opacity(selected ? 0.32 : 0.18), lineWidth: 1)

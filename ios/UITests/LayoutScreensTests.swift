@@ -35,9 +35,9 @@ import XCTest
         capture("Title", app: app)
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["Search library"].tap()
-        let field = app.textFields["library-search"]
+        let field = app.textFields["Search library and online"]
         XCTAssertTrue(field.waitForExistence(timeout: 5)); field.typeText("Frieren\n")
-        XCTAssertTrue(app.buttons["title-frieren"].exists); XCTAssertFalse(app.buttons["title-again"].exists)
+        XCTAssertTrue(app.buttons["search-library-frieren"].exists); XCTAssertFalse(app.buttons["search-library-again"].exists)
         capture("Search", app: app)
         app.buttons["tab-stats"].tap(); XCTAssertTrue(app.buttons["stats-calendar"].waitForExistence(timeout: 5)); capture("Stats", app: app)
         for tab in ["home", "library", "glance", "stats", "more"] {
@@ -60,13 +60,30 @@ import XCTest
             XCTAssertTrue(item.isHittable); item.tap(); XCTAssertTrue(item.isSelected); capture("Theme " + theme, app: app)
         }
         app.buttons["appearance-done"].tap(); app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
-        let search = app.textFields["library-search"]
+        let search = app.textFields["Search library and online"]
         XCTAssertTrue(search.waitForExistence(timeout: 5)); XCTAssertGreaterThanOrEqual(search.frame.minX, 14); XCTAssertLessThanOrEqual(search.frame.maxX, app.frame.width - 14)
         search.typeText("Frieren\n"); capture("Glass search", app: app)
         app.buttons["tab-more"].tap(); openThemes(app)
         let twilight = app.buttons["theme-twilight"]
         for _ in 0..<5 { if twilight.isHittable { break }; app.swipeDown() }
         XCTAssertTrue(twilight.isHittable); twilight.tap(); XCTAssertTrue(twilight.isSelected)
+    }
+    func testExpandedSummaryAndWatchDateRemainInsideEveryPhone() {
+        let app = launch(); app.buttons["tab-library"].tap(); app.buttons["title-frieren"].tap()
+        XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: 5)); app.buttons["More"].tap()
+        let summary = app.staticTexts["title-synopsis-text"]
+        XCTAssertTrue(summary.exists); XCTAssertGreaterThan(summary.frame.width, app.frame.width * 0.8)
+        XCTAssertLessThan(summary.frame.minX, 24)
+        capture("Expanded synopsis full width", app: app)
+        let watched = app.buttons["watch-date"]
+        for _ in 0..<5 { if watched.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(watched.isHittable); watched.tap()
+        let value = app.buttons["title-watch-date-value"]
+        for _ in 0..<3 { if value.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(value.isHittable); XCTAssertGreaterThanOrEqual(value.frame.minX, 14); XCTAssertLessThanOrEqual(value.frame.maxX, app.frame.width - 14)
+        capture("Watch date contained", app: app)
+        value.tap(); XCTAssertTrue(app.datePickers.firstMatch.waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
     }
     private func openThemes(_ app: XCUIApplication) {
         let theme = app.buttons["settings-theme"]

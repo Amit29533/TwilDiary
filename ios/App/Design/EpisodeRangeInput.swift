@@ -34,21 +34,34 @@ import UIKit
         control.changed = onChange; control.committed = onCommit; control.cancelled = onCancel
     }
     final class TrackSlider: UISlider {
+        private weak var popGesture: UIGestureRecognizer?
+        private var popWasEnabled = false
+        private func protectTracking() {
+            var responder: UIResponder? = self
+            while let current = responder {
+                if let controller = current as? UIViewController, let gesture = controller.navigationController?.interactiveContentPopGestureRecognizer {
+                    popGesture = gesture; popWasEnabled = gesture.isEnabled; gesture.isEnabled = false; return
+                }
+                responder = current.next
+            }
+        }
+        private func restoreNavigation() { popGesture?.isEnabled = popWasEnabled; popGesture = nil }
+        override func didMoveToWindow() { super.didMoveToWindow(); if window == nil { restoreNavigation() } }
         var changed: (@MainActor (Double) -> Void)?
         var committed: (@MainActor (Double) -> Void)?
         var cancelled: (@MainActor () -> Void)?
         override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: 44) }
         override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-            guard isEnabled else { return false }; updateCount(at: touch.location(in: self)); return true
+            guard isEnabled else { return false }; protectTracking(); updateCount(at: touch.location(in: self)); return true
         }
         override func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
             updateCount(at: touch.location(in: self)); return true
         }
         override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
             if let touch { updateCount(at: touch.location(in: self)) }
-            committed?(Double(value))
+            restoreNavigation(); committed?(Double(value))
         }
-        override func cancelTracking(with event: UIEvent?) { cancelled?() }
+        override func cancelTracking(with event: UIEvent?) { restoreNavigation(); cancelled?() }
         override func accessibilityIncrement() { adjust(by: 1) }
         override func accessibilityDecrement() { adjust(by: -1) }
         private func updateCount(at point: CGPoint) {

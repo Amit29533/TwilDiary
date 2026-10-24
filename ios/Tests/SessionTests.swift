@@ -779,6 +779,7 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         await store.loadPublicRatings([title, title], source: .trakt)
         XCTAssertEqual(StubProtocol.state.recorded().count, 1)
         XCTAssertEqual(StubProtocol.state.recorded().first?.url?.path, "/api/library/ratings")
+        XCTAssertEqual(StubProtocol.state.recorded().first?.timeoutInterval, 8)
         XCTAssertEqual(store.communityRatings.entries[title.id]?.state, "unavailable")
         XCTAssertNil(store.error); XCTAssertFalse(store.needsSignIn)
         await store.loadPublicRatings([title], source: .trakt)
@@ -844,6 +845,117 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         store.signOut(); XCTAssertTrue(store.cachedPeople.isEmpty)
         do { _ = try await store.person(700034); XCTFail("A signed-out view cannot read cached metadata") } catch { XCTAssertTrue(store.needsSignIn) }
         XCTAssertEqual(StubProtocol.state.recorded().count, 34)
+    }
+    func testProgressCardsShareReadsRetainCategoryCacheAndInvalidateOnlyTheirOwnTitle() async throws {
+        StubProtocol.state.reset { _ in
+            var reply = StubProtocol.Reply(#"{"progress":{"watched":8,"total":16},"season":{"number":1,"name":"Season 1"},"next":{"id":"again-9","number":9},"previous":null}"#)
+            reply.delay = 0.03; return reply
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace
+        let title = try XCTUnwrap(store.title("again"))
+        let revision = store.cardRevision(title.id)
+        async let first = store.card(title)
+        async let second = store.card(title)
+        _ = try await (first, second)
+        _ = try await store.card(title)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1, "Home, Glance and returning categories should share one current read")
+        let unrelated = try XCTUnwrap(store.workspace.titles.firstIndex { $0.id != title.id })
+        store.workspace.titles[unrelated].notes += " unrelated edit"
+        XCTAssertEqual(store.cardRevision(title.id), revision)
+        _ = try await store.card(title)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+        let own = try XCTUnwrap(store.workspace.titles.firstIndex { $0.id == title.id })
+        store.workspace.titles[own].notes += " own edit"
+        XCTAssertNotEqual(store.cardRevision(title.id), revision)
+        _ = try await store.card(try XCTUnwrap(store.title(title.id)))
+        XCTAssertEqual(StubProtocol.state.recorded().count, 2)
+        _ = try await store.card(title, fresh: true)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 3, "Writes must revalidate progress rather than trusting the display cache")
+        store.signOut()
+        do { _ = try await store.card(title); XCTFail("A signed-out card read must not return a cached score") } catch { }
+        XCTAssertEqual(StubProtocol.state.recorded().count, 3)
+    }
+    func testDifferentCardMutationsQueueWithoutDimmingOrDroppingOtherCardsAndDeduplicateSameCard() async throws {
+        let pages = try workspacePages(PreviewData.workspace)
+        StubProtocol.state.reset { request in .init(pages[request.url?.query ?? ""] ?? "{}") }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage))
+        var gate: CheckedContinuation<Void, Never>?
+        var secondRan = false
+        let first = Task { await store.perform(cardID: "again", cardAction: .mark) { await withCheckedContinuation { gate = $0 } } }
+        guard await waitForRegressionCondition({ gate != nil }) else { first.cancel(); XCTFail("First mutation did not start"); return }
+        let second = Task { await store.perform(cardID: "frieren", cardAction: .remove) { secondRan = true } }
+        guard await waitForRegressionCondition({ store.cardActions["frieren"] == .remove }) else { gate?.resume(); _ = await first.value; second.cancel(); XCTFail("Second card did not queue"); return }
+        XCTAssertEqual(store.cardActions["again"], .mark); XCTAssertNil(store.cardActions["night"])
+        XCTAssertFalse(secondRan)
+        let duplicate = await store.perform(cardID: "again") { XCTFail("Duplicate tap ran") }
+        XCTAssertFalse(duplicate)
+        gate?.resume()
+        let firstOK = await first.value, secondOK = await second.value
+        XCTAssertTrue(firstOK); XCTAssertTrue(secondOK); XCTAssertTrue(secondRan)
+        XCTAssertFalse(store.busy); XCTAssertTrue(store.cardActions.isEmpty)
+    }
+    func testSignOutDiscardsQueuedCardWorkBeforeItCanRunInAnotherSession() async throws {
+        StubProtocol.state.reset { _ in .init("{}") }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage))
+        var gate: CheckedContinuation<Void, Never>?
+        var secondRan = false
+        let first = Task { await store.perform(cardID: "again") { await withCheckedContinuation { gate = $0 } } }
+        guard await waitForRegressionCondition({ gate != nil }) else { first.cancel(); XCTFail("First mutation did not start"); return }
+        let second = Task { await store.perform(cardID: "frieren") { secondRan = true } }
+        guard await waitForRegressionCondition({ store.cardActions["frieren"] != nil }) else { gate?.resume(); _ = await first.value; second.cancel(); XCTFail("Second mutation did not queue"); return }
+        store.signOut(); gate?.resume()
+        let firstOK = await first.value, secondOK = await second.value
+        XCTAssertFalse(firstOK); XCTAssertFalse(secondOK); XCTAssertFalse(secondRan)
+        XCTAssertTrue(store.cardActions.isEmpty); XCTAssertTrue(StubProtocol.state.recorded().isEmpty)
+    }
+    func testConfirmedWriteRefreshFailurePreventsQueuedCardFromWritingAgainstStaleData() async throws {
+        StubProtocol.state.reset { _ in .init(503, #"{"error":{"message":"Synthetic refresh outage"}}"#) }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage))
+        var gate: CheckedContinuation<Void, Never>?
+        var secondRan = false
+        let first = Task { await store.perform(cardID: "again") { await withCheckedContinuation { gate = $0 } } }
+        guard await waitForRegressionCondition({ gate != nil }) else { first.cancel(); XCTFail("First mutation did not start"); return }
+        let second = Task { await store.perform(cardID: "frieren") { secondRan = true } }
+        guard await waitForRegressionCondition({ store.cardActions["frieren"] != nil }) else { gate?.resume(); _ = await first.value; second.cancel(); XCTFail("Second mutation did not queue"); return }
+        gate?.resume()
+        let firstOK = await first.value, secondOK = await second.value
+        XCTAssertTrue(firstOK); XCTAssertFalse(secondOK); XCTAssertFalse(secondRan)
+        XCTAssertTrue(store.needsMutationRefresh); XCTAssertTrue(store.cardActions.isEmpty)
+    }
+    func testIdenticalUndoLabelsHaveDistinctLifetimes() {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage))
+        store.undoLabel = "Watch marked"; let first = store.undoNoticeID
+        store.undoLabel = "Watch marked"
+        XCTAssertNotEqual(store.undoNoticeID, first)
+        store.dismissUndo(); XCTAssertNil(store.undoLabel)
+    }
+    func testGlanceCompletionOnlyWritesTheSelectedSeasonAndRetainsUndoReceipts() async throws {
+        let workspace = PreviewData.upcomingWorkspace
+        let pages = try workspacePages(workspace)
+        StubProtocol.state.reset { request in
+            if request.url?.path.hasSuffix("/watches") == true {
+                let body = (try? JSONSerialization.jsonObject(with: request.httpBody ?? Data())) as? [String: Any] ?? [:]
+                let id = body["episodeId"] as? String ?? "missing"
+                let event: [String: Any] = ["id": "new-" + id, "operationId": body["operationId"] ?? "missing", "titleId": "again", "episodeId": id, "watchedAt": "2026-10-23T12:00:00Z", "recordedAt": "2026-10-23T12:00:00Z", "origin": "manual", "version": 1]
+                return .init(String(decoding: try! JSONSerialization.data(withJSONObject: ["event": event, "added": true]), as: UTF8.self))
+            }
+            return .init(pages[request.url?.query ?? ""] ?? "{}")
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = workspace
+        let result = await store.completeCardSeason("again", season: 1)
+        XCTAssertTrue(result); XCTAssertEqual(store.undoLabel, "Season progress updated")
+        let recorded = try StubProtocol.state.recorded().filter { $0.url?.path.hasSuffix("/watches") == true }.map(bodyObject)
+        let expected = Set(workspace.episodes.filter { $0.titleId == "again" && $0.season == 1 && $0.number > 8 }.map(\.id))
+        XCTAssertEqual(Set(recorded.compactMap { $0["episodeId"] as? String }), expected)
+        XCTAssertFalse(recorded.isEmpty)
+        XCTAssertFalse(StubProtocol.state.recorded().contains { $0.url?.path == "/api/titles/bulk" })
+        XCTAssertEqual(store.workspace.episodes.filter { $0.titleId == "again" && $0.season == 2 }.count, 3)
     }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),

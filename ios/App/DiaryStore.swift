@@ -5,10 +5,39 @@ import TwilDiaryCore
     var workspace = Workspace() { didSet { indexWorkspace() } }
     private var titleIndex: [String: MediaTitle] = [:]
     private var progressIndex: [String: Double] = [:]
+    private var seasonProgressIndex: [String: [Int: SeasonProgress]] = [:]
     private var presentTitleIDs = Set<String>()
+    private struct CardInput: Equatable {
+        let title: MediaTitle
+        let episodes: [Episode]
+        let events: [WatchEvent]
+    }
+    private struct CardKey: Hashable {
+        let titleID: String
+        let revision: UUID
+        let session: UUID
+        let season: Int?
+        let day: String
+    }
+    private var cardInputs: [String: CardInput] = [:]
+    private var cardRevisions: [String: UUID] = [:]
+    private var cachedCards: [CardKey: (at: Date, value: WatchCard)] = [:]
+    private var cardReads: [CardKey: (id: UUID, task: Task<WatchCard, Error>)] = [:]
+    func cardRevision(_ id: String) -> UUID? { cardRevisions[id] }
+    private func clearCards() {
+        for read in cardReads.values { read.task.cancel() }
+        cardReads = [:]; cachedCards = [:]; cardInputs = [:]; cardRevisions = [:]
+    }
     var cachedPeople: [Int: (at: Date, value: PersonResponse)] = [:]
     var loading = false
-    var busy = false
+    var busy = false { didSet { if !busy { resumeMutationWaiters() } } }
+    enum CardAction: Equatable { case mark, remove, menu }
+    private(set) var cardActions: [String: CardAction] = [:]
+    private var mutationWaiters: [CheckedContinuation<Void, Never>] = []
+    private func resumeMutationWaiters() {
+        let waiting = mutationWaiters; mutationWaiters.removeAll()
+        for waiter in waiting { waiter.resume() }
+    }
     private(set) var needsMutationRefresh = false
     var writesBlocked: Bool { busy || needsMutationRefresh }
     var mutationRefreshNotice: String? {
@@ -17,7 +46,8 @@ import TwilDiaryCore
     var needsSignIn = true
     var hasLoadedWorkspace = false
     var error: String?
-    var undoLabel: String?
+    private(set) var undoNoticeID = UUID()
+    var undoLabel: String? { didSet { undoNoticeID = UUID() } }
     private(set) var showingCachedSnapshot = false
     private(set) var lastRefreshedAt: Date?
     private(set) var cacheWarning: String?
@@ -77,7 +107,7 @@ import TwilDiaryCore
         do {
             try await api.authenticate(credential)
             guard generation == sessionGeneration else { return }
-            communityRatings.reset(); cachedPeople = [:]
+            communityRatings.reset(); cachedPeople = [:]; clearCards(); cardActions = [:]; resumeMutationWaiters()
             if previousScope != credential.cacheScope {
                 workspace = Workspace(); hasLoadedWorkspace = false; showingCachedSnapshot = false; lastRefreshedAt = nil; cacheWarning = nil
                 needsMutationRefresh = false
@@ -95,7 +125,7 @@ import TwilDiaryCore
         #endif
         sessionGeneration = UUID(); snapshotGeneration = UUID()
         needsMutationRefresh = false
-        api.signOut(); workspace = Workspace(); communityRatings.reset(); cachedPeople = [:]; hasLoadedWorkspace = false; error = nil
+        api.signOut(); workspace = Workspace(); communityRatings.reset(); cachedPeople = [:]; clearCards(); cardActions = [:]; resumeMutationWaiters(); hasLoadedWorkspace = false; error = nil
         showingCachedSnapshot = false; lastRefreshedAt = nil; loading = false; busy = false
         do { try cache.removeAll(); cacheWarning = nil }
         catch { cacheWarning = "The saved diary could not be removed. It remains encrypted on this device." }
@@ -157,13 +187,33 @@ import TwilDiaryCore
         progressIndex = titleIndex.mapValues { title in
             LibraryProgress.fraction(title: title, episodes: episodes[title.id] ?? [], activeEvents: events[title.id] ?? [])
         }
+        seasonProgressIndex = titleIndex.mapValues { title in
+            let rows = episodes[title.id] ?? []
+            let scoped = Workspace(titles: [title], episodes: rows, events: events[title.id] ?? [])
+            let seasons = Set(rows.map(\.season)).union(title.seasons?.map(\.number) ?? [])
+            return Dictionary(uniqueKeysWithValues: seasons.map { ($0, SeasonProgress.calculate(title: title, workspace: scoped, season: $0)) })
+        }
+        let inputs = titleIndex.mapValues { title in CardInput(title: title, episodes: episodes[title.id] ?? [], events: events[title.id] ?? []) }
+        let changed = Set(cardInputs.keys).union(inputs.keys).filter { cardInputs[$0] != inputs[$0] }
+        for id in changed { cardRevisions[id] = inputs[id] == nil ? nil : UUID() }
+        cardInputs = inputs
+        cachedCards = cachedCards.filter { cardRevisions[$0.key.titleID] == $0.key.revision }
+        for (key, read) in cardReads where cardRevisions[key.titleID] != key.revision { read.task.cancel(); cardReads.removeValue(forKey: key) }
         presentTitleIDs = Set(workspace.locations.filter { $0.evidence == "present" }.map(\.titleId))
     }
     func title(_ id: String) -> MediaTitle? { titleIndex[id] }
+    func seasonProgress(_ title: MediaTitle, season: Int) -> SeasonProgress {
+        seasonProgressIndex[title.id]?[season] ?? SeasonProgress.calculate(title: title, workspace: workspace, season: season)
+    }
+    func cachedCard(_ title: MediaTitle, season: Int? = nil) -> WatchCard? {
+        guard !needsSignIn, let revision = cardRevisions[title.id] else { return nil }
+        let key = CardKey(titleID: title.id, revision: revision, session: sessionGeneration, season: season, day: DiaryDate.day(now))
+        return cachedCards[key]?.value
+    }
     func libraryProgress(_ title: MediaTitle) -> Double { progressIndex[title.id] ?? 0 }
     func hasPresentLocation(_ titleID: String) -> Bool { presentTitleIDs.contains(titleID) }
     func browserCredential() -> AccessCredential? { api.credential }
-    func read<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> T {
+    func read<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil, timeout: TimeInterval? = nil) async throws -> T {
         #if DEBUG
         if let fixture {
             let value: T = try fixture.request(path, method: method, body: body)
@@ -176,7 +226,7 @@ import TwilDiaryCore
         #endif
         let generation = sessionGeneration
         do {
-            let value: T = try await api.request(path, method: method, body: body)
+            let value: T = try await api.request(path, method: method, body: body, timeout: timeout)
             guard generation == sessionGeneration else { throw CancellationError() }
             return value
         }
@@ -204,7 +254,8 @@ import TwilDiaryCore
     func publicScore(_ title: MediaTitle, source: PublicRatingSource) -> Double? {
         CommunityScore.value(tmdb: title.communityScore, trakt: communityRatings.entries[title.id], source: source)
     }
-    func loadPublicRatings(_ titles: [MediaTitle], source: PublicRatingSource) async {
+    func loadPublicRatings(_ titles: [MediaTitle], source: PublicRatingSource, retry: Bool = false) async {
+        if retry { communityRatings.retryUnavailable() }
         guard source == .trakt, !needsSignIn else { return }
         await communityRatings.prepare(titles.map(\.id)) { ids in
             #if DEBUG
@@ -215,15 +266,38 @@ import TwilDiaryCore
                 })
             }
             #endif
-            let page: PublicRatingsPage = try await self.read(CatalogTools.apiPath("/api/library/ratings", query: ["ids": ids.joined(separator: ",")]))
+            let page: PublicRatingsPage = try await self.read(CatalogTools.apiPath("/api/library/ratings", query: ["ids": ids.joined(separator: ",")]), timeout: 8)
             return page.ratings
         }
     }
-    func card(_ title: MediaTitle, season: Int? = nil) async throws -> WatchCard {
-        if isPreview { return PreviewData.card(title, workspace: workspace, season: season) }
-        var query = "?day=\(DiaryDate.day())"
-        if let season { query += "&season=\(season)" }
-        return try await read("/api/glance/\(title.id)" + query)
+    func card(_ title: MediaTitle, season: Int? = nil, fresh: Bool = false) async throws -> WatchCard {
+        guard !needsSignIn, !Task.isCancelled else { throw CancellationError() }
+        let key = CardKey(titleID: title.id, revision: cardRevisions[title.id] ?? snapshotGeneration, session: sessionGeneration, season: season, day: DiaryDate.day(now))
+        if !fresh, let cached = cachedCards[key], Date.now.timeIntervalSince(cached.at) < 120 { return cached.value }
+        let flight: (id: UUID, task: Task<WatchCard, Error>)
+        if !fresh, let existing = cardReads[key] { flight = existing }
+        else {
+            flight = (UUID(), Task {
+                if self.isPreview { return PreviewData.card(title, workspace: self.workspace, season: season) }
+                var query = "?day=\(key.day)"
+                if let season { query += "&season=\(season)" }
+                return try await self.read("/api/glance/\(title.id)" + query)
+            })
+            cardReads[key] = flight
+        }
+        defer { if cardReads[key]?.id == flight.id { cardReads.removeValue(forKey: key) } }
+        let value: WatchCard
+        do { value = try await flight.task.value }
+        catch {
+            guard key.session == sessionGeneration, key.revision == (cardRevisions[title.id] ?? snapshotGeneration) else { throw CancellationError() }
+            throw error
+        }
+        try Task.checkCancellation()
+        guard key.session == sessionGeneration, !needsSignIn,
+              key.revision == (cardRevisions[title.id] ?? snapshotGeneration) else { throw CancellationError() }
+        if cachedCards.count >= 128, let oldest = cachedCards.min(by: { $0.value.at < $1.value.at })?.key { cachedCards.removeValue(forKey: oldest) }
+        cachedCards[key] = (.now, value)
+        return value
     }
     func loadSeason(_ title: MediaTitle, number: Int) async {
         await perform {
@@ -231,10 +305,10 @@ import TwilDiaryCore
         }
     }
     func markNext(_ title: MediaTitle, season: Int? = nil, expectedEpisode: String? = nil) async {
-        await perform {
+        await perform(cardID: title.id, cardAction: .mark) {
             let key = title.id
             if self.pendingWatches[key] == nil {
-                let card = try await self.card(title, season: season)
+                let card = try await self.card(title, season: season, fresh: true)
                 if let expectedEpisode, card.next?.id != expectedEpisode { throw APIError.message("Progress changed. Refresh this title before marking another episode.") }
                 if title.isSeries && card.next == nil { throw APIError.message("No aired episode is ready to mark. Load this season’s episodes or choose another season.") }
                 self.pendingWatches[key] = ["operationId": UUID().uuidString, "episodeId": card.next?.id as Any? ?? NSNull(), "watchedAt": self.now.ISO8601Format(), "rewatch": false]
@@ -252,9 +326,9 @@ import TwilDiaryCore
         }
     }
     func removeLatest(_ title: MediaTitle, season: Int? = nil, expected: WatchCard.Previous? = nil) async {
-        await perform {
+        await perform(cardID: title.id, cardAction: .remove) {
             if self.pendingRemovals[title.id] == nil {
-                let card = try await self.card(title, season: season)
+                let card = try await self.card(title, season: season, fresh: true)
                 guard let previous = card.previous else { return }
                 if let expected, previous != expected { throw APIError.message("Watch history changed. Refresh this title before removing a watch.") }
                 self.pendingRemovals[title.id] = previous
@@ -282,6 +356,13 @@ import TwilDiaryCore
         await perform {
             var body = values; body["expectedVersion"] = expectedVersion ?? title.version
             let _: EmptyResponse = try await self.read("/api/titles/\(title.id)", method: "PATCH", body: body)
+        }
+    }
+    @discardableResult func patchCard(_ titleID: String, values: [String: Any]) async -> Bool {
+        await perform(cardID: titleID) {
+            guard let title = self.title(titleID), title.deletedAt == nil else { throw APIError.message("This title is no longer in your library.") }
+            var body = values; body["expectedVersion"] = title.version
+            let _: EmptyResponse = try await self.read("/api/titles/\(titleID)", method: "PATCH", body: body)
         }
     }
     @discardableResult func setStatus(_ title: MediaTitle, status: String, watchedAt: Date? = nil) async -> Bool {
@@ -348,9 +429,19 @@ import TwilDiaryCore
             }
         }
     }
-    @discardableResult func perform(_ action: () async throws -> Void) async -> Bool {
-        guard !busy, canMutate else { return false }
+    @discardableResult func perform(cardID: String? = nil, cardAction: CardAction = .menu, _ action: () async throws -> Void) async -> Bool {
         let generation = sessionGeneration
+        if let cardID {
+            guard cardActions[cardID] == nil, canMutate else { return false }
+            cardActions[cardID] = cardAction
+        }
+        defer { if let cardID, generation == sessionGeneration { cardActions.removeValue(forKey: cardID) } }
+        if cardID != nil {
+            while busy && generation == sessionGeneration && !Task.isCancelled {
+                await withCheckedContinuation { mutationWaiters.append($0) }
+            }
+        }
+        guard generation == sessionGeneration, !Task.isCancelled, !needsSignIn, !busy, canMutate else { return false }
         snapshotGeneration = UUID()
         busy = true; defer { if generation == sessionGeneration { busy = false } }
         do {

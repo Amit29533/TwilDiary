@@ -54,6 +54,7 @@ struct CatalogSearchView: View {
     @State private var totalPages = 0
     @State private var libraryLimit = 20
     @State private var generation = UUID()
+    @State private var completedQuery: String?
     @State private var pageTask: Task<Void, Never>?
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -86,8 +87,8 @@ struct CatalogSearchView: View {
             }
             if allowsManual { Button("Add manually") { showManual = true }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 44) }
         }.padding(.horizontal, 14).padding(.bottom, 12)
-            .task(id: normalized) { await search(number: 1, reset: true) }
-            .onDisappear { pageTask?.cancel(); generation = UUID() }
+            .task(id: normalized) { if completedQuery != normalized || failure != nil { await search(number: 1, reset: true) } }
+            .onDisappear { pageTask?.cancel(); generation = UUID(); loading = false }
             .sheet(isPresented: $showManual) { ManualTitleView(initialName: normalized) { id in chooseLibrary(id) } }
     }
     private func onlineRow(_ item: CatalogItem) -> some View {
@@ -112,7 +113,7 @@ struct CatalogSearchView: View {
             if store.title(id) == nil { await store.refresh() }
             guard store.title(id) != nil else { failure = "This title is no longer available. Refresh your library and try again."; return }
             if let onLibraryChoose { onLibraryChoose(id) }
-            else { onClose?(); router.openTitle(id, tab: router.selectedTab) }
+            else { router.openTitle(id, tab: router.selectedTab) }
         }
     }
     private func requestPage(_ number: Int) { pageTask?.cancel(); pageTask = Task { await search(number: number) } }
@@ -128,6 +129,7 @@ struct CatalogSearchView: View {
             let response = try await store.searchDiary(value, page: number)
             guard !Task.isCancelled, request == generation, normalized == value else { return }
             guard response.page == number else { throw APIError.message("Search returned an unexpected page. Please retry.") }
+            completedQuery = value
             identified = DiarySearchTools.merging(identified, response.library)
             results = response.online; page = response.page; totalPages = response.totalPages
             failure = response.onlineError.isEmpty ? nil : response.onlineError
@@ -167,7 +169,7 @@ struct CatalogDetailView: View {
             }.padding(.horizontal, 14).padding(.bottom, 32)
         }.background(alignment: .top) {
             if let details { TitleArtworkBackdrop(path: CatalogTools.image(details.details.backdropPath, size: "w780"), name: details.details.name) }
-        }.background(.black).background(EdgeSwipeBackOnly()).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+        }.background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .task(id: route) { await load() }
     }
     private func accepted(_ id: String) { if let onImported { onImported(id) } else { router.replaceTitle(id, tab: router.selectedTab) } }

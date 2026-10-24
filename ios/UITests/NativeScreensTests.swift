@@ -84,6 +84,9 @@ import UIKit
         XCTAssertTrue(planned.isHittable); planned.tap()
         let name = app.staticTexts["random-picked-name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5)); XCTAssertEqual(name.label, "A Quiet Orbit")
+        let dialog = app.otherElements["random-pick-dialog"]
+        XCTAssertTrue(dialog.exists); XCTAssertLessThan(dialog.frame.height, app.frame.height * 0.75)
+        XCTAssertGreaterThan(dialog.frame.minY, 70)
         XCTAssertFalse(app.buttons["random-pick-again"].isEnabled, "The planned fixture has only one eligible title")
         capture("Home planned random pick")
         app.buttons["Close random pick"].tap()
@@ -124,7 +127,7 @@ import UIKit
         XCTAssertEqual(count.label, "1 watch")
         XCTAssertTrue(app.staticTexts["Watch date unknown"].waitForExistence(timeout: 5)); capture("History unknown dates")
         app.buttons["Clear filters"].tap()
-        let search = app.textFields["Search watch history"]
+        let search = app.textFields["Filter watch history"]
         search.tap(); search.typeText("Ｆｒｉｅｒｅｎ\n")
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'history-event-'")).firstMatch.waitForExistence(timeout: 5))
         let row = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'history-event-'")).firstMatch
@@ -159,13 +162,13 @@ import UIKit
     func testLibrarySearchAndSelectionPersistAcrossTabs() {
         let app = launch()
         app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
-        let search = app.textFields["library-search"]
+        let search = app.textFields["Search library and online"]
         XCTAssertTrue(search.waitForExistence(timeout: 5)); search.tap(); search.typeText("Frieren\n")
-        XCTAssertTrue(app.buttons["title-frieren"].exists); XCTAssertFalse(app.buttons["title-again"].exists)
+        XCTAssertTrue(app.buttons["search-library-frieren"].exists); XCTAssertFalse(app.buttons["search-library-again"].exists)
         capture("Library search")
         app.buttons["tab-home"].tap(); app.buttons["tab-library"].tap()
         XCTAssertEqual(search.value as? String, "Frieren")
-        app.buttons["Clear search"].tap(); app.buttons["List layout"].tap(); capture("Library list")
+        app.buttons["Close search"].tap(); app.buttons["List layout"].tap(); capture("Library list")
         app.buttons["Genre sections"].tap(); capture("Library genres")
     }
     func testLibraryStatusGenreAndDriveComposeThenClearTogether() {
@@ -207,11 +210,12 @@ import UIKit
         let picker = app.buttons["settings-rating-source"]
         XCTAssertTrue(picker.waitForExistence(timeout: 5)); picker.tap(); app.buttons["Trakt"].tap()
         app.buttons["tab-library"].tap()
-        let message = app.staticTexts["Some Trakt ratings are unavailable. Try again later or select TMDB in Settings."]
+        let message = app.staticTexts["Some Trakt ratings are unavailable."]
         XCTAssertTrue(message.waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["title-again"].isHittable)
         XCTAssertFalse((app.buttons["title-again"].value as? String)?.contains("Rating") == true)
-        capture("Library community ratings unavailable")
+        XCTAssertTrue(app.buttons["ratings-retry"].exists); app.buttons["ratings-retry"].tap()
+        XCTAssertTrue(message.waitForExistence(timeout: 5)); capture("Library community ratings unavailable")
         app.buttons["tab-more"].tap(); picker.tap(); app.buttons["TMDB"].tap()
         app.buttons["tab-library"].tap(); XCTAssertFalse(message.exists)
     }
@@ -681,6 +685,61 @@ import UIKit
                 if index == 8 { XCTAssertGreaterThan(piece[1], 70, "Up next must have a softer accent tint") }
             }
         }
+    }
+    func testNativeExploreReturnsByDoneActiveHomeTabAndFullContentSwipe() {
+        let app = launch(); app.buttons["tab-home"].tap()
+        let explore = app.buttons["explore-shortcut"]
+        for _ in 0..<4 { if explore.isHittable { break }; app.swipeUp() }
+        explore.tap(); XCTAssertTrue(app.buttons["explore-done"].waitForExistence(timeout: 5))
+        app.buttons["explore-done"].tap()
+        XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5))
+        explore.tap(); XCTAssertTrue(app.buttons["explore-done"].waitForExistence(timeout: 5))
+        app.buttons["tab-home"].tap()
+        XCTAssertFalse(app.buttons["explore-done"].exists)
+        explore.tap(); XCTAssertTrue(app.buttons["explore-done"].waitForExistence(timeout: 5))
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.62)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.62)))
+        XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5))
+        capture("Native Explore returned Home")
+    }
+    func testSearchReturnsDirectlyToRetainedResultsAndGlanceRemainsScoped() {
+        let app = launch(); app.buttons["tab-home"].tap(); app.buttons["search-twildiary"].tap()
+        let field = app.textFields["Search library and online"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5)); field.typeText("Frieren\n")
+        app.buttons["search-library-frieren"].tap()
+        XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.52)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.52)))
+        XCTAssertTrue(field.waitForExistence(timeout: 5)); XCTAssertEqual(field.value as? String, "Frieren")
+        XCTAssertTrue(app.buttons["search-library-frieren"].exists); capture("Search retained after content Back")
+        app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 5)); field.typeText("Clockmaker\n")
+        XCTAssertTrue(app.buttons["search-movie:900001"].waitForExistence(timeout: 10))
+        app.buttons["tab-glance"].tap(); app.buttons["search-glance"].tap()
+        let scoped = app.textFields["Find a current watch"]
+        XCTAssertTrue(scoped.waitForExistence(timeout: 5)); scoped.typeText("Clockmaker\n")
+        XCTAssertFalse(app.buttons["search-movie:900001"].exists)
+        XCTAssertTrue(app.staticTexts["A clear little corner"].exists); capture("Glance scoped search")
+    }
+    func testToastExpiresAndCardCoverAndUsefulMenuWork() {
+        let app = launch(mutations: true)
+        let mark = app.buttons["Mark next watch for 18 Again"]
+        XCTAssertTrue(mark.waitForExistence(timeout: 5)); mark.tap()
+        let toast = app.otherElements["undo-toast"]
+        XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 5))
+        if toast.exists { XCTAssertLessThan(toast.frame.height, 80) }
+        capture("Compact watch toast")
+        wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.buttons["Undo"])], timeout: 8)
+        XCTAssertFalse(app.buttons["Dismiss undo"].exists)
+        app.buttons["progress-menu-again"].tap()
+        XCTAssertTrue(app.buttons["Favorite"].exists); XCTAssertTrue(app.buttons["Dropped"].exists)
+        XCTAssertTrue(app.buttons["Mark season 1 complete"].exists)
+        app.buttons["Notes"].tap()
+        XCTAssertTrue(app.textViews["title-notes"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.textViews["title-notes"].isHittable); capture("Glance menu reveals Notes")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let cover = app.buttons["progress-cover-again"]
+        XCTAssertTrue(cover.waitForExistence(timeout: 5))
+        cover.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.86)).tap()
+        XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
     }
     private func sample(_ image: CGImage, at point: CGPoint, scale: CGFloat) -> [Int] {
         guard let pixel = image.cropping(to: CGRect(x: floor(point.x * scale), y: floor(point.y * scale), width: 1, height: 1)) else { XCTFail("Missing pixel sample"); return [0, 0, 0, 0] }

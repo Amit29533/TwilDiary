@@ -31,3 +31,7 @@ Latest completed build **21 / 40084111068 / 6f11c17**: zero-warning simulator/de
 PC-only boundary: scanning/ingestion and provider credential editing remain on the existing Windows/server side, as on mobile web. Native presents saved mappings, scanner evidence and reviewed resolution. No arbitrary Windows-volume scanning from the phone, bundled service token or fake provider success.
 
 Primary references: reference/chromium-win32 (99 passing states, 390×844; all image hashes verified). Secondary: reference/chromium-win32-402x778 (matching iPhone 17 Pro content excluding documented 62pt top/34pt bottom system insets). DEVICE-CHECKS.md records what CI cannot establish.
+
+## User-requested native improvements prepared for build 24
+
+The latest device feedback explicitly overrides PWA parity for full-content native Back gestures, active-tab return to root, shared Library+TMDB search (Glance remains current-watch-only), a compact expiring Undo toast, useful Glance menus, content-sized surprise and full-width expanded descriptions. Glass/press transitions use first-party SwiftUI effects. These changes await CI/UI/screenshot acceptance and physical timing checks; they are not accepted differences merely because the implementation exists.

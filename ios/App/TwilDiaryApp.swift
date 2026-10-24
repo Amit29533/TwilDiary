@@ -33,6 +33,7 @@ struct SavedTitleRoute: Hashable {
     let id: String
     let season: Int
     var focusEpisodes = true
+    var focusNotes = false
 }
 
 @MainActor @Observable final class AppRouter {
@@ -45,6 +46,10 @@ struct SavedTitleRoute: Hashable {
     var libraryRevision = 0
     var statsRevision = 0
     var detailTabs = Set<AppTab>()
+    func select(_ tab: AppTab) {
+        if selectedTab == tab { paths[tab] = NavigationPath(); detailTabs.remove(tab) }
+        selectedTab = tab
+    }
     func presentRandomPick(_ titleIDs: [String]? = nil) {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         randomPick = RandomPickScope(titleIDs: titleIDs)
@@ -108,8 +113,8 @@ struct RootView: View {
                         if showNavigation { navigation.padding(.horizontal, 12).padding(.bottom, 10) }
                     }.overlay(alignment: .bottom) {
                         if let label = store.undoLabel {
-                            HStack { DiaryIcon(name: "check", size: 18).foregroundStyle(.mint); Text(label); Spacer(); Button("Undo") { Task { await store.undo() } }.disabled(store.writesBlocked); Button("Dismiss undo", systemImage: "xmark") { store.dismissUndo() }.labelStyle(.iconOnly) }
-                                .font(.system(size: 13, weight: .semibold)).padding(14).glassEffect(in: RoundedRectangle(cornerRadius: 18)).padding(.horizontal, 14).padding(.bottom, showNavigation ? 84 : 14)
+                            UndoToast(label: label).padding(.horizontal, 14).padding(.bottom, showNavigation ? 78 : 10)
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
                         }
                     }.overlay(alignment: .top) {
                         if let notice = store.mutationRefreshNotice {
@@ -130,7 +135,8 @@ struct RootView: View {
                         }
                     }
             }
-        }.accessibilityHidden(router.randomPick != nil)
+        }.sensoryFeedback(.selection, trigger: router.selectedTab)
+            .accessibilityHidden(router.randomPick != nil)
             .overlay {
                 if let scope = router.randomPick {
                     RandomPickDialog(titles: scope.candidates(in: store.workspace),
@@ -145,14 +151,14 @@ struct RootView: View {
     private var navigation: some View {
         HStack(spacing: 0) {
             ForEach(AppTab.allCases, id: \.self) { tab in
-                Button { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil); router.selectedTab = tab } label: {
+                Button { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil); router.select(tab) } label: {
                     VStack(spacing: 0) {
                         DiaryIcon(name: tab.icon, size: 23).frame(width: 40, height: 33)
                         Text(tab.label).font(.system(size: 11)).frame(height: 16.5)
                     }.frame(maxWidth: .infinity).frame(height: 57)
                         .foregroundStyle(theme == .glass ? Color(webHex: router.selectedTab == tab ? "#f5f5f7" : "#e0e0e6") : router.selectedTab == tab ? theme.accent : theme.muted)
                         .background { DiaryNavigationSelection(selected: router.selectedTab == tab) }
-                }.buttonStyle(.plain).accessibilityLabel(tab.label).accessibilityIdentifier("tab-" + tab.rawValue).accessibilityAddTraits(router.selectedTab == tab ? .isSelected : [])
+                }.buttonStyle(DiaryPressStyle()).accessibilityLabel(tab.label).accessibilityIdentifier("tab-" + tab.rawValue).accessibilityAddTraits(router.selectedTab == tab ? .isSelected : [])
             }
         }.padding(4).background { DiaryNavigationSurface() }
     }
@@ -160,7 +166,7 @@ struct RootView: View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {
             content().background(tab == .library && theme != .glass ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
                 .navigationDestination(for: String.self) { TitleDetailView(id: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
-                .navigationDestination(for: SavedTitleRoute.self) { TitleDetailView(id: $0.id, linkedSeason: $0.season, focusEpisodes: $0.focusEpisodes).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
+                .navigationDestination(for: SavedTitleRoute.self) { TitleDetailView(id: $0.id, linkedSeason: $0.season, focusEpisodes: $0.focusEpisodes, focusNotes: $0.focusNotes).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: ExploreSectionRoute.self) { ExploreSectionView(route: $0, store: store).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) } }
                 .navigationDestination(for: PersonFilmographyRoute.self) { PersonFilmographyView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) } }

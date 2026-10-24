@@ -8,6 +8,7 @@ struct HistoryView: View {
     @State private var filters: HistoryQuery
     @State private var showRange: Bool
     @State private var limit = 12
+    @State private var showSearch = false
     @State private var searchFocus = 0
     @State private var dateSelection: HistoryDateSelection?
     init(initialDay: Date? = nil, initialUnknown: Bool = false) {
@@ -18,9 +19,10 @@ struct HistoryView: View {
     var body: some View {
         let entries = filters.entries(in: store.workspace)
         VStack(spacing: 0) {
-            PageHeader(name: "Recently watched", onSearch: { searchFocus += 1 }, onDone: { dismiss() }, doneIdentifier: "history-done")
+            PageHeader(name: "Recently watched", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "history-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     HStack(spacing: 10) {
                         Text("Your watch history").font(.system(size: 19, weight: .semibold)).frame(maxWidth: .infinity, alignment: .leading)
                         Text("\(entries.count) \(entries.count == 1 ? "watch" : "watches")").font(.system(size: 12)).foregroundStyle(.secondary)
@@ -29,13 +31,18 @@ struct HistoryView: View {
                             .buttonStyle(.plain).foregroundStyle(showRange || filters.filtered ? theme.accent : .secondary)
                             .accessibilityLabel("Date filters").accessibilityAddTraits(showRange ? .isSelected : [])
                     }
-                    SearchField(placeholder: "Find a watched title…", text: $filters.query, label: "Search watch history", focusRevision: searchFocus)
+                    SearchField(placeholder: "Filter watch history…", text: $filters.query, label: "Filter watch history", focusRevision: searchFocus)
                     ScrollView(.horizontal) {
                         HStack(spacing: 8) {
                             ForEach(HistoryPreset.allCases) { preset in
                                 Button { filters.select(preset, now: store.now) } label: {
-                                    Text(preset.label).font(.system(size: 13, weight: .semibold)).padding(.horizontal, 13).frame(minHeight: 38)
-                                        .background { DiaryControlSurface(shape: Capsule(), selected: filters.selects(preset, now: store.now)) }
+                                    HStack(spacing: 5) {
+                                        if filters.selects(preset, now: store.now) { DiaryIcon(name: "check", size: 13) }
+                                        Text(preset.label)
+                                    }.font(.system(size: 13, weight: .semibold)).padding(.horizontal, 13).frame(minHeight: 38)
+                                        .foregroundStyle(filters.selects(preset, now: store.now) ? theme.ink : Color.primary)
+                                        .background(filters.selects(preset, now: store.now) ? theme.accent : theme.accent.opacity(0.08), in: Capsule())
+                                        .overlay(Capsule().strokeBorder(theme.accent.opacity(filters.selects(preset, now: store.now) ? 1 : 0.2)))
                                 }.buttonStyle(.plain).accessibilityAddTraits(filters.selects(preset, now: store.now) ? .isSelected : [])
                             }
                         }

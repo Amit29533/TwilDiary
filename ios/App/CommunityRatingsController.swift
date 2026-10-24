@@ -17,6 +17,16 @@ import TwilDiaryCore
     func reset() {
         generation = UUID(); entries = [:]; expires = [:]; inflight = []; pending = 0
     }
+    func retryUnavailable() {
+        for (id, entry) in entries where entry.state == "unavailable" { expires.removeValue(forKey: id) }
+    }
+    private func markUnavailable(_ ids: ArraySlice<String>) {
+        for id in ids {
+            // Keep a previously fetched community score visible during a transient outage.
+            if entries[id]?.state != "rated" { entries[id] = PublicRating(score: nil, state: "unavailable") }
+            expires[id] = clock().addingTimeInterval(60)
+        }
+    }
     func prepare(_ titleIDs: [String], fetch: ([String]) async throws -> [String: PublicRating]) async {
         var seen = Set<String>()
         let now = clock()
@@ -27,14 +37,24 @@ import TwilDiaryCore
         defer {
             if session == generation { inflight.subtract(ids); pending -= 1 }
         }
-        for offset in stride(from: 0, to: ids.count, by: 24) {
+        // The existing endpoint fans out four provider calls at a time. Small batches
+        // avoid waiting for six sequential provider waves before the first score appears.
+        let deadline = now.addingTimeInterval(12)
+        for offset in stride(from: 0, to: ids.count, by: 4) {
             guard session == generation, !Task.isCancelled else { return }
-            let batch = Array(ids[offset..<min(offset + 24, ids.count)])
+            if clock() >= deadline { markUnavailable(ids[offset...]); return }
+            let batch = Array(ids[offset..<min(offset + 4, ids.count)])
             let results: [String: PublicRating]
             do { results = try await fetch(batch) }
             catch is CancellationError { return }
-            catch { results = [:] }
+            catch {
+                guard session == generation, !Task.isCancelled else { return }
+                markUnavailable(ids[offset...]); return
+            }
             guard session == generation, !Task.isCancelled else { return }
+            if results.isEmpty || results.values.allSatisfy({ $0.state == "unavailable" }) {
+                markUnavailable(ids[offset...]); return
+            }
             let received = clock()
             for id in batch {
                 let rating = results[id] ?? PublicRating(score: nil, state: "unavailable")

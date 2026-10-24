@@ -18,3 +18,11 @@ Hosted mutation tests require the owner's explicit authorization. Simulator chec
 - Random pick: three logo taps within 850ms open one dialog; ordinary spaced taps only spin the logo. Check the 650ms reroll guard, reduced-motion behavior, VoiceOver modal focus/escape and keyboard dismissal. CI screenshots cannot establish those physical timings.
 
 - Confirmed save with a subsequent read outage: after the write receipt, disconnect networking before refresh completes. The Saved/Refresh notice must preserve the old complete diary and Undo, disable repeated writes, then clear after reconnect/Refresh shows exactly one added viewing. Check app interruption/relaunch separately; recovery markers are currently session memory, not a persisted write outbox.
+
+## Build 24 device feedback follow-up (pending CI and phone validation)
+
+- Time Undo toast expiry after single/repeated actions and VoiceOver; ensure refresh recovery keeps its actionable receipt visible.
+- On a slow connection, verify only the tapped card spins/dims, other cards can queue an action, and interrupted writes never silently duplicate a watch.
+- Swipe back from Explore/search/title anywhere outside an actively dragged episode control. Confirm the slider still adjusts without navigating and search returns immediately without showing Home first.
+- Check real Trakt public ratings with the existing hosted configuration; fixture/network timeout tests cannot establish provider uptime or missing server credentials. No backend deploy is authorized.
+- Review native glass contrast, short press/card springs, selection haptics, Reduce Motion and Reduce Transparency on the physical iPhone; no simulated smoothness/battery claim.

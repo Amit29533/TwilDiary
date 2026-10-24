@@ -39,7 +39,7 @@ struct PersonView: View {
                 Artwork(path: CatalogTools.image(person.profilePath, size: "w780"), title: person.name).frame(height: 310)
                     .overlay(LinearGradient(stops: [.init(color: .black.opacity(2.0 / 15), location: 0), .init(color: .black.opacity(7.0 / 15), location: 0.55), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
             }
-        }.background(.black).background(EdgeSwipeBackOnly()).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+        }.background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .task(id: route.id) { if person == nil { await load() } }
     }
     private func header(_ person: PersonDetails) -> some View {

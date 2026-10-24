@@ -16,6 +16,7 @@ struct TitleHero<PersonalRating: View>: View {
         self.name = name; self.poster = poster; self.year = year; self.category = category; self.runtime = runtime; self.series = series; self.score = score; self.summary = summary; self._expanded = expanded; self.personalRating = personalRating()
     }
     var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
         HStack(alignment: .top, spacing: 15) {
             Artwork(path: poster, title: name, initialsOnly: false).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 12))
             VStack(alignment: .leading, spacing: 0) {
@@ -25,16 +26,19 @@ struct TitleHero<PersonalRating: View>: View {
                     HStack(spacing: 5) { Image(systemName: "star.fill").font(.system(size: 20)).foregroundStyle(.yellow); Text(score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—").foregroundStyle(.yellow); Text("TMDb").font(.system(size: 14.4)).foregroundStyle(.secondary) }.frame(minHeight: 44)
                     personalRating
                 }.font(.system(size: 15.2)).padding(.top, 14)
-                synopsis.padding(.top, 16)
+                if !expanded { synopsis.padding(.top, 16) }
             }.padding(.top, 14)
+        }
+        if expanded { synopsis.accessibilityIdentifier("expanded-synopsis") }
         }.padding(.top, 82)
     }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var synopsis: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(summary.isEmpty ? "Add your own thoughts in Notes." : summary).font(.system(size: 15.04)).lineSpacing(6).foregroundStyle(Color(webHex: "#c5c0cf")).lineLimit(expanded ? nil : 2)
+            Text(summary.isEmpty ? "Add your own thoughts in Notes." : summary).font(.system(size: 15.04)).lineSpacing(6).foregroundStyle(Color(webHex: "#c5c0cf")).lineLimit(expanded ? nil : 2).frame(maxWidth: .infinity, alignment: .leading).accessibilityIdentifier("title-synopsis-text")
                 .padding(.trailing, !expanded && summary.count > 100 ? 36 : 0)
-                .overlay(alignment: .bottomTrailing) { if !expanded && summary.count > 100 { Button("More") { expanded = true }.font(.system(size: 14, weight: .semibold)).frame(width: 44, height: 44).offset(y: 8) } }
-            if expanded { Button("Less") { expanded = false }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 36) }
+                .overlay(alignment: .bottomTrailing) { if !expanded && summary.count > 100 { Button("More") { withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) { expanded = true } }.font(.system(size: 14, weight: .semibold)).frame(width: 44, height: 44).offset(y: 8) } }
+            if expanded { Button("Less") { withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) { expanded = false } }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 36) }
         }
     }
 }

@@ -26,7 +26,9 @@ struct LibraryView: View {
     var body: some View {
         VStack(spacing: 0) {
             PageHeader(name: archived ? "Trash" : "Library", count: String(collection.count), onSearch: { showSearch.toggle(); if !showSearch { search = "" } }, height: 54)
-            if showSearch { SearchField(placeholder: "Search your library…", text: $search, label: "library-search", autoFocus: true).padding(.horizontal, 14).padding(.bottom, 10) }
+            if showSearch {
+                ScrollView { CatalogSearchView(onClose: { showSearch = false }).padding(.top, 2) }
+            } else {
             CategoryPicker(selection: $category)
             filterBar
             if hasFilters {
@@ -35,9 +37,15 @@ struct LibraryView: View {
             orderingBar
             if ratingSource == .trakt {
                 if store.communityRatings.loading { ratingStatus("Loading Trakt community ratings…") }
-                else if store.communityRatings.unavailable { ratingStatus("Some Trakt ratings are unavailable. Try again later or select TMDB in Settings.") }
+                else if store.communityRatings.unavailable {
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("Some Trakt ratings are unavailable.").font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+                        Button("Retry") { Task { await store.loadPublicRatings(collection, source: ratingSource, retry: true) } }.font(.system(size: 12, weight: .semibold)).accessibilityIdentifier("ratings-retry")
+                    }.padding(.horizontal, 14).padding(.bottom, 10)
+                }
             }
             collectionContent
+            }
         }.background(theme == .glass ? .black : Color(webHex: "#0e0d13"))
             .task(id: collection.map(\.id).sorted().joined(separator: ",") + ratingSource.rawValue) { await store.loadPublicRatings(collection, source: ratingSource) }
             .onChange(of: router.libraryRevision) { _, _ in applyShortcut() }
