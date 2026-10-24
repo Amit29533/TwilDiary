@@ -12,6 +12,8 @@ The table below records the original build25 findings; it must not be read as th
 
 Build31/source d8a8476/run40120123169 is now validating longer, content-anchored native Back gestures and download retry handling. No findings above authorize hosted writes, automatic overwrite of remote edits, or deployment. The full device-feedback/follow-on scope remains in PROGRESS.md; it includes the bottom navigation bar, not just top-header styling.
 
+25October local checkpoint: build31 early10 UI and physical-device compilation/unsigned packaging pass; full UI/all-phone acceptance is pending. Editor conflict handling now has local implementation in c746611/534ccf1, with eight Core cases and an expanded Notes/Favorite UI regression. It preserves drafts, advances only unrelated field revisions, offers Use saved/Keep my draft on a field conflict, and retains acknowledged values through refresh failure. This source is not in31 and is not yet compiled/tested in CI, so the editor finding remains open for runtime acceptance. All other open findings listed above remain open.
+
 Reviewed 24 October 2026 against native source 6130cdf (build 25), web baseline b43454e and the downloaded unsigned build-25 IPA. This is source/artifact verification, not a claim that the listed races were reproduced on an iPhone. No product changes were made from this review. The active device-feedback build continues independently: run 40098826990. Simulator/device compile and early watch/slider/Undo/movie gate pass; full unit/UI/all-phone acceptance is pending.
 
 ## Follow-up prepared after build 27 started

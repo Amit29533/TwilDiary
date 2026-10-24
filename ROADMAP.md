@@ -44,7 +44,7 @@ Screens/files: `ios/Shell`, `ios/Design`, `ios/Components`, shared XCUITests.
 
 Done: shared states match references at SE/390/Pro Max sizes; navigation and Undo do not jump; green regression and screenshots.
 
-Pending device-feedback build29: typed Done ownership, keyboard-safe pushes and Add-sheet handoff, retained synopsis lead with full-width continuation, stable Notes editor targeting after late metadata, swipe-dismiss Surprise and collection list/grid preferences. All await macOS compile, functional UI checks and all-phone screenshots; no additional checkbox accepted yet.
+Device-feedback build31/source d8a8476 passes native compilation, unit119 and all ten early UI checks, including typed Done ownership, keyboard-safe completed/cancelled Back, Notes targeting/save/reopen after late metadata and swipe-dismiss Surprise. Full43 primary UI and all-phone screenshot acceptance are still pending, including synopsis continuation and collection grids; no full-step checkbox is accepted yet. The complete follow-on request, particularly the bottom navigation bar, is tracked in PROGRESS.md.
 
 ## 4. Home
 
