@@ -16,6 +16,8 @@ Build 17 also ports Person to the actual profile/facts/server/Known-for/shows/mo
 
 A Trakt paging review found that an old failed/cancelled page could publish an error after a newer filter had loaded. Build 17 guards error publication with the same request/filter generation as successful pages and ignores cancellation. Three new controller tests cover stale-page failure, cancelled-page retention and automatic pause on unchanged scan progress. Secondary 402×778 Person/four filmography references are also captured; they are comparison inputs, not native acceptance.
 
+Added collect-build.py to verify completed-success CI status, individual passed unit/UI records, both target compilation summaries, zero warnings and IPA checksum/build/arm64/unsigned payload before preparing named screenshot evidence. It refuses failed/incomplete runs and explicitly leaves visual/device acceptance separate. It has not yet been used to accept build 16.
+
 Earlier run notes below are chronological evidence; current truth is the paragraph above.
 
 Build 8, source a15b103, run **40020975007**, passed: 13 core + 8 endpoint/session + 5 UI tests, zero warnings. Downloaded/verified 16 screenshots and the unsigned arm64 IPA. Visually reviewed the contact sheet, episode pieces, continuous movie track and Stats selection. Full layout parity remains unfinished (see the committed web/native title comparison). The passed-build title screenshot has been shared in chat; IPA is copied to D:/Downloads/TwilDiary-native-build8.ipa with SHA-256 sidecar.
