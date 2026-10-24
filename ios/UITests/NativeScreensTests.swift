@@ -392,7 +392,9 @@ import UIKit
         let trash = app.buttons["Open Trash"]
         if !trash.isHittable { app.scrollViews.element(boundBy: 0).swipeLeft() }
         trash.tap()
-        XCTAssertTrue(app.staticTexts["In Trash"].waitForExistence(timeout: 5)); capture("Trash populated")
+        XCTAssertTrue(app.staticTexts["In Trash"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["page-title"].label, "Trash")
+        capture("Trash populated")
         app.buttons["Restore"].tap(); XCTAssertTrue(confirm.waitForExistence(timeout: 5)); confirm.tap()
         XCTAssertTrue(app.staticTexts["Trash is clear"].waitForExistence(timeout: 5))
         app.buttons["Return to Library"].tap()

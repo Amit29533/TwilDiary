@@ -106,12 +106,12 @@ struct PageHeader: View {
                     Text("Twil").foregroundStyle(Color(webHex: "#f3f0f7"))
                     Text("Diary").foregroundStyle(LinearGradient(colors: [.white, theme.accent], startPoint: .leading, endPoint: .trailing))
                 }.font(.system(size: 26, weight: .bold)).tracking(-1.25)
-            } else { Text(name).font(.system(size: 26, weight: .bold)).tracking(-1.2).foregroundStyle(Color(webHex: "#f3f0f7")).lineLimit(1).minimumScaleFactor(0.7) }
+            } else { Text(name).font(.system(size: 26, weight: .bold)).tracking(-1.2).foregroundStyle(Color(webHex: "#f3f0f7")).lineLimit(1).minimumScaleFactor(0.7).accessibilityIdentifier("page-title") }
             if let count { Text(count).font(.system(size: 13)).foregroundStyle(Color(webHex: "#a09aa9")).lineLimit(1) }
             Spacer(minLength: 0)
             if let onSearch { Button(action: onSearch) { DiaryIcon(name: "search", size: 22).frame(width: 44, height: 44) }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel(name == "Library" ? "Search library" : "Search").accessibilityIdentifier("search-" + name.lowercased()) }
             if let onDone { Button("Done", action: onDone).font(.system(size: 14, weight: .semibold)).frame(minWidth: 44, minHeight: 44).accessibilityIdentifier(doneIdentifier) }
-        }.frame(height: 56).padding(.horizontal, 14).background(Color(webHex: theme == .glass ? "#000000" : name == "Library" ? "#0e0d13" : "#050507"))
+        }.frame(height: 56).padding(.horizontal, 14).background(Color(webHex: theme == .glass ? "#000000" : ["Library", "Trash"].contains(name) ? "#0e0d13" : "#050507"))
     }
 }
 

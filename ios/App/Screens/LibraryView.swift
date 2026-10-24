@@ -25,7 +25,7 @@ struct LibraryView: View {
     @State private var confirmEmptyTrash = false
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Library", count: String(collection.count), onSearch: { showSearch.toggle(); if !showSearch { search = "" } })
+            PageHeader(name: archived ? "Trash" : "Library", count: String(collection.count), onSearch: { showSearch.toggle(); if !showSearch { search = "" } })
             if showSearch { SearchField(placeholder: "Search your library…", text: $search, label: "library-search", autoFocus: true).padding(.horizontal, 14).padding(.bottom, 10) }
             CategoryPicker(selection: $category)
             filterBar
@@ -38,7 +38,8 @@ struct LibraryView: View {
                 else if store.communityRatings.unavailable { ratingStatus("Some Trakt ratings are unavailable. Try again later or select TMDB in Settings.") }
             }
             collectionContent
-        }.task(id: collection.map(\.id).sorted().joined(separator: ",") + ratingSource.rawValue) { await store.loadPublicRatings(collection, source: ratingSource) }
+        }.background(theme == .glass ? .black : Color(webHex: "#0e0d13"))
+            .task(id: collection.map(\.id).sorted().joined(separator: ",") + ratingSource.rawValue) { await store.loadPublicRatings(collection, source: ratingSource) }
             .onChange(of: router.libraryRevision) { _, _ in applyShortcut() }
             .onAppear { applyShortcut() }
             .onChange(of: filterScope) { _, _ in selecting = false; selected = [] }
