@@ -6,7 +6,10 @@ struct TitleDetailView: View {
     @Environment(DiaryStore.self) private var store
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     @AppStorage("hideSpoilers") private var hideSpoilers = true
-    @State private var season = 1
+    @State private var chosenSeason: Int?
+    @State private var initializedEditor = false
+    @State private var configuredSeason: Int?
+    @FocusState private var notesFocused: Bool
     @State private var showOverview = false
     @State private var showNotes = false
     @State private var showLocation = false
@@ -39,8 +42,9 @@ struct TitleDetailView: View {
                         VStack(spacing: 20) {
                             DisclosureGroup("Notes", isExpanded: $showNotes) {
                                 VStack(alignment: .leading, spacing: 12) {
-                                    TextEditor(text: $notes).frame(minHeight: 110).scrollContentBackground(.hidden)
-                                    Button("Save notes") { Task { if await store.patch(title, values: ["notes": notes], expectedVersion: notesVersion) { notesVersion = store.title(id)?.version } } }.disabled(store.busy || notes == title.notes || notes.count > 20_000)
+                                    TextEditor(text: $notes).frame(minHeight: 110).scrollContentBackground(.hidden).focused($notesFocused).accessibilityIdentifier("title-notes").accessibilityLabel("Title notes")
+                                    if notes.utf16.count > 20_000 { Text("Keep notes within 20,000 characters.").font(.caption).foregroundStyle(.orange) }
+                                    Button("Save notes") { Task { if await store.patch(title, values: ["notes": notes], expectedVersion: notesVersion) { notesVersion = store.title(id)?.version } } }.disabled(store.busy || notes == title.notes || notes.utf16.count > 20_000)
                                 }.padding(.top, 12)
                             }
                             Divider()
@@ -49,7 +53,7 @@ struct TitleDetailView: View {
                             } } label: { Text(serverLabel).font(.subheadline.weight(.semibold)) }
                         }.diaryPanel()
                     }.padding(.horizontal, 16).padding(.bottom, 32)
-                }.background(alignment: .top) {
+                }.scrollDismissesKeyboard(.interactively).background(alignment: .top) {
                     Artwork(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, title: title.name).frame(height: 310).overlay(LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
                 }.background(.black)
                     .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
@@ -63,8 +67,13 @@ struct TitleDetailView: View {
                             } label: { Image(systemName: "ellipsis") }
                         }
                     }
-                    .task { watchDate = store.now; notes = title.notes; notesVersion = title.version; rating = title.score ?? 7; await loadCard(title); if let selected = card?.season?.number { season = selected } }
-                    .task(id: season) { sliderDraft = nil; showAllEpisodes = false; await loadCard(title); if !hideSpoilers { await revealSeason(title) } }
+                    .toolbar { ToolbarItemGroup(placement: .keyboard) { if notesFocused { Spacer(); Button("Done") { notesFocused = false }.accessibilityIdentifier("notes-keyboard-done") } } }
+                    .task { if !initializedEditor { initializedEditor = true; watchDate = store.now; notes = title.notes; notesVersion = title.version; rating = title.score ?? 7 } }
+                    .task(id: season) {
+                        if configuredSeason != season { configuredSeason = season; sliderDraft = nil; showAllEpisodes = false }
+                        if !hideSpoilers { await revealSeason(title) }
+                    }
+                    .task(id: cardRevision(title)) { await loadCard(title) }
                     .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
                     .sheet(isPresented: $showRating) { ratingSheet(title) }
                     .confirmationDialog("Reset progress to 0? Logged watches will be removed, with Undo available.", isPresented: $resetConfirmation, titleVisibility: .visible) {
@@ -123,7 +132,7 @@ struct TitleDetailView: View {
                                     else if value >= 50, card.progress.watched == 0 { await store.recordViewing(title, watchedAt: watchInstant) }
                                     await loadCard(title)
                                 }
-                            }), in: 0...100, step: 100).opacity(0.02).disabled(store.busy || store.isPreview).accessibilityLabel("Movie watched")
+                            }), in: 0...100, step: 100).opacity(0.02).disabled(store.busy || !store.canMutate).accessibilityLabel("Movie watched")
                         }
                 }
                 if let next = card.next, let episode = episodes.first(where: { $0.id == next.id }) { nextPreview(title, episode: episode) }
@@ -156,7 +165,7 @@ struct TitleDetailView: View {
                     if !editing, let count = sliderDraft {
                         Task { await store.setSeasonProgress(title, season: season, count: Int(count), watchedAt: watchInstant); sliderDraft = nil; await loadCard(title) }
                     }
-                }.opacity(0.02).disabled(store.busy || store.isPreview || !seasonCanEdit(title))
+                }.opacity(0.02).disabled(store.busy || !store.canMutate || !seasonCanEdit(title))
                     .accessibilityLabel("Season \(season) episodes watched").accessibilityValue("\(displayedWatched) of \(card.progress.total) episodes watched").accessibilityIdentifier("episode-progress")
             }
         }.frame(height: 44)
@@ -172,7 +181,7 @@ struct TitleDetailView: View {
     }
     private func episodeSection(_ title: MediaTitle) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack { Text("Episodes").font(.title2.bold()); Spacer(); Picker("Season", selection: $season) { ForEach(title.seasons ?? [], id: \.number) { Text($0.name).tag($0.number) } }.pickerStyle(.menu) }
+            HStack { Text("Episodes").font(.title2.bold()); Spacer(); Picker("Season", selection: Binding(get: { season }, set: { chosenSeason = $0 })) { ForEach(title.seasons ?? [], id: \.number) { Text($0.name).tag($0.number) } }.pickerStyle(.menu) }
             Text("Season \(season) · \(card?.progress.watched ?? 0) / \(card?.progress.total ?? episodes.count) watched").font(.caption).foregroundStyle(.secondary)
             if !seasonCanEdit(title) { Button("Load season episodes") { Task { await store.loadSeason(title, number: season); await loadCard(title) } }.buttonStyle(.bordered).disabled(store.busy) }
             if revealing { ProgressView("Loading episode details…").font(.caption) }
@@ -263,12 +272,19 @@ struct TitleDetailView: View {
         }.presentationDetents([.medium])
     }
     private func openRating(_ title: MediaTitle) { rating = title.score ?? 7; ratingVersion = title.version; showRating = true }
+    private struct CardRevision: Hashable {
+        let season: Int
+        let events: [WatchEvent]
+        let episodes: [Episode]
+        let seasons: [Season]
+    }
+    private var season: Int { chosenSeason ?? EpisodeSelection.preferredSeason(in: store.workspace, titleID: id, today: DiaryDate.day(store.now)) }
+    private func cardRevision(_ title: MediaTitle) -> CardRevision {
+        CardRevision(season: season, events: store.workspace.events.filter { $0.titleId == id }, episodes: episodes, seasons: title.seasons ?? [])
+    }
     private var episodes: [Episode] { store.workspace.episodes.filter { $0.titleId == id && $0.season == season }.sorted { $0.number < $1.number } }
     private var visibleEpisodes: [Episode] {
-        if showAllEpisodes { return episodes }
-        let next = episodes.firstIndex { !watched.contains($0.id) } ?? episodes.count
-        let start = max(0, min(next - 1, episodes.count - 4))
-        return Array(episodes.dropFirst(start).prefix(4))
+        EpisodeSelection.window(episodes, season: season, all: showAllEpisodes, nextID: card?.next?.id)
     }
     private var watched: Set<String> { Set(store.workspace.activeEvents.filter { $0.titleId == id }.compactMap(\.episodeId)) }
     private var locations: [FileLocation] { store.workspace.locations.filter { $0.titleId == id } }

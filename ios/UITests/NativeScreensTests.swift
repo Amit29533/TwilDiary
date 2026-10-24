@@ -236,6 +236,71 @@ import UIKit
         app.buttons["Close search"].tap(); app.buttons["files-done"].tap()
         XCTAssertTrue(app.staticTexts["Appearance & region"].waitForExistence(timeout: 5))
     }
+    func testGlanceSwipeLogsExactlyOneWatchAndUndoPreservesTheCardPosition() {
+        let app = launch(mutations: true)
+        let count = app.staticTexts["watch-count-again"], mark = app.buttons["Mark next watch for 18 Again"]
+        XCTAssertTrue(count.waitForExistence(timeout: 5)); XCTAssertEqual(count.label, "8")
+        let originalY = mark.frame.minY
+        let title = app.buttons["progress-title-again"]
+        let start = title.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 140, dy: 0)))
+        wait(for: [expectation(for: NSPredicate(format: "label == '9'"), evaluatedWith: count)], timeout: 10)
+        XCTAssertEqual(mark.frame.minY, originalY, accuracy: 1, "Release must not reflow the page")
+        capture("Glance swipe marked")
+        app.buttons["Undo"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "label == '8'"), evaluatedWith: count)], timeout: 10)
+        XCTAssertEqual(mark.frame.minY, originalY, accuracy: 1)
+        app.buttons["Remove latest watch for 18 Again"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "label == '7'"), evaluatedWith: count)], timeout: 10)
+        app.buttons["Undo"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "label == '8'"), evaluatedWith: count)], timeout: 10)
+        capture("Glance Undo restored")
+    }
+    func testTitleWatchAndUndoUpdateTheEpisodePiecesAndMovieHistory() {
+        let app = launch(mutations: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
+        let progress = app.sliders["episode-progress"]
+        XCTAssertTrue(progress.waitForExistence(timeout: 5)); XCTAssertEqual(progress.value as? String, "8 of 16 episodes watched")
+        let mark = app.buttons["mark-title-watch"]
+        if !mark.isHittable { app.swipeUp() }
+        mark.tap()
+        wait(for: [expectation(for: NSPredicate(format: "value == '9 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        capture("Title episode marked")
+        app.buttons["Undo"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "value == '8 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        let start = progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
+        XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 10), "A range edit must produce a real Undo receipt, not only a draft value")
+        wait(for: [expectation(for: NSPredicate(format: "value == '10 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        capture("Title range committed"); app.buttons["Undo"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "value == '8 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["title-quiet-orbit"].tap()
+        let movieMark = app.buttons["mark-title-watch"]
+        XCTAssertTrue(movieMark.waitForExistence(timeout: 5)); movieMark.tap()
+        XCTAssertTrue(app.buttons["Log a rewatch"].waitForExistence(timeout: 5))
+        capture("Movie watched")
+        app.buttons["Undo"].tap()
+        XCTAssertTrue(app.buttons["Log a watch"].waitForExistence(timeout: 5)); capture("Movie watch undone")
+    }
+    func testNotesDraftSurvivesOpeningACastProfileAndReturning() {
+        let app = launch(mutations: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
+        let notes = app.buttons["Notes"]
+        for _ in 0..<14 { if notes.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(notes.isHittable); notes.tap()
+        let editor = app.textViews["title-notes"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5)); editor.tap(); editor.typeText("Native draft survives cast navigation")
+        let done = app.buttons["notes-keyboard-done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5)); done.tap()
+        let actor = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Reference Actor 1'")).firstMatch
+        for _ in 0..<10 { if actor.isHittable { break }; app.swipeDown() }
+        XCTAssertTrue(actor.isHittable); actor.tap()
+        XCTAssertTrue(app.staticTexts["Filmography"].waitForExistence(timeout: 10))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        for _ in 0..<10 { if editor.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue((editor.value as? String)?.contains("Native draft survives cast navigation") == true)
+        capture("Notes draft retained")
+        app.buttons["Save notes"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "enabled == false"), evaluatedWith: app.buttons["Save notes"])], timeout: 10)
+    }
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)

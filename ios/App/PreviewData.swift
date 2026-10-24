@@ -8,10 +8,10 @@ enum PreviewData {
     }
     static func card(_ title: MediaTitle, workspace: Workspace, season: Int? = nil) -> WatchCard {
         let watched = Set(workspace.activeEvents.filter { $0.titleId == title.id }.compactMap(\.episodeId))
-        let regular = workspace.episodes.filter { $0.titleId == title.id && $0.season > 0 }.sorted { ($0.season, $0.number) < ($1.season, $1.number) }
-        let selected = season ?? regular.first(where: { !watched.contains($0.id) })?.season ?? title.seasons?.first(where: { $0.number > 0 })?.number ?? 1
-        let episodes = regular.filter { $0.season == selected }
-        let next = episodes.first { !watched.contains($0.id) }
+        let today = "2026-10-23"
+        let selected = season ?? EpisodeSelection.preferredSeason(in: workspace, titleID: title.id, today: today)
+        let episodes = workspace.episodes.filter { $0.titleId == title.id && $0.season == selected }.sorted { $0.number < $1.number }
+        let next = EpisodeSelection.next(in: workspace, titleID: title.id, today: today, season: selected)
         let prior = workspace.activeEvents.filter { event in event.titleId == title.id && (!title.isSeries || episodes.contains(where: { $0.id == event.episodeId })) }.last
         let previousEpisode = workspace.episodes.first { $0.id == prior?.episodeId }
         let body: [String: Any] = [

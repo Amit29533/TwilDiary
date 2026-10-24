@@ -155,3 +155,9 @@ Done: no unfinished native placeholders/dead controls; all tests/builds/warnings
 - Reference inventory expands from 70 to 78 passing states. Read-only provider fixtures honor source filter/paging and search response contracts. No web product file changed.
 
 Build 14 evidence checkpoint: run 40056346004 passes all 66 tests/zero warnings; 29 screenshots and verified IPA saved. Visual review still found sticky Trakt Apply overlap; build 15 follows the current source in-list action and asserts full bounds above navigation.
+
+## Watch/editor hardening checkpoint — build 16 prepared, uncompiled
+
+- The expanded real local API probe passes 30 requests with unchanged pre-existing fixtures and zero hosted requests; fixture watch/Undo receipts mirror those contracts and the existing server status projection.
+- Title history refresh/initial season/window rules and retained editor state are corrected from source; three mutation/draft UI flows and two core selection regressions are added. Validation awaits CI.
+- Core cache retains compiler work but never skips tests. Future full runs allow 65 minutes/35-minute native tests to cover the larger regression suite on the pinned Intel image.

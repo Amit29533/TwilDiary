@@ -250,7 +250,7 @@ struct ProgressCard: View {
                 NavigationLink(value: title.id) { Artwork(path: title.poster, title: title.name).frame(width: 94, height: 118).clipShape(RoundedRectangle(cornerRadius: 8)) }.buttonStyle(.plain)
                 VStack(alignment: .leading, spacing: 7) {
                     HStack(alignment: .top) {
-                        NavigationLink(value: title.id) { Text(title.name).font(.system(size: 18, weight: .semibold)).foregroundStyle(.white).lineLimit(2).multilineTextAlignment(.leading) }.buttonStyle(.plain)
+                        NavigationLink(value: title.id) { Text(title.name).font(.system(size: 18, weight: .semibold)).foregroundStyle(.white).lineLimit(2).multilineTextAlignment(.leading) }.buttonStyle(.plain).accessibilityIdentifier("progress-title-" + title.id)
                         Spacer(minLength: 0)
                         Menu { Button(title.queued == true ? "Remove from Queue" : "Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } } } label: { DiaryIcon(name: "ellipsis", size: 19).frame(width: 26, height: 30) }.foregroundStyle(Color(webHex: "#c5c0cf"))
                     }
@@ -264,7 +264,7 @@ struct ProgressCard: View {
                     Text("\(Int((fraction * 100).rounded()))% complete").font(.system(size: 13)).foregroundStyle(Color(webHex: "#c5c0cf"))
                 }
                 Button { let reviewed = card?.previous; Task { await store.removeLatest(title, expected: reviewed); await loadCard() } } label: { Image(systemName: "minus").font(.system(size: 18)).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))) }.buttonStyle(.plain).disabled(store.busy || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
-                Text("\(card?.progress.watched ?? 0)").font(.system(size: 17, weight: .semibold)).monospacedDigit()
+                Text("\(card?.progress.watched ?? 0)").font(.system(size: 17, weight: .semibold)).monospacedDigit().accessibilityIdentifier("watch-count-" + title.id)
                 Button { Task { await markWatch() } } label: { Image(systemName: "plus").font(.system(size: 20)).foregroundStyle(Color(webHex: "#21182e")).frame(width: 34, height: 34).background(.tint, in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(.plain).disabled(store.busy || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
             }
         }.padding(10)

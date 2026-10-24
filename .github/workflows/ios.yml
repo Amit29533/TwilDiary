@@ -12,7 +12,7 @@ concurrency:
 jobs:
   build-test-artifacts:
     runs-on: macos-26-intel
-    timeout-minutes: 50
+    timeout-minutes: 65
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       HOMEBREW_NO_AUTO_UPDATE: '1'
@@ -30,6 +30,12 @@ jobs:
         with:
           path: ios/.spm
           key: spm-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/**/Package.resolved', 'ios/**/Package.swift', 'ios/project.yml') }}
+      - name: Cache core regression build
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: ios/Packages/TwilDiaryCore/.build
+          key: core-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/Packages/TwilDiaryCore/Package.swift', 'ios/Packages/TwilDiaryCore/Sources/**', 'ios/Packages/TwilDiaryCore/Tests/**') }}
+          restore-keys: core-macos26-${{ runner.arch }}-xcode26.6-
       - name: Generate Xcode project
         run: |
           xcodegen_archive="$RUNNER_TEMP/xcodegen-2.46.0.zip"
@@ -62,7 +68,7 @@ jobs:
         timeout-minutes: 15
         run: bash ios/scripts/ci.sh boot
       - name: Run unit and UI tests
-        timeout-minutes: 25
+        timeout-minutes: 35
         run: bash ios/scripts/ci.sh test
       - name: Export screenshots
         if: always()

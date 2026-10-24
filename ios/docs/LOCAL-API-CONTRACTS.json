@@ -46,12 +46,72 @@
     },
     {
       "method": "PATCH",
-      "path": "/api/watch-events/ba8d4834-8931-40f5-8cf4-cf3a7bf33a30",
+      "path": "/api/watch-events/023a1db7-a2b7-4e25-aa37-4dc41da6a659",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/titles/PROBE_ID/watches",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/titles/PROBE_ID/watches",
+      "status": 409
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/watch-events/023a1db7-a2b7-4e25-aa37-4dc41da6a659",
       "status": 200
     },
     {
       "method": "PATCH",
-      "path": "/api/watch-events/ba8d4834-8931-40f5-8cf4-cf3a7bf33a30",
+      "path": "/api/watch-events/023a1db7-a2b7-4e25-aa37-4dc41da6a659",
+      "status": 200
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/watch-events/023a1db7-a2b7-4e25-aa37-4dc41da6a659",
+      "status": 409
+    },
+    {
+      "method": "GET",
+      "path": "/api/titles/PROBE_ID",
+      "status": 200
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/titles/PROBE_ID",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/titles/PROBE_ID/watches",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/titles/PROBE_ID",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "path": "/api/titles/PROBE_ID/watches",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/titles/PROBE_ID",
+      "status": 200
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/watch-events/f6b2620b-7a64-478e-97f4-f52a4b32a737",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/titles/PROBE_ID",
       "status": 200
     },
     {

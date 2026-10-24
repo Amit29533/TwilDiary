@@ -8,11 +8,17 @@ import TwilDiaryCore
     private(set) var workspace: Workspace
     private let stamp = "2026-10-23T12:00:00Z"
     private var scans: [[String: Any]] = []
+    private let history = FixtureWatchHistory()
     init(workspace: Workspace, scanner: Bool = false) {
         self.workspace = workspace
         if scanner { scans = [["id": "fixture-unmatched", "version": 1, "deviceId": "fixture-pc", "deviceName": "Reference PC", "volumeId": "fixture-volume", "driveLetter": "R:", "root": "R:\\Reference", "relativePath": "Unmatched Series", "name": "Unmatched Series", "seasonNumber": 1, "fileCount": 16, "sizeBytes": NSNull(), "checkedAt": stamp]] }
     }
     func request<T: Decodable>(_ path: String, method: String, body: [String: Any]?) throws -> T {
+        if let update = try history.prepare(workspace, route: URLComponents(string: path)?.path ?? path, method: method, body: body ?? [:]) {
+            // Publish only after both the snapshot and caller's receipt decode successfully.
+            let result = try JSONDecoder().decode(T.self, from: JSONSerialization.data(withJSONObject: update.response))
+            history.commit(update); workspace = update.workspace; return result
+        }
         var archive = try object(workspace), titles = try objects(workspace.titles)
         let body = body ?? [:], route = URLComponents(string: path)?.path ?? path
         let parts = route.split(separator: "/").map(String.init)
@@ -78,7 +84,7 @@ import TwilDiaryCore
         }
         let updated = try JSONDecoder().decode(Workspace.self, from: JSONSerialization.data(withJSONObject: archive))
         let receipt = try JSONDecoder().decode(T.self, from: JSONSerialization.data(withJSONObject: response))
-        workspace = updated
+        workspace = updated; history.retain(Set(updated.titles.map(\.id)))
         if let resolvedScan { scans.removeAll { $0["id"] as? String == resolvedScan } }
         return receipt
     }
