@@ -13,7 +13,7 @@ struct ScannerReviewView: View {
     @State private var message: String?
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Fix mismatches")
+            PageHeader(name: "Fix mismatches", onDone: { dismiss() }, doneIdentifier: "scanner-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack { Text("Unmatched scans").font(.system(size: 19, weight: .semibold)); Spacer(); Button("Refresh unmatched scans", systemImage: "arrow.clockwise") { Task { await load() } }.labelStyle(.iconOnly).disabled(loading) }
@@ -27,7 +27,7 @@ struct ScannerReviewView: View {
                 }.padding(14)
             }.refreshable { await load() }
         }.navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
-            .safeAreaInset(edge: .bottom) { Button("Done") { dismiss() }.font(.subheadline).padding(10) }
+
             .task { await load() }
             .task(id: message) { guard message != nil else { return }; do { try await Task.sleep(for: .seconds(2)); message = nil } catch { } }
             .sheet(item: $selected) { scan in ScannerMatchView(scan: scan) { id in items.removeAll { $0.id == id }; message = "Folder matched" } }

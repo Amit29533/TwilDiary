@@ -160,7 +160,7 @@ struct HistoryView: View {
     @State private var includeUnknown = false
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Recently watched")
+            PageHeader(name: "Recently watched", onDone: { dismiss() }, doneIdentifier: "history-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
@@ -184,7 +184,7 @@ struct HistoryView: View {
             }
         }.navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
             .task { if let initialDay { from = initialDay; to = initialDay; period = "range" }; if initialUnknown { period = "unknown" } }
-            .safeAreaInset(edge: .bottom) { Button("Done") { dismiss() }.font(.subheadline).padding(10) }
+
     }
     private var events: [WatchEvent] {
         let calendar = DiaryDate.calendar()

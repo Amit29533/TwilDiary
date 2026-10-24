@@ -6,11 +6,15 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native �
 
 Build 8, source a15b103, run **40020975007**, passed: 13 core + 8 endpoint/session + 5 UI tests, zero warnings. Downloaded/verified 16 screenshots and the unsigned arm64 IPA. Visually reviewed the contact sheet, episode pieces, continuous movie track and Stats selection. Full layout parity remains unfinished (see the committed web/native title comparison). The passed-build title screenshot has been shared in chat; IPA is copied to D:/Downloads/TwilDiary-native-build8.ipa with SHA-256 sidecar.
 
-Latest result: build 11, source 6496556, run **40031636415**, failed compilation in the new Stats genre expression (type-check complexity plus a dependent unresolved key path). Replaced the chained map/ternary/sort with explicitly typed values and a loop. Logs downloaded under .local/ios-app-build-40031636415/results. Build 10 run 40029758134 failed in five Trakt catch blocks; all are corrected. Earlier Intel build 9 run 40026403236 compiled both targets and passed 13 core + 15 app tests, then timed out during UI execution. Neither is a fully passed build. Build 8 remains the last fully passed artifact.
+Latest run **40035195084**, source **a0e171c**, compiled simulator and unsigned arm64 Release builds with zero warnings. All **25 core tests (including 17 web Stats golden scenarios)** and **32 native unit tests** passed. **7/9 UI tests passed**; full workflow failed. Downloaded results/screenshots/videos under .local/ios-app-build-40035195084. Failure review: Files/Scanner bottom Done was obscured by the global capsule and tapping it selected Glance. Trakt conflict actions rendered visibly but ViewThatFits retained competing accessibility candidates. These are not accepted artifacts; build 8 remains the last full pass.
 
-Prepared build 12 includes the Stats compiler correction and restores its previously pixel-tested selection rendering outside button labels, with source-sized text and rounded segments. Library gains source-matched normalized/composable query rules, sorted genre shelves including unclassified titles, reviewed selection up to 60, atomic Queue/favorite/status/Trash requests, shared reset/complete transactions with retained operation IDs and Undo, full archived browsing/restore/purge and Empty Trash. Added an explicitly opted-in DEBUG simulator backend for collection writes, with no URLSession/network capability; ordinary --ui-testing remains read-only. Planned/reset/completed and other unsupported fixture actions fail explicitly. General write-flow UI coverage is therefore still incomplete. New tests cover atomic stale rejection, Queue/history independence, Trash/restore/purge cleanup, explicit Empty Trash, frozen reviewed versions, retained batch reset IDs/Undo and a native Queue→Trash→restore→delete walkthrough. Exact next action: commit/push build 12 (23 core + 30 app + 8 UI tests planned), inspect every diagnostic, fix through a fully green run, download/review screenshots and verify the arm64 IPA, then continue unfinished Glance/locations/offline parity. No full step is claimed complete.
+Prepared **build 14** moves Files/Scanner/History Done into the fixed header, above content and navigation, and replaces the duplicate Trakt action subtrees with a single adaptive AnyLayout tree. Regression asserts the selected More tab after dismissal, non-overlapping Done bounds, a unique Trakt conflict action and confirmed completion. Builds 12 and the subsequent scanner commit both carried CFBundleVersion 12 because a Windows text-encoding failure prevented the intended version/docs edit; build 14 restores distinct numbering without rewriting history.
 
-The track uses the source SVG's 12-unit slots, 9-unit rounded pieces, 3-unit gaps, a 12pt drawing in a 44pt row, accent watched fill, 36.08% accent for Up next and #ffffff20 unwatched fill. Episode identities preserve holes in watch history and unloaded manifest slots. Movies retain continuous progress. Two core tests cover holes, ordering, unloaded/empty slots and stale-next precedence. The UI test checks all 16 pieces/gaps, eight filled episodes, and the separate continuous movie track. Interactive range editing remains an explicitly tracked parity gap.
+Exact next action: push the reviewed build-14 corrections, inspect the complete CI logs, fix all remaining failures, then download and visually review every screenshot and verify the packaged IPA. Only share it as a passed build when all tests and warning gates pass. Continue unfinished discovery, global search, transaction UI coverage and full visual parity afterward. No entire roadmap step is claimed complete.
+
+## Source audit corrections
+
+The current web code wins over earlier mockups: Glance has category/search and source ordering, with no waiting/sort section; More has export/storage but no import/automatic-backup controls; Stats has daily/aggregate/monthly buckets, not hourly charts. Web offline mode requires reconnecting to save and has no offline write outbox. Native preserves a protected read snapshot and never claims offline writes succeeded. These absent web features are not native parity gaps.
 
 ## CI truth
 
@@ -27,6 +31,8 @@ The track uses the source SVG's 12-unit slots, 9-unit rounded pieces, 3-unit gap
 | 40026403236 | d71e49a | Intel builds passed with zero warnings; 13 core + 15 native unit tests passed; UI execution timed out, incomplete. |
 | 40029758134 | 3e69167 | Simulator compilation failed in five shadowed Trakt error-state assignments; fixed locally for build 11. Tests/device packaging skipped. |
 | 40031636415 | 6496556 | Simulator compilation failed in the Stats genre expression; split into explicitly typed operations for build 12. Tests/device packaging skipped. |
+| 40033415653 | a937be1 | Simulator built without warnings. Core preflight exposed Swift empty-string search versus JS and Sep versus web Sept labels; both fixed in a0e171c. |
+| 40035195084 | a0e171c | Both builds zero warnings; 25 core + 32 native unit tests pass; 7/9 UI pass. Files Done/tab overlap and Trakt conflict accessibility prevent acceptance. |
 
 Build-8 artifacts are downloaded under .local/ios-app-build-40020975007; accepted scoped screenshot evidence is in ios/docs/screenshots/step-8. Its arm64 IPA SHA-256 is 82b1de7adcdd32127cfac3321e7153e9f6297ff9ac42928ad2b4bfac5e2ab96b. This is an unfinished native preview, not a release/parity acceptance claim.
 
@@ -41,7 +47,7 @@ Build-8 artifacts are downloaded under .local/ios-app-build-40020975007; accepte
 - Stats shared period/menu selection, 90-day boundary, basic daily charts, streak heatmap, backlog counts and watched-title genre denominator.
 - Complete-snapshot paginated reload preserves in-memory data on read failure; uncertain mutations retain operation identities and server version/Undo receipts.
 
-Debug --ui-testing uses isolated synthetic data and read-only mutation stand-ins. Release builds cannot select that mode. Browsing UI tests do not establish write-flow coverage. The local contract probe passed 18 requests on the isolated loopback backend, including watch/idempotency, patch/conflict, revoke/restore and Trash/restore; it cleaned only its fresh synthetic UUID and left pre-existing fixture versions unchanged. Hosted requests: zero. Report: ios/docs/LOCAL-API-CONTRACTS.json.
+Debug --ui-testing uses isolated synthetic data; only the additional --ui-mutations opt-in enables in-memory collection/scanner writes. Release builds cannot select either fixture path. Other unsupported fixture requests fail explicitly. The local contract probe passed 18 requests on the isolated loopback backend, including watch/idempotency, patch/conflict, revoke/restore and Trash/restore; it cleaned only its fresh synthetic UUID and left pre-existing fixture versions unchanged. Hosted requests: zero. Report: ios/docs/LOCAL-API-CONTRACTS.json.
 
 ## References and comparison
 
@@ -52,12 +58,13 @@ Debug --ui-testing uses isolated synthetic data and read-only mutation stand-ins
 
 ## Remaining parity work / known issues
 
-- Title interactions, date/rewatch/episode/slider controls are implemented in build 10, awaiting a successful full test run and visual acceptance; general write-flow UI fixtures remain missing.
-- Stats calculation/zero-bucket/comparison/streak/backlog work is implemented for build 11, awaiting macOS golden tests, interaction tests and visual comparison. The source Stats chart uses daily/aggregate/monthly buckets; it does not use hourly buckets.
-- Glance waiting/sort, complete Explore shelves/filters, Library bulk management and scanner mismatch/location management remain incomplete.
-- Native More/export/TMDB status and reviewed Trakt scan/apply are implemented in build 10, awaiting green integration/UI evidence; backup/import and full sync direction/type coverage remain unfinished.
-- Protected durable snapshots, generation guards, reviewed editor/minus versions and overlay Undo are implemented; cache/session unit tests passed in the incomplete build-9 UI run. Durable retry journal/outbox remains unfinished.
-- Multi-size, accessibility/empty/error/loading/rapid-tap regression; real-device haptics, scrolling, animation timing and LiveContainer login. See DEVICE-CHECKS.md.
+- Fix the two current UI failures through a full green run; collect and compare all new screens.
+- Home/Glance watch and Undo, title episodes/date/rewatch/slider transactions, and broad error/loading/empty/rapid-tap UI coverage remain incomplete, despite pure/API tests.
+- Complete Explore shelves/filters/surprise picks, global search from all fixed headers, and composed Library filter controls.
+- Library bulk Queue/Trash/restore/purge now passes an isolated write-flow UI test. Scanner resolve passes unit tests and reaches the resolved UI, but return navigation failed in the latest run.
+- Stats golden calculations, period collision/calendar navigation, zero-day drilldown and undated history passed. Remaining full layout/all-size comparison is not accepted.
+- Protected cache/session generation and reviewed Trakt controller/transport unit tests pass; per-conflict UI completion still fails. No real provider/account mutation is tested by these fixtures.
+- Real-device Access/Trakt authentication, haptics, scroll smoothness, gesture timing, accessibility and LiveContainer behavior require device checks. See DEVICE-CHECKS.md.
 
 No credential is currently required for this fixture-backed work. Provider redirect registration or real-device behavior may require user input later; never fake successful sync or writes.
 

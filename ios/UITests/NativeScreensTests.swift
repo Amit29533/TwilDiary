@@ -105,6 +105,7 @@ import UIKit
         XCTAssertTrue(app.staticTexts["1 remaining"].waitForExistence(timeout: 5))
         let useTrakt = app.buttons["trakt-trakt-change-2"]
         for _ in 0..<8 { if useTrakt.isHittable { break }; app.swipeUp() }
+        XCTAssertEqual(app.buttons.matching(identifier: "trakt-trakt-change-2").count, 1, "One conflict must expose exactly one Trakt action")
         XCTAssertTrue(useTrakt.isHittable); useTrakt.tap()
         XCTAssertTrue(app.staticTexts["You’re up to date"].waitForExistence(timeout: 5))
         capture("Trakt applied")
@@ -180,10 +181,18 @@ import UIKit
         let chosen = app.buttons["match-title-again"]
         XCTAssertTrue(chosen.waitForExistence(timeout: 5)); chosen.tap()
         XCTAssertTrue(app.staticTexts["No unmatched scans"].waitForExistence(timeout: 5)); capture("Scanner resolved")
-        app.buttons["Done"].tap()
+        let done = app.buttons["scanner-done"]
+        XCTAssertTrue(done.isHittable)
+        XCTAssertLessThan(done.frame.maxY, app.buttons["tab-more"].frame.minY, "Dismiss must never overlap the tab bar")
+        done.tap()
+        XCTAssertTrue(app.staticTexts["Mapped folders"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["tab-more"].isSelected)
         let path = app.staticTexts["R:\\Reference\\Unmatched Series"]
         for _ in 0..<10 { if path.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(path.exists); capture("Confirmed scanned location")
+        let filesDone = app.buttons["files-done"]
+        XCTAssertTrue(filesDone.isHittable); filesDone.tap()
+        XCTAssertTrue(app.staticTexts["Appearance & region"].waitForExistence(timeout: 5))
     }
     private func capture(_ name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())

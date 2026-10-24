@@ -60,6 +60,8 @@ struct PageHeader: View {
     let name: String
     var count: String? = nil
     var onSearch: (() -> Void)? = nil
+    var onDone: (() -> Void)? = nil
+    var doneIdentifier = "page-done"
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     var body: some View {
         HStack(spacing: 9) {
@@ -75,6 +77,7 @@ struct PageHeader: View {
             if let count { Text(count).font(.system(size: 13)).foregroundStyle(Color(webHex: "#a09aa9")).lineLimit(1) }
             Spacer(minLength: 0)
             if let onSearch { Button(action: onSearch) { DiaryIcon(name: "search", size: 22).frame(width: 44, height: 44) }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel(name == "Library" ? "Search library" : "Search").accessibilityIdentifier("search-" + name.lowercased()) }
+            if let onDone { Button("Done", action: onDone).font(.system(size: 14, weight: .semibold)).frame(minWidth: 44, minHeight: 44).accessibilityIdentifier(doneIdentifier) }
         }.frame(height: 56).padding(.horizontal, 14).background(Color(webHex: "#050507"))
     }
 }

@@ -11,7 +11,7 @@ struct FilesView: View {
     @State private var copied = ""
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Files & drives")
+            PageHeader(name: "Files & drives", onDone: { dismiss() }, doneIdentifier: "files-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     ForEach(DiskSummary.make(activeLocations)) { disk in diskButton(disk) }
@@ -26,7 +26,7 @@ struct FilesView: View {
                 }.padding(14).padding(.bottom, 20)
             }.refreshable { await store.refresh() }
         }.navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
-            .safeAreaInset(edge: .bottom) { Button("Done") { dismiss() }.font(.subheadline).padding(10) }
+
     }
     private var activeLocations: [FileLocation] { let ids = Set(store.workspace.activeTitles.map(\.id)); return store.workspace.locations.filter { ids.contains($0.titleId) } }
     private var locations: [FileLocation] { activeLocations.filter { selected == "all" || $0.diskKey == selected || (selected.hasPrefix("drive:") && $0.driveLetter.uppercased() == String(selected.dropFirst(6))) } }

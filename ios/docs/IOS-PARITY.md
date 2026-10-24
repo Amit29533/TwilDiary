@@ -1,28 +1,27 @@
 # Native parity status — work in progress
 
-Product source: the web app under /preview at b43454e. Active native source: Amit29533/TwilDiary, ios-native, ios/. No hosted backend changes are deployed by this work.
+Product source: the web /preview code at b43454e. Active native source: Amit29533/TwilDiary → ios-native → ios/. No hosted changes or deployments.
 
-This is an interim gap list, not final parity acceptance. Run 40020975007 passed 13 core, 8 endpoint/session and 5 browsing UI tests with zero warnings. Screenshot review confirms the corrected single bar, poster bounds, theme colors, Stats range fill and series episode pieces; movie progress remains continuous. The title comparison still shows broader layout differences. Build-9 cache/concurrency work is awaiting CI. Debug fixtures are read-only for mutations; these UI tests establish navigation/browsing, not complete write-flow coverage.
+Latest run 40035195084 compiled both targets with zero warnings: 25 core and 32 native unit tests passed, 7/9 UI passed. Files dismissal and Trakt conflict accessibility failed. Build 8 (40020975007) remains the last complete green run. The new screenshots are diagnostic evidence, not release acceptance. Pixel parity remains unfinished.
 
 | Screen / area | Native work present | Remaining parity / validation |
 | --- | --- | --- |
-| Shell | Fixed native headers, web vector icons, five native tab navigation stacks, six accents, single custom capsule | Reduced transparency, gestures and physical-device timing |
-| Home | Continue cards, shortcuts, week metrics/day links, planned random pick, upcoming air dates, recent history | Full long-text/empty/error states and watch/Undo interaction tests; lower-page spacing review |
-| Library | Categories, status/genre/disk search, public ratings, grid/list/genre layouts, Queue shortcut, Trash link | Bulk selection, independent composed Queue/favorite filters, shelf ordering/unclassified rows, provider-rating failures and all-size review |
-| Title movie/show/anime | Clear art, personal/public ratings, status transactions, quick watch, season selection, screenshot-tested per-episode pieces, episode window/expansion, collapsed notes and locations | Interactive individual episode rows, spoiler reveal policy, date/rewatch editing, range editing, full header/panel layout alignment and transaction UI regression |
-| Catalog review | Authenticated browse, allowed category choice, import, existing/trashed identity handling | Season preview and fixture-backed import/retry/conflict UI coverage |
-| Explore | Discover type/sort, paged grid and online search | Source shelves, complete provider filters, genre discovery and surprise-pick parity |
-| Cast/person | Cast scroller, person biography and searchable typed filmography | Remaining filters/shelf layout, loading/error/empty visual states |
-| Glance | Categories/search, remaining-time metadata, quick +/- and swipe action | Waiting-for-new-episodes section, ordering, exact scroll retention/Undo and real-phone gesture checks |
-| Stats | Period/menu shared selection, original range bar, current streak/heatmap, backlog counts, genre shares, basic chart drilldown | Average/comparison, hourly/monthly/zero-day buckets, longest/active streaks, backlog runtime/in-progress/stale titles and full date-zone fixtures |
-| History | Search, date presets/range/undated, title navigation and chronological ordering | Watch date/rewatch editing, deletion/Undo interactions and grouped history parity |
-| Files & drives | Saved drives, title/path/evidence display | Disk Map geometry, location editing, mismatch-review UI and scanner state management |
-| Trash | List/empty and versioned restore | Permanent-delete/empty-trash flows and conflict/Undo UI tests |
-| More/settings | Themes, public TMDB/Trakt preference, files/history/trash, sign-out, attribution | Tracking/region/default-date/rating-scale options, cache clearing, backups/import/export and complete About UI |
-| TMDB setup | Existing backend metadata APIs consumed | Connection/status/credential setup UI |
-| Trakt | Existing server connection remains authoritative | Native sign-in, scan/review/per-item directions/apply/cancel/conflicts and fixture sync matrix; no account writes are tested here |
-| Offline/auth | Keychain credential, restricted API transport, session independent of D1 quota, atomic paginated reload, retry identities | Durable protected cache/outbox and process-relaunch recovery; real iPhone login in LiveContainer |
+| Shell | Fixed headers, source vector icons, per-tab stacks, six accents, floating capsule | All-size spacing, transparency, keyboard and physical gesture/timing review |
+| Home | Continue cards, shortcuts, weekly metrics/day links, planned pick, upcoming episodes, history | Watch/Undo UI tests; empty/error/long text and lower-page comparison |
+| Library | Category/status/genre/disk search; public ratings; grid/list/ordered genre shelves; reviewed bulk Queue/favorite/status/Trash | Composed Queue/favorite/tag/availability filter UI, sorting coverage, provider failures and all-size review |
+| Title movie/show/anime | Art/ratings/status; episode pieces versus continuous movie; aired prefix slider plans; dates/rewatches; versioned Undo; spoiler reveal; notes/locations collapsed | End-to-end transaction tests and complete header/panel spacing/typography comparisons |
+| Catalog | Search/review/import, identity/category handling, cast | Season preview, fixture-backed import/retry/conflict UI coverage |
+| Explore | Discover type/sort and paged grid | Source shelves, provider filters, genre discovery and surprise picks |
+| Cast/person | Biography, searchable movie/TV filmography | Filters/shelves, loading/error/empty states and visual alignment |
+| Glance | Source-order watching cards; category/search; remaining time; quick +/- and swipe | Watch/Undo and scroll-retention regression, real-device gesture checks. Current source has no waiting section or sort control. |
+| Stats | 17 web golden scenarios pass; average/comparison; zero/day/aggregate/year-month buckets; streaks/84-day heatmap; backlog runtime/stale titles; genre shares; accessible bucket drilldown | Full visual/all-size review. Calendar collision, Home→Today, empty bucket and undated history UI tests pass. Current source has no hourly chart. |
+| History | Search, presets/range/undated, title navigation, chronological ordering | Full source grouping/filter edge cases and transaction entry-point review |
+| Files & drives | Device/volume summaries, filters, mapped folders/evidence/path copy, disk Library link; paginated scanner review/match | Navigation return fix, visual comparison and error/retry/empty/paging UI tests. PC creates scans; phone reviews existing scan data. |
+| Trash | Shared Library search/layout, reviewed restore/delete/Empty Trash | Queue→Trash→restore→delete UI passed. More stale/conflict/empty/error coverage; native adds confirmation before explicit Empty Trash command. |
+| More/settings | Source tracking/region/theming/public ratings, export/storage/About; TMDB status/PC credential boundary | Every option interaction and visual regression. Current source has no import or automatic-backup settings. |
+| Trakt | Existing server PKCE auth, status/scan/step/pause/cancel, filters/paging/cooldown, safe apply and explicit local/Trakt/skip choice; unit/transport tests pass | Conflict action accessibility fix, full direction/type UI matrix and actual device/provider authentication. Synthetic provider makes no HTTP requests. |
+| Offline/auth | Keychain; restricted transport; complete atomic reload; encrypted owner-scoped snapshot; generation guards; retained retry identities | Real-device login/relaunch/network transitions. Current web requires reconnect before writes; no offline outbox is a parity requirement. |
 
-PC-only boundary: drive scanning and ingestion execute on the Windows host. Native iPhone screens must show the same saved mappings, scanner evidence and mismatch data as the mobile web product; the phone cannot scan arbitrary Windows volumes. No fake scan or fake successful provider sync is implemented.
+PC-only boundary: scanning/ingestion and provider credential editing remain on the existing Windows/server side, as on mobile web. Native presents saved mappings, scanner evidence and reviewed resolution. No arbitrary Windows-volume scanning from the phone, bundled service token or fake provider success.
 
-Primary web references: docs/reference/chromium-win32 (70 enumerated states at 390x844). Secondary matching-content references: docs/reference/chromium-win32-402x778, excluding only documented iPhone 17 Pro OS insets for comparison. Neither set alone establishes native pixel parity. Physical-device checks are in DEVICE-CHECKS.md.
+Primary references: reference/chromium-win32 (70 states, 390×844). Secondary: reference/chromium-win32-402x778 (matching iPhone 17 Pro content excluding documented 62pt top/34pt bottom system insets). DEVICE-CHECKS.md records what CI cannot establish.

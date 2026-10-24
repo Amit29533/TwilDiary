@@ -8,6 +8,7 @@ import TwilDiaryCore
     @State private var clock = Date.now
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     init(store: DiaryStore) { self.store = store; _controller = State(initialValue: TraktController(service: makeTraktService(store: store))) }
     var body: some View {
@@ -124,12 +125,14 @@ import TwilDiaryCore
             }
             if ["applied", "skipped"].contains(change.state) { Text(change.state.capitalized).font(.caption).foregroundStyle(.secondary) }
             else {
-                ViewThatFits(in: .horizontal) {
-                    HStack { changeActions(change) }
-                    VStack(alignment: .leading) { changeActions(change) }
-                }.disabled(controller.busy || !sync.reviewing)
+                // A single subtree keeps each review action unique in accessibility.
+                // ViewThatFits retained two sets of buttons, including hidden candidates.
+                let layout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                    : AnyLayout(HStackLayout(spacing: 8))
+                layout { changeActions(change) }.disabled(controller.busy || !sync.reviewing)
             }
-        }.diaryPanel().accessibilityIdentifier("trakt-change-" + change.id)
+        }.diaryPanel().accessibilityElement(children: .contain).accessibilityIdentifier("trakt-change-" + change.id)
     }
     @ViewBuilder private func changeActions(_ change: TraktChange) -> some View {
         if change.state == "uncertain" { action("Check Trakt", change: change, choice: .local) }

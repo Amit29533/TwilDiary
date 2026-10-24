@@ -140,3 +140,10 @@ Goal: release a verified native client with an honest parity and device checklis
 Screens/files: all `/ios`, final screenshots, reports and release artifact.
 
 Done: no unfinished native placeholders/dead controls; all tests/builds/warnings/visual gates pass; remaining physical-device checks and genuine web limitations are explicitly recorded; all changes committed only to `ios-native`.
+
+## Evidence checkpoint — 24 October, build 14 prepared
+
+- Run 40035195084: zero-warning simulator/device builds; all 25 core (17 web Stats golden scenarios) and 32 native unit tests pass; 7/9 UI tests pass. Full acceptance is still pending.
+- Library reviewed Queue/Trash/restore/purge UI passes. Files/scanner mapping core/transport tests pass; dismissal hit bounds need correction. Trakt safe apply works; conflict button accessibility needs correction.
+- Current source audit removes obsolete gaps from older mockups: no Glance waiting/sort, hourly Stats, settings import/backup or offline write outbox exists in current web code.
+- Next gate: build-14 header Done / unique conflict action regression, complete CI green, downloaded screenshots and verified IPA; then remaining real parity work.
