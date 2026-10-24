@@ -4,6 +4,11 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native �
 
 ## Current request and exact next action
 
+### Optional Codemagic permission
+
+User permits occasional Codemagic builds. No repo configuration or process environment connection was found. Official specs confirm Xcode26.6 / iOS26.5 and our three phone sizes on the M2 image. Prepared root codemagic.yaml and CODEMAGIC.md as a manual-only fallback reusing the complete existing ci.sh/XcodeGen pipeline, retaining failure diagnostics and unsigned IPA without signing/deployments. No account integration, credentials, paid tier, automatic runs or Codemagic success is claimed; first real execution must be verified and its provider provenance recorded. GitHub build26 continues unchanged; root-only config/docs do not trigger its ios/** workflow.
+
+
 ### Build 26 pushed — active run and next action
 
 Build 25 / 40098826990 / 6130cdf completes with **54 Core + 99 native unit tests passing**, zero build warnings, passing simulator/device Release compilation and the early real watch/segmented-slider/Undo/movie gate. Primary UI **33/40** pass, including all three LayoutScreensTests, native nav scrub/cancel, held-touch Undo, per-card slow writes/cache retention, Glance completion/Undo and title menu/location fixes. Compact/large suites are skipped after primary failure; this is not an accepted release.
