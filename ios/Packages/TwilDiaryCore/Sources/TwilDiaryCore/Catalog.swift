@@ -73,9 +73,13 @@ public struct CatalogDetails: Decodable, Sendable {
 }
 
 public struct CatalogBrowse: Decodable, Sendable {
-    public struct Saved: Decodable, Sendable { public let id: String; public let trashed: Bool }
+    public struct Saved: Decodable, Sendable {
+        public let id: String; public let trashed: Bool
+        public init(id: String, trashed: Bool) { self.id = id; self.trashed = trashed }
+    }
     public let details: CatalogDetails
     public let libraryTitle: Saved?
+    public init(details: CatalogDetails, libraryTitle: Saved?) { self.details = details; self.libraryTitle = libraryTitle }
 }
 
 public struct CastPerson: Decodable, Identifiable, Sendable {
@@ -103,7 +107,7 @@ public struct PersonDetails: Decodable, Sendable {
 
 public enum CatalogTools {
     public static func libraryIdentity(_ item: CatalogItem, in workspace: Workspace) -> String? {
-        workspace.titles.first { $0.id == item.inLibraryId || ($0.tmdbId == item.id && $0.isSeries == (item.mediaType == .tv)) }?.id
+        workspace.activeTitles.first { $0.id == item.inLibraryId || ($0.tmdbId == item.id && $0.isSeries == (item.mediaType == .tv)) }?.id
     }
     public static func image(_ path: String?, size: String = "w500") -> String? {
         guard let path, ["w185", "w500", "w780"].contains(size),

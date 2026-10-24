@@ -141,14 +141,13 @@ struct CatalogDetailView: View {
     @State private var failure: String?
     @State private var loading = false
     @State private var showOverview = false
-    @State private var importedID: String?
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 if let details {
                     TitleHero(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), year: details.details.year, category: details.details.suggestedCategory == "anime-movie" ? "Anime movie" : details.details.suggestedCategory.capitalized, runtime: details.details.runtimeMinutes, series: route.kind == .tv, score: details.details.communityScore, summary: details.details.overview, expanded: $showOverview) { EmptyView() }
                     if details.libraryTitle?.trashed == true {
-                        Button("Restore from Trash") { router.paths[router.selectedTab, default: NavigationPath()].append(AppDestination.trash) }.buttonStyle(.borderedProminent).controlSize(.large)
+                        NavigationLink { TrashView().onAppear { router.detailTabs.remove(router.selectedTab) } } label: { Text("Restore from Trash") }.buttonStyle(.borderedProminent).controlSize(.large)
                     } else if let saved = details.libraryTitle {
                         Button("Open in Library") { accepted(saved.id) }.buttonStyle(.borderedProminent).controlSize(.large)
                     } else {
@@ -165,9 +164,8 @@ struct CatalogDetailView: View {
             if let details { TitleArtworkBackdrop(path: CatalogTools.image(details.details.backdropPath, size: "w780"), name: details.details.name) }
         }.background(.black).background(EdgeSwipeBackOnly()).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .task(id: route) { await load() }
-            .navigationDestination(item: $importedID) { TitleDetailView(id: $0) }
     }
-    private func accepted(_ id: String) { if let onImported { onImported(id) } else { importedID = id } }
+    private func accepted(_ id: String) { if let onImported { onImported(id) } else { router.replaceTitle(id, tab: router.selectedTab) } }
     private func load() async {
         guard details == nil else { return }
         loading = true; failure = nil; defer { loading = false }

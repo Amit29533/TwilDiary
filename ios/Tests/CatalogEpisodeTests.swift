@@ -1,8 +1,15 @@
 import XCTest
+import SwiftUI
 import TwilDiaryCore
 @testable import TwilDiary
 
 @MainActor final class CatalogEpisodeTests: XCTestCase {
+    func testImportNavigationReplacesThePreviewInsteadOfLeavingAStaleAddPage() {
+        let router = AppRouter(); router.paths[.home] = NavigationPath()
+        router.paths[.home]?.append(CatalogRoute(kind: .tv, id: 900001))
+        router.replaceTitle("tmdb-tv-900001", tab: .home)
+        XCTAssertEqual(router.paths[.home]?.count, 1); XCTAssertEqual(router.selectedTab, .home)
+    }
     private func page(_ number: Int) -> CatalogEpisodesPage {
         CatalogEpisodesPage(items: [CatalogEpisode(number: number, name: "Chapter", overview: "Summary", airedOn: nil, stillPath: nil, communityScore: nil)])
     }

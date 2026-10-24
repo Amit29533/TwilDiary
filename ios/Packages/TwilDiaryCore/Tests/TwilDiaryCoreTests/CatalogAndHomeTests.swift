@@ -54,3 +54,13 @@ import Testing
     let page = try JSONDecoder().decode(CatalogEpisodesPage.self, from: Data(#"{"items":[{"number":1,"name":"","overview":"","airedOn":null,"stillPath":null,"communityScore":8.1}],"stale":false}"#.utf8))
     #expect(page.items.first?.name == ""); #expect(page.items.first?.communityScore == 8.1)
 }
+
+@Test func archivedCatalogMatchesMustOpenTheRestorePreview() throws {
+    let original = try #require(SampleWorkspace.make().titles.first)
+    var object = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
+    object["deletedAt"] = "2026-10-23T00:00:00Z"; object["tmdbId"] = 42
+    let title = try JSONDecoder().decode(MediaTitle.self, from: JSONSerialization.data(withJSONObject: object))
+    let workspace = Workspace(titles: [title])
+    let item = CatalogItem(id: 42, mediaType: title.isSeries ? .tv : .movie, name: title.name, inLibraryId: title.id)
+    #expect(CatalogTools.libraryIdentity(item, in: workspace) == nil)
+}

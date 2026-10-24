@@ -36,6 +36,11 @@ enum AppDestination: Hashable { case explore, history, files, trash }
     func statsToday() { statsRevision += 1; paths[.stats] = NavigationPath(); selectedTab = .stats }
     func files() { selectedTab = .more; paths[.more] = NavigationPath(); paths[.more, default: NavigationPath()].append(AppDestination.files) }
     func openTitle(_ id: String, tab: AppTab) { selectedTab = tab; paths[tab, default: NavigationPath()].append(id) }
+    func replaceTitle(_ id: String, tab: AppTab) {
+        selectedTab = tab
+        if paths[tab, default: NavigationPath()].count > 0 { paths[tab, default: NavigationPath()].removeLast() }
+        paths[tab, default: NavigationPath()].append(id)
+    }
 }
 
 struct RootView: View {

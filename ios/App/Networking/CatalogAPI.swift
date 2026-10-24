@@ -11,7 +11,11 @@ extension DiaryStore {
         return try await read(CatalogTools.apiPath("/api/search", query: ["q": query, "scope": "online", "page": String(page)]))
     }
     func browse(_ route: CatalogRoute) async throws -> CatalogBrowse {
-        if isPreview { return PreviewCatalog.browse(route) }
+        if isPreview {
+            let value = PreviewCatalog.browse(route)
+            let saved = workspace.titles.first { $0.tmdbId == route.id && $0.isSeries == (route.kind == .tv) }
+            return CatalogBrowse(details: value.details, libraryTitle: saved.map { CatalogBrowse.Saved(id: $0.id, trashed: $0.deletedAt != nil) })
+        }
         return try await read(CatalogTools.apiPath("/api/metadata/browse", query: ["type": route.kind.rawValue, "id": String(route.id)]))
     }
     func cast(_ route: CatalogRoute) async throws -> CastResponse {
