@@ -1,5 +1,12 @@
 # Native TwilDiary progress
 
+## Parallel checkpoint — build33 on GitHub; next Trash/menu batch local only
+
+GitHub build33/source3cd25b01f75039cf502a78caa684953abdef343a is active run40130893194, https://github.com/Amit29533/TwilDiary/actions/runs/40130893194. Codemagic independently runs build32/source72f081cf59b13f23a17fb4626cef522222ff2b94 (same native app7ec6249). Preserve both runs and report their exact outcomes separately.
+
+Prepared the first independent follow-on subtask locally while both providers run: a dedicated TrashView with native Back/title, separate persistent list/grid preference, count/categories/order, global Library/TMDB search, recovery explanation, Select/bulk review, Restore/permanent-delete reviews and explicit Empty Trash confirmation. Library keeps its existing Trash shortcut and active filters; removed the obsolete archived-Library branches. Decorative cards have no dead buttons; selection uses real controls, preserving the60-title bound. Existing fixture bulk Queue/Trash/Restore/delete UI case now checks native Trash navigation, grid/list, independence from Library filters and cancellation of Empty Trash before restoration/purge. Glance removes Open title and uses Mark complete while calling the unchanged current-season transaction. Existing menu/season regression selectors are updated. This source is not in33 or the Codemagic baseline; no pass is claimed. Swift syntax/diff inspection is local only. Next: review both live run outcomes, fix any33 compiler/unit/UI failure, finish the next coherent feature batch and push only after GitHub33 ends.
+
+
 ## Current continuation — build32 failed; independent Codemagic baseline running; build33 prepared
 
 GitHub run40126884412/source7ec6249a9220fe3615085e5cec8027d3ebf770aa is completed FAILURE: Core64/64, native unit119/119 and early UI8/10; simulator/Core builds have zero warnings. No physical IPA/full43/all-phone execution. Original screenshots, failed recordings, logs and xcresults downloaded to .local/ios-app-build-40126884412; original passed Notes-save/reopen screenshot retained in ios/docs/screenshots/step-10/build-32-diagnostic with explicit failure scope. Notes retains the draft across Favorite before Save. Search's saved-title content Back still fails. Mark-one/Undo now passes inside the failing range test; after range edit the forward10 state and real receipt appear, but XCTest tries to scroll the gesture-containing toast and consumes its unchanged4.5-second lifetime. Do not call32 accepted.

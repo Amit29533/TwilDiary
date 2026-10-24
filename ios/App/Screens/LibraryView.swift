@@ -2,9 +2,7 @@ import SwiftUI
 import TwilDiaryCore
 
 struct LibraryView: View {
-    var archived = false
     @Environment(DiaryStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     @Environment(AppRouter.self) private var router
     @AppStorage("publicRatingSource") private var ratingSource = PublicRatingSource.tmdb
@@ -23,10 +21,9 @@ struct LibraryView: View {
     @State private var selecting = false
     @State private var selected = Set<String>()
     @State private var review: CollectionReview?
-    @State private var confirmEmptyTrash = false
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: archived ? "Trash" : "Library", count: String(collection.count), onSearch: { showSearch.toggle() }, height: 54)
+            PageHeader(name: "Library", count: String(collection.count), onSearch: { showSearch.toggle() }, height: 54)
             if showSearch {
                 ScrollView { CatalogSearchView(onClose: { showSearch = false }).padding(.top, 2) }
             } else {
@@ -66,7 +63,6 @@ struct LibraryView: View {
                 }
             }
             .sheet(item: $review) { value in CollectionReviewView(review: value) { selecting = false; selected = [] } }
-            .confirmationDialog("Empty Trash?", isPresented: $confirmEmptyTrash, titleVisibility: .visible) { Button("Empty Trash", role: .destructive) { Task { await store.emptyTrash() } } } message: { Text("This permanently removes every title in Trash and its diary history. Files on your disks stay untouched.") }
     }
     private func ratingStatus(_ message: String) -> some View {
         Text(message).font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.bottom, 10)
@@ -91,15 +87,14 @@ struct LibraryView: View {
                             Text("No disk mapping").tag("unmapped")
                         }
                     } label: { filterChip(driveLabel, selected: !drive.isEmpty) }.accessibilityIdentifier("library-disk")
-                    if archived { Button { dismiss() } label: { trashChip }.accessibilityLabel("Return to Library") }
-                    else { NavigationLink(value: AppDestination.trash) { trashChip }.accessibilityLabel("Open Trash") }
+                    NavigationLink(value: AppDestination.trash) { trashChip }.accessibilityLabel("Open Trash")
                 }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).padding(.horizontal, 14).padding(.vertical, 8)
             }.scrollIndicators(.hidden)
     }
     private var orderingBar: some View {
         GeometryReader { geometry in
             HStack(spacing: 8) {
-                Text(archived ? "In Trash" : hasFilters ? "" : "All titles")
+                Text(hasFilters ? "" : "All titles")
                     .font(.system(size: geometry.size.width < 331 ? 13 : 14))
                     .foregroundStyle(.secondary).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                 Menu {
@@ -124,10 +119,8 @@ struct LibraryView: View {
                 } else {
                     Button { list.toggle(); genreRows = false } label: { layoutIcon(list ? "list" : "layout-grid", selected: true) }
                         .accessibilityLabel(list ? "Grid layout" : "List layout").accessibilityIdentifier("library-layout")
-                    if !archived {
-                        Button { genreRows.toggle(); list = false } label: { layoutIcon("rows-3", selected: genreRows, genre: true) }
-                            .accessibilityLabel("Genre sections").accessibilityIdentifier("library-genres")
-                    }
+                    Button { genreRows.toggle(); list = false } label: { layoutIcon("rows-3", selected: genreRows, genre: true) }
+                        .accessibilityLabel("Genre sections").accessibilityIdentifier("library-genres")
                 }
             }.foregroundStyle(Color(webHex: "#c5c0cf")).buttonStyle(.plain)
         }.frame(height: 46).padding(.horizontal, 14).padding(.bottom, 12)
@@ -137,13 +130,7 @@ struct LibraryView: View {
     }
     private var collectionContent: some View {
         ScrollView {
-                if archived {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Button("Empty Trash", systemImage: "trash", role: .destructive) { confirmEmptyTrash = true }.buttonStyle(.bordered).disabled(store.writesBlocked || collection.isEmpty).accessibilityIdentifier("empty-trash")
-                        Text("Removed titles stay here with their history. Deleting permanently only removes diary records; your disk files stay untouched.").font(.caption).foregroundStyle(.secondary)
-                    }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.bottom, 14)
-                }
-                if selecting { CollectionSelectionPanel(titles: filtered, selected: $selected, archived: archived, onReview: prepareReview).padding(.horizontal, 14).padding(.bottom, 12) }
+                if selecting { CollectionSelectionPanel(titles: filtered, selected: $selected, onReview: prepareReview).padding(.horizontal, 14).padding(.bottom, 12) }
                 if genreRows && !selecting {
                     LazyVStack(alignment: .leading, spacing: 20) {
                         ForEach(LibraryShelf.make(filtered)) { shelf in
@@ -156,11 +143,11 @@ struct LibraryView: View {
                 } else {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10, alignment: .top), count: 3), alignment: .leading, spacing: 18) { ForEach(filtered) { poster($0) } }.padding(.horizontal, 14)
                 }
-                if filtered.isEmpty { DiaryEmptyState(title: archived ? "Trash is clear" : "Nothing here just yet", description: archived ? "Removed titles will appear here. Try clearing filters if a title is missing." : "Try a different search or clear a filter to find your stories.").padding(.horizontal, 14).padding(.top, 20) }
+                if filtered.isEmpty { DiaryEmptyState(title: "Nothing here just yet", description: "Try a different search or clear a filter to find your stories.").padding(.horizontal, 14).padding(.top, 20) }
             }.refreshable { await store.refresh(); await store.loadPublicRatings(collection, source: ratingSource) }
     }
     private func applyShortcut() {
-        guard !archived, router.libraryRevision > appliedShortcutRevision else { return }
+        guard router.libraryRevision > appliedShortcutRevision else { return }
         appliedShortcutRevision = router.libraryRevision
         category = .all; genre = router.libraryGenreShortcut; drive = router.libraryDiskShortcut; status = "all"
         switch router.libraryShortcut { case "queue": status = "queue"; case "planned", "watching", "completed", "dropped": status = router.libraryShortcut ?? "all"; case "disk": drive = HomeDiskShortcut.all.first?.key ?? ""; case "add": showAdd = true; default: break }
@@ -170,11 +157,6 @@ struct LibraryView: View {
             Button { if selected.contains(title.id) { selected.remove(title.id) } else if selected.count < CollectionRequest.limit { selected.insert(title.id) } } label: {
                 cardContent(title, row: row).overlay(alignment: .topTrailing) { Image(systemName: selected.contains(title.id) ? "checkmark.circle.fill" : "circle").font(.system(size: 22)).foregroundStyle(selected.contains(title.id) ? theme.accent : .white).padding(7).shadow(color: .black, radius: 3) }
             }.buttonStyle(.plain).disabled(store.busy || (!selected.contains(title.id) && selected.count >= CollectionRequest.limit)).accessibilityIdentifier("select-title-" + title.id).accessibilityAddTraits(selected.contains(title.id) ? .isSelected : [])
-        } else if archived {
-            VStack(spacing: 8) {
-                cardContent(title, row: row)
-                HStack { Button("Restore") { review = CollectionReview(titles: [title], change: .restore) }.font(.caption.bold()); Spacer(); Button("Delete permanently", systemImage: "trash", role: .destructive) { review = CollectionReview(titles: [title], change: .purge) }.labelStyle(.iconOnly) }.buttonStyle(.bordered).disabled(store.writesBlocked)
-            }.contextMenu { Button("Select") { selecting = true; selected = [title.id] } }.accessibilityIdentifier("archived-title-" + title.id)
         } else {
             NavigationLink(value: title.id) { cardContent(title, row: row) }.buttonStyle(.plain).contentShape(Rectangle()).accessibilityIdentifier("title-" + title.id)
                 .contextMenu {
@@ -185,11 +167,11 @@ struct LibraryView: View {
                 }
         }
     }
-    @ViewBuilder private func cardContent(_ title: MediaTitle, row: Bool) -> some View { if row { LibraryTitleRow(title: title, archived: archived) } else { PosterCard(title: title, archived: archived).contentShape(Rectangle()) } }
+    @ViewBuilder private func cardContent(_ title: MediaTitle, row: Bool) -> some View { if row { LibraryTitleRow(title: title) } else { PosterCard(title: title).contentShape(Rectangle()) } }
     private func prepareReview(_ change: CollectionChange) { let titles = filtered.filter { selected.contains($0.id) }; if !titles.isEmpty { review = CollectionReview(titles: titles, change: change) } }
     private var filterScope: String { [category.rawValue, status, genre, drive, sort].joined(separator: "\n") }
-    private var collection: [MediaTitle] { store.workspace.titles.filter { ($0.deletedAt != nil) == archived } }
-    private var trashChip: some View { HStack(spacing: 6) { DiaryIcon(name: "trash-2", size: 15); Text("Trash") }.font(.system(size: 14, weight: .semibold)).padding(.horizontal, 14).frame(height: 40).background { DiaryControlSurface(shape: Capsule(), selected: archived) } }
+    private var collection: [MediaTitle] { store.workspace.activeTitles }
+    private var trashChip: some View { HStack(spacing: 6) { DiaryIcon(name: "trash-2", size: 15); Text("Trash") }.font(.system(size: 14, weight: .semibold)).padding(.horizontal, 14).frame(height: 40).background { DiaryControlSurface(shape: Capsule()) } }
     private func filterChip(_ label: String, selected: Bool) -> some View {
         HStack(spacing: 7) { Text(label).lineLimit(1); DiaryIcon(name: "chevron-down", size: 15) }.font(.system(size: 14, weight: .semibold)).padding(.horizontal, 14).frame(height: 40).background { DiaryControlSurface(shape: Capsule(), selected: selected) }
     }
@@ -207,7 +189,6 @@ struct LibraryView: View {
     private var driveLabel: String { if drive.isEmpty { return "Disk" }; if drive == "mapped" { return "On disk" }; if drive == "unmapped" { return "No disk mapping" }; if let shortcut = HomeDiskShortcut.all.first(where: { $0.key == drive }) { return shortcut.label }; return disks.first { $0.key == drive }?.letters.joined(separator: " / ") ?? "Selected disk" }
     private var filtered: [MediaTitle] {
         var query = LibraryQuery()
-        query.archived = archived
         query.category = category == .movies ? "movie" : category == .shows ? "show" : category == .anime ? "anime" : "all"
         query.status = status == "queue" ? "all" : status; query.queued = status == "queue"; query.genre = genre
         query.disk = drive.isEmpty ? "all" : ["mapped", "unmapped"].contains(drive) || drive.hasPrefix("[") || drive.hasPrefix("drive:") ? drive : "drive:" + drive.uppercased()
@@ -242,10 +223,4 @@ struct GlanceView: View {
         }
     }
     private var titles: [MediaTitle] { store.workspace.activeTitles.filter { $0.status == "watching" && category.includes($0) && (search.isEmpty || $0.name.localizedCaseInsensitiveContains(search)) } }
-}
-
-struct TrashView: View {
-    var body: some View {
-        LibraryView(archived: true).navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
-    }
 }

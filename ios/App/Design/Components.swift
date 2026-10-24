@@ -369,13 +369,12 @@ struct ProgressCard: View {
                             Button(title.favorite ? "Remove favorite" : "Favorite", systemImage: title.favorite ? "heart.slash" : "heart") { Task { await store.patchCard(title.id, values: ["favorite": !title.favorite]) } }
                             Button(title.queued == true ? "Remove from Queue" : "Add to Queue", systemImage: "text.badge.plus") { Task { await store.patchCard(title.id, values: ["queued": title.queued != true]) } }
                             if title.isSeries, let season = card?.season?.number {
-                                Button("Mark season \(season) complete", systemImage: "checkmark.circle") { Task { await store.completeCardSeason(title.id, season: season) } }
+                                Button("Mark complete", systemImage: "checkmark.circle") { Task { await store.completeCardSeason(title.id, season: season) } }
                             }
                             Button("Dropped", systemImage: "stop.circle") { Task { await store.patchCard(title.id, values: ["status": "dropped"]) } }
                             Button("Notes", systemImage: "note.text") {
                                 router.paths[router.selectedTab, default: NavigationPath()].append(SavedTitleRoute(id: title.id, season: card?.season?.number ?? 1, focusEpisodes: false, focusNotes: true))
                             }
-                            Button("Open title", systemImage: "arrow.up.right") { openTitle() }
                         } label: { DiaryIcon(name: "ellipsis", size: 19).frame(width: 44, height: 44) }
                             .disabled(cardBusy || store.needsMutationRefresh).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel("More options for " + title.name).accessibilityIdentifier("progress-menu-" + title.id)
                     }

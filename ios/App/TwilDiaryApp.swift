@@ -15,6 +15,7 @@ import TwilDiaryCore
             UserDefaults.standard.set(true, forKey: "hideSpoilers")
             for key in ["historyGrid", "homeHistoryGrid", "upcomingGrid", "glanceGrid", "filesGrid", "scannerGrid", "episodesGrid", "traktGrid", "searchGrid", "backlogGrid"] { UserDefaults.standard.set(false, forKey: key) }
             UserDefaults.standard.set(true, forKey: "catalogGrid")
+            UserDefaults.standard.set(true, forKey: "trashGrid")
         }
         #endif
     }
