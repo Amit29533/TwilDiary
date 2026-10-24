@@ -25,6 +25,9 @@ Build 20 has passed Core and both simulator/arm64 compilations and is executing 
 Home calculation review found two order differences: the web sorts eligible Planned titles by identity via its shared discovery helper, while Home used storage order; upcoming ties use ordinary lexical locale comparison, while native used numeric-aware standard comparison. Reused DiscoveryTools.unwatched and matched the lexical tie rule. Nine expectations now come directly from unchanged homeOverview, covering weekly/date/runtime coverage, DST, planned history exclusions/order and upcoming skip/special/drop/30-day/dedup/tie rules. Pending native Core CI.
 
 
+Self-review: 94/94 primary reference image hashes verify; unchanged web random-pick tests pass (4/4); Home/History expectations generated from source (9/19 cases); next workflow YAML parses with the existing Prettier parser and cache restore/save keys match. No local Bash/YAML-Python/Swift toolchain exists; attempted optional Bash/PyYAML validation was unavailable, so no shell/native test pass is claimed. The script edit only adds standard xcodebuild timing/index options; actual execution remains in CI. Web src/docs/drizzle/tests and existing web workflows have no diff from b43454e.
+
+
 Build 19 also includes these source-driven improvements, all awaiting native CI/visual acceptance:
 - Shared saved/catalog hero and backdrop; online TV season picker, read-only episode pieces, four-row/expanded lists, explicit spoiler reveal, lazy season cache and retries.
 - Exact suggested-category imports, archived-identity Restore routing, replace navigation after import, session/cancellation guards, and in-memory opt-in import fixtures that preserve notes/ratings/history.

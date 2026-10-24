@@ -31,7 +31,7 @@ StatsOverview is a Codable projection of unchanged web diaryStats. UTC surrogate
 
 CollectionRequest freezes up to 60 distinct reviewed title versions. Ordinary collection edits use the existing single atomic bulk endpoint; Planned/Completed use the existing progress transaction with retained operation IDs, metadata preparation and a retryable Undo receipt. LibraryQuery follows web normalization, independent Queue/favorite/status/availability/disk semantics, public score sorting and source genre shelf ordering/unclassified behavior.
 
-Only DEBUG --ui-testing --ui-mutations enables FixtureDiaryBackend. It owns synthetic in-memory data and has no network API. Every collection item/version/state is validated before publishing a change. Unsupported fixture requests fail explicitly, never reaching URLSession or the hosted backend. It currently supports collection/Trash and ordinary title patches, not progress/episode transactions; those use separate pure/URLProtocol/local-backend evidence. Release code cannot enable this fixture. The native Empty Trash action adds a destructive confirmation before sending the same explicit server command.
+Only DEBUG --ui-testing --ui-mutations enables FixtureDiaryBackend. It owns synthetic in-memory data and has no network API. Every collection item/version/state is validated before publishing a change. Unsupported fixture requests fail explicitly, never reaching URLSession or the hosted backend. It now supports collection/Trash, ordinary title patches, watch/progress/Undo transactions, metadata preparation, catalog/manual import and scanner review through isolated request handlers; pure/URLProtocol/local-backend evidence remains complementary. Release code cannot enable this fixture. The native Empty Trash action adds a destructive confirmation before sending the same explicit server command.
 
 ## Saved drives, scanner and control containment
 
@@ -89,3 +89,10 @@ Provider-linked saved titles automatically prepare their selected season when it
 
 
 Random-pick overlay uses a containing modal accessibility element and escape-to-dismiss, with the underlying diary hidden from accessibility while open. API references checked: https://developer.apple.com/documentation/swiftui/accessibilitytraits/ismodal and https://developer.apple.com/documentation/swiftui/accessibilityactionkind/escape . Physical VoiceOver focus/gesture timing remains in DEVICE-CHECKS.md. Library initials and ordinary clapperboard/name placeholders remain distinct, matching Poster.svelte; missing hero images use TitleScreen.svelte's backdrop gradient.
+
+
+## Current unaccepted build-21 follow-up
+
+HistoryQuery shares a parsed-date ordering and row projection between Home and History; date-only ranges are evaluated in the device calendar, unknown dates remain independent, and repeat badges use evidence outside the current filter. Nineteen generated activity.ts cases and nine homeOverview cases are committed. Home reuses the discovery Planned ordering rather than storage order, and its minute/foreground clock refresh never performs a backend write. TraktOverview mirrors More's source summary priorities and excludes stale review counts when disconnected or expired. DEBUG scenarios cover disconnected/reconnect/scanning/unavailable states without provider traffic. These changes still require macOS compilation and screenshot review.
+
+The next workflow allowance is 100 minutes with bounded Core/UI stages. Native intermediates are cached only after successful ordinary builds; restored data never skips xcodebuild dependency checks. Indexing is disabled for CI and build timing summaries are retained. Cache effectiveness remains unmeasured until a later run uses it. Local YAML syntax was checked with the existing Prettier parser; local Bash and Swift are unavailable, so shell execution and all native compilation remain CI-only.
