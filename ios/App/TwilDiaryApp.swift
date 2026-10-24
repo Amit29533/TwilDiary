@@ -32,6 +32,7 @@ enum AppDestination: Hashable { case explore, history, files, trash }
 
 @MainActor @Observable final class AppRouter {
     var selectedTab = AppTab.glance
+    var randomPick: RandomPickScope?
     var paths: [AppTab: NavigationPath] = [:]
     var libraryShortcut: String?
     var libraryGenreShortcut = ""
@@ -39,6 +40,10 @@ enum AppDestination: Hashable { case explore, history, files, trash }
     var libraryRevision = 0
     var statsRevision = 0
     var detailTabs = Set<AppTab>()
+    func presentRandomPick(_ titleIDs: [String]? = nil) {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        randomPick = RandomPickScope(titleIDs: titleIDs)
+    }
     func library(_ shortcut: String) { libraryGenreShortcut = ""; libraryDiskShortcut = ""; libraryShortcut = shortcut; libraryRevision += 1; paths[.library] = NavigationPath(); selectedTab = .library }
     func libraryGenre(_ genre: String) { library("all"); libraryGenreShortcut = genre }
     func libraryDisk(_ key: String) { library("all"); libraryDiskShortcut = key == "all" ? "" : key }
@@ -113,7 +118,15 @@ struct RootView: View {
                         }
                     }
             }
-        }.task { await store.refresh() }
+        }.accessibilityHidden(router.randomPick != nil)
+            .overlay {
+                if let scope = router.randomPick {
+                    RandomPickDialog(titles: scope.candidates(in: store.workspace),
+                        onClose: { router.randomPick = nil },
+                        onOpen: { id in router.randomPick = nil; router.openTitle(id, tab: router.selectedTab) },
+                        onAdd: { router.randomPick = nil; router.library("add") }).id(scope.id)
+                }
+            }.task { await store.refresh() }
     }
     private var showNavigation: Bool { !router.detailTabs.contains(router.selectedTab) }
     private var navigation: some View {

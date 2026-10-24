@@ -14,6 +14,7 @@ struct LibraryView: View {
     @State private var drive = ""
     @State private var search = ""
     @State private var showSearch = false
+    @State private var showAdd = false
     @State private var list = false
     @State private var genreRows = false
     @State private var sort = "library"
@@ -42,6 +43,15 @@ struct LibraryView: View {
             .onAppear { applyShortcut() }
             .onChange(of: filterScope) { _, _ in selecting = false; selected = [] }
             .onChange(of: filtered.map(\.id)) { _, ids in selected.formIntersection(ids) }
+            .sheet(isPresented: $showAdd) {
+                NavigationStack {
+                    ScrollView {
+                        CatalogSearchView(onLibraryChoose: { id in showAdd = false; router.openTitle(id, tab: .library) },
+                            onCatalogChoose: { route in showAdd = false; router.paths[.library, default: NavigationPath()].append(route) },
+                            onClose: { showAdd = false }).padding(.top, 14)
+                    }.navigationTitle("Add title").navigationBarTitleDisplayMode(.inline)
+                }
+            }
             .sheet(item: $review) { value in CollectionReviewView(review: value) { selecting = false; selected = [] } }
             .confirmationDialog("Empty Trash?", isPresented: $confirmEmptyTrash, titleVisibility: .visible) { Button("Empty Trash", role: .destructive) { Task { await store.emptyTrash() } } } message: { Text("This permanently removes every title in Trash and its diary history. Files on your disks stay untouched.") }
     }
@@ -115,7 +125,7 @@ struct LibraryView: View {
         guard !archived, router.libraryRevision > appliedShortcutRevision else { return }
         appliedShortcutRevision = router.libraryRevision
         category = .all; search = ""; genre = router.libraryGenreShortcut; drive = router.libraryDiskShortcut; status = "all"
-        switch router.libraryShortcut { case "queue": status = "queue"; case "planned", "watching", "completed", "dropped": status = router.libraryShortcut ?? "all"; case "disk": drive = HomeDiskShortcut.all.first?.key ?? ""; default: break }
+        switch router.libraryShortcut { case "queue": status = "queue"; case "planned", "watching", "completed", "dropped": status = router.libraryShortcut ?? "all"; case "disk": drive = HomeDiskShortcut.all.first?.key ?? ""; case "add": showAdd = true; default: break }
     }
     @ViewBuilder private func poster(_ title: MediaTitle, row: Bool = false) -> some View {
         if selecting {

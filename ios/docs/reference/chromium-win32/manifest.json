@@ -164,6 +164,122 @@
     "passed": true
   },
   {
+    "id": "library-add-search",
+    "path": "/preview/library?add=1",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 844,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "All",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Movies",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Shows",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Anime",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Watch status filter",
+        "value": "all"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Genre filter",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Disk filter",
+        "value": "all"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Sort library",
+        "value": "library"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "List view",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Browse by genre",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Close add title",
+        "value": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": "",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Search type",
+        "value": "all"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Add manually",
+        "value": ""
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Metadata by TMDb"
+      }
+    ],
+    "file": "library-add-search.png",
+    "sha256": "b16fd7bc3defff515724427e024b064523ad7d45d12f1ea83c9960467ab7d0b0",
+    "passed": true
+  },
+  {
     "id": "library-trakt-ratings",
     "path": "/preview/library",
     "scenario": "default",
@@ -3061,6 +3177,140 @@
     ],
     "file": "home-random-pick.png",
     "sha256": "8e6e0ef67fdedec704472818e2cd31724f862e3e153d26a98c73fb232bd31156",
+    "passed": true
+  },
+  {
+    "id": "collection-random-pick",
+    "path": "/preview/home",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1750,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Close random pick",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Pick again",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 9 watched for 18 Again",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 13 watched for Frieren: Beyond Journey’s End",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 6 watched for Call of the Night",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 4 watched for Severance",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Previous continue watching title",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Next continue watching title",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Start automatic carousel",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Pick for meChoose from 1 unwatched planned titles",
+        "value": ""
+      }
+    ],
+    "file": "collection-random-pick.png",
+    "sha256": "e587c2ecb9b8be4622b88373589bf97465cb97e7b67d9417043ffeb22cfa4f24",
+    "passed": true
+  },
+  {
+    "id": "random-pick-empty",
+    "path": "/preview/home",
+    "scenario": "empty",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 844,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Close random pick",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Pick for meAdd a planned movie or show to get a pick",
+        "value": ""
+      }
+    ],
+    "file": "random-pick-empty.png",
+    "sha256": "7044bb798ef512519c78a1484481aaaa25e63f73f95b752f3247493281faba37",
     "passed": true
   },
   {

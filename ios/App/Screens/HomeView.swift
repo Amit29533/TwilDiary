@@ -5,11 +5,13 @@ struct HomeView: View {
     @Environment(DiaryStore.self) private var store
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     @Environment(AppRouter.self) private var router
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var clock = Date.now
     @State private var showSearch = false
-    @State private var pick: MediaTitle?
     @State private var upcomingLimit = 3
     var body: some View {
-        let overview = HomeOverview(workspace: store.workspace, now: store.now)
+        let now = store.isPreview ? store.now : clock
+        let overview = HomeOverview(workspace: store.workspace, now: now)
         let watching = store.workspace.activeTitles.filter { $0.status == "watching" }
         let recent = sortedHistory(store.workspace.activeEvents).prefix(4)
         VStack(spacing: 0) {
@@ -36,11 +38,11 @@ struct HomeView: View {
                     }.scrollIndicators(.hidden)
                     VStack(spacing: 10) {
                         SectionHeading(name: "This week") { Button("Stats →") { router.statsToday() }.accessibilityIdentifier("home-stats") }
-                        weekPanel(overview)
+                        weekPanel(overview, now: now)
                     }
                     VStack(spacing: 10) {
                         SectionHeading(name: "Up next") { Button("Planned →") { router.library("planned") } }
-                        Button { pick = overview.planned.randomElement() } label: {
+                        Button { router.presentRandomPick(overview.planned.map(\.id)) } label: {
                             HStack(spacing: 12) {
                                 DiaryIcon(name: "shuffle", size: 23)
                                 VStack(alignment: .leading, spacing: 3) {
@@ -48,11 +50,11 @@ struct HomeView: View {
                                     Text(overview.planned.isEmpty ? "Add a planned movie or show to get a pick" : "Choose from \(overview.planned.count) unwatched planned titles").font(.system(size: 12)).foregroundStyle(.secondary)
                                 }; Spacer(minLength: 0)
                             }.padding(14).background(theme.accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(theme.accent.opacity(0.28)))
-                        }.buttonStyle(.plain).disabled(overview.planned.isEmpty)
+                        }.buttonStyle(.plain).disabled(overview.planned.isEmpty).accessibilityIdentifier("home-pick-planned")
                         LazyVGrid(columns: columns, spacing: 12) {
                             ForEach(overview.planned.prefix(3)) { title in
                                 VStack(alignment: .leading, spacing: 4) {
-                                    NavigationLink(value: title.id) { PosterCard(title: title) }.buttonStyle(.plain)
+                                    NavigationLink(value: title.id) { PosterCard(title: title, personalRating: true) }.buttonStyle(.plain)
                                     Text(title.categoryName + (title.runtimeMinutes.map { " · " + DiaryDate.duration($0) + (title.isSeries ? " / ep" : "") } ?? "")).font(.system(size: 11)).foregroundStyle(.secondary)
                                 }
                             }
@@ -74,16 +76,15 @@ struct HomeView: View {
                         }
                     } }
                 }.padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 24)
-            }.refreshable { await store.refresh() }
-        }.sheet(item: $pick) { title in
-            NavigationStack {
-                VStack(spacing: 20) {
-                    Text("Your pick").font(.title2.bold()); PosterCard(title: title).frame(width: 140)
-                    Button("Open title") { pick = nil; router.openTitle(title.id, tab: .home) }.buttonStyle(.borderedProminent)
-                    Button("Pick again") { pick = overview.planned.randomElement() }.disabled(overview.planned.count < 2)
-                }.padding(24).toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { pick = nil } } }
-            }.presentationDetents([.medium, .large])
-        }
+            }.refreshable { clock = store.now; await store.refresh() }
+        }.onChange(of: scenePhase) { _, phase in if phase == .active { clock = store.now } }
+            .task {
+                clock = store.now
+                while !Task.isCancelled {
+                    do { try await Task.sleep(for: .seconds(60)) } catch { return }
+                    clock = store.now
+                }
+            }
     }
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3)
     private func shortcut(_ name: String, _ icon: String) -> some View {
@@ -97,7 +98,7 @@ struct HomeView: View {
             VStack(alignment: .trailing, spacing: 5) { Text(item.daysAway == 0 ? "Today" : item.daysAway == 1 ? "Tomorrow" : "In \(item.daysAway) days").font(.system(size: 12, weight: .semibold)).foregroundStyle(.tint); Text(item.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated)).font(.system(size: 11)).foregroundStyle(.secondary) }
         }.foregroundStyle(.primary).diaryPanel()
     }
-    private func weekPanel(_ overview: HomeOverview) -> some View {
+    private func weekPanel(_ overview: HomeOverview, now: Date) -> some View {
         let maximum = max(1, overview.days.map(\.minutes).max() ?? 0)
         return VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 20) { metric(DiaryDate.duration(overview.minutes), "Watch time", accent: true); metric(String(overview.watches), "Watches"); metric("\(overview.streak) \(overview.streak == 1 ? "day" : "days")", "Current streak") }
@@ -106,7 +107,7 @@ struct HomeView: View {
                 NavigationLink { HistoryView(initialDay: day.date) } label: {
                     VStack(spacing: 6) {
                         Text(day.date, format: .dateTime.weekday(.narrow)).font(.system(size: 10)).foregroundStyle(.secondary)
-                        Text(day.date, format: .dateTime.day()).font(.system(size: 16, weight: .semibold)).foregroundStyle(DiaryDate.calendar().isDate(day.date, inSameDayAs: store.now) ? theme.accent : .primary)
+                        Text(day.date, format: .dateTime.day()).font(.system(size: 16, weight: .semibold)).foregroundStyle(DiaryDate.calendar().isDate(day.date, inSameDayAs: now) ? theme.accent : .primary)
                         VStack { Spacer(minLength: 0); RoundedRectangle(cornerRadius: 3).fill(day.minutes > 0 ? theme.accent : .white.opacity(0.12)).frame(width: 10, height: day.minutes > 0 ? max(4, 30 * CGFloat(day.minutes) / CGFloat(maximum)) : 2) }.frame(height: 30)
                     }.frame(maxWidth: .infinity).foregroundStyle(.primary).opacity(day.future ? 0.4 : 1)
                 }.buttonStyle(.plain).disabled(day.future).accessibilityLabel("\(day.date.formatted(date: .abbreviated, time: .omitted)), \(day.count) watches")

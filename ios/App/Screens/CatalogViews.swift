@@ -39,6 +39,7 @@ struct CatalogPoster: View {
 
 struct CatalogSearchView: View {
     var onLibraryChoose: ((String) -> Void)? = nil
+    var onCatalogChoose: ((CatalogRoute) -> Void)? = nil
     var allowsManual = true
     var onClose: (() -> Void)? = nil
     @Environment(DiaryStore.self) private var store
@@ -73,12 +74,9 @@ struct CatalogSearchView: View {
                 if loading { ProgressView("Searching…") }
                 if let failure { HStack { Text(failure).font(.system(size: 13)).foregroundStyle(.secondary); Spacer(minLength: 0); Button("Retry") { requestPage(page) }.font(.system(size: 13)) } }
                 ForEach(results, id: \.key) { item in
-                    NavigationLink(value: item.route) {
-                        HStack(spacing: 12) {
-                            Artwork(path: item.artwork, title: item.name).frame(width: 72, height: 108).clipShape(RoundedRectangle(cornerRadius: 8))
-                            VStack(alignment: .leading, spacing: 4) { Text(item.name).font(.system(size: 15, weight: .semibold)); Text([item.year.map(String.init), item.mediaType == .tv ? "Show" : "Movie"].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 13)).foregroundStyle(.secondary) }
-                            Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint)
-                        }.padding(.vertical, 9).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)
+                    Group {
+                        if let onCatalogChoose { Button { onCatalogChoose(item.route) } label: { onlineRow(item) } }
+                        else { NavigationLink(value: item.route) { onlineRow(item) } }
                     }.buttonStyle(.plain).accessibilityIdentifier("search-" + item.key)
                 }
                 if !loading && results.isEmpty && failure == nil { Text("No online matches").font(.system(size: 13)).foregroundStyle(.secondary) }
@@ -91,6 +89,13 @@ struct CatalogSearchView: View {
             .task(id: normalized) { await search(number: 1, reset: true) }
             .onDisappear { pageTask?.cancel(); generation = UUID() }
             .sheet(isPresented: $showManual) { ManualTitleView(initialName: normalized) { id in chooseLibrary(id) } }
+    }
+    private func onlineRow(_ item: CatalogItem) -> some View {
+        HStack(spacing: 12) {
+            Artwork(path: item.artwork, title: item.name).frame(width: 72, height: 108).clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 4) { Text(item.name).font(.system(size: 15, weight: .semibold)); Text([item.year.map(String.init), item.mediaType == .tv ? "Show" : "Movie"].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 13)).foregroundStyle(.secondary) }
+            Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint)
+        }.padding(.vertical, 9).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)
     }
     private var normalized: String { DiarySearchTools.normalize(query) }
     private var ready: Bool { DiarySearchTools.ready(normalized) }

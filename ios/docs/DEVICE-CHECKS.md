@@ -14,3 +14,5 @@ After each passed build, install the unsigned IPA using LiveContainer or your si
 - Drag a series track across several episode counts, change seasons quickly, log a past-date movie rewatch, and Undo while the content stays in place. Simulator pixels and mock transport coverage do not prove physical gesture timing.
 
 Hosted mutation tests require the owner's explicit authorization. Simulator checks use synthetic fixtures.
+
+- Random pick: three logo taps within 850ms open one dialog; ordinary spaced taps only spin the logo. Check the 650ms reroll guard, reduced-motion behavior, VoiceOver modal focus/escape and keyboard dismissal. CI screenshots cannot establish those physical timings.

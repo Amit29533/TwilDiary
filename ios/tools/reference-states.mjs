@@ -7,6 +7,7 @@ const search = async (page,name,value)=>{
 export const referenceStates = [
   screen('home','/preview/home'),
   screen('library','/preview/library'),
+  screen('library-add-search','/preview/library?add=1'),
   screen('library-trakt-ratings','/preview/library',{ratingSource:'trakt'}),
   screen('library-ratings-unavailable','/preview/library',{ratingSource:'trakt',scenario:'ratings-unavailable'}),
   screen('glance','/preview'),
@@ -52,6 +53,8 @@ export const referenceStates = [
   screen('person-server','/preview/person/700001/credits?scope=server'),
   screen('home-search','/preview/home',{action:async page=>search(page,'Search library and online','Frieren')}),
   screen('home-random-pick','/preview/home',{action:async page=>page.getByRole('button',{name:/Pick for me/}).click()}),
+  screen('collection-random-pick','/preview/home',{action:async page=>page.getByRole('button',{name:'Spin TwilDiary logo',exact:true}).click({clickCount:3,delay:100})}),
+  screen('random-pick-empty','/preview/home',{scenario:'empty',action:async page=>page.getByRole('button',{name:'Spin TwilDiary logo',exact:true}).click({clickCount:3,delay:100})}),
   screen('library-search','/preview/library',{action:async page=>search(page,'Search your library','Frieren')}),
   screen('library-no-matches','/preview/library',{action:async page=>search(page,'Search your library','No matching reference title')}),
   screen('library-filters','/preview/library',{action:async page=>{

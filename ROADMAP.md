@@ -57,6 +57,8 @@ Screens/files: `ios/Features/Home`, corresponding models/tests/references.
 
 Done: every Home control works against fixtures/local API and matches the web, including restored state and date navigation.
 
+Pending follow-up after build 20: shared artwork random-pick dialog and three-tap logo entry; planned-only versus full collection scopes, previous-pick exclusion, empty Add search, and minute/foreground dates. Added source reference states and native regressions; acceptance awaits macOS CI and screenshots.
+
 ## 5. Library
 
 Goal: preserve artwork-led browsing and independent collection commands.

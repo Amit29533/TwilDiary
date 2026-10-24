@@ -58,6 +58,40 @@ import UIKit
         XCTAssertTrue(app.buttons["stats-calendar"].isHittable)
     }
 
+    func testRandomPickKeepsPlannedScopeAndLogoRerollsWithoutRepeating() {
+        let app = launch(); app.buttons["tab-home"].tap()
+        let planned = app.buttons["home-pick-planned"]
+        for _ in 0..<8 { if planned.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(planned.isHittable); planned.tap()
+        let name = app.staticTexts["random-picked-name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5)); XCTAssertEqual(name.label, "A Quiet Orbit")
+        XCTAssertFalse(app.buttons["random-pick-again"].isEnabled, "The planned fixture has only one eligible title")
+        capture("Home planned random pick")
+        app.buttons["Close random pick"].tap()
+        let logo = app.buttons["random-pick-logo"]
+        logo.tap(withNumberOfTaps: 3, numberOfTouches: 1)
+        XCTAssertTrue(name.waitForExistence(timeout: 5)); let previous = name.label
+        let again = app.buttons["random-pick-again"]
+        wait(for: [expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: again)], timeout: 5)
+        again.tap()
+        wait(for: [expectation(for: NSPredicate(format: "label != %@", previous), evaluatedWith: name)], timeout: 5)
+        capture("Collection random pick")
+        app.buttons["random-pick-open"].tap()
+        XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["Close random pick"].exists)
+    }
+    func testEmptyRandomPickOpensTheWorkingAddSearch() {
+        let app = launch(empty: true)
+        app.buttons["random-pick-logo"].tap(withNumberOfTaps: 3, numberOfTouches: 1)
+        XCTAssertTrue(app.staticTexts["Your next story starts here"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["random-pick-open"].exists); capture("Empty collection random pick")
+        app.buttons["Add a title"].tap()
+        XCTAssertTrue(app.textFields["Search library and online"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Add manually"].exists); capture("Library add search")
+        app.buttons["Close search"].tap()
+        XCTAssertTrue(app.staticTexts["Nothing here just yet"].waitForExistence(timeout: 5))
+    }
+
     func testLibrarySearchAndSelectionPersistAcrossTabs() {
         let app = launch()
         app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()

@@ -64,12 +64,23 @@ struct PageHeader: View {
     var onSearch: (() -> Void)? = nil
     var onDone: (() -> Void)? = nil
     var doneIdentifier = "page-done"
+    @Environment(AppRouter.self) private var router
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var taps: [Double] = []
+    @State private var angle = 0.0
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     var body: some View {
         HStack(spacing: 9) {
-            BrandMark().fill(theme.accent).frame(width: 24, height: 24)
-                .frame(width: 44, height: 44).background(theme.accent.opacity(0.07), in: Circle())
-                .overlay(Circle().strokeBorder(theme.accent.opacity(0.3)))
+            Button {
+                let gesture = RandomPick.tap(previous: taps, now: ProcessInfo.processInfo.systemUptime)
+                taps = gesture.taps
+                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.65)) { angle += 270 }
+                if gesture.triggered { router.presentRandomPick() }
+            } label: {
+                BrandMark().fill(theme.accent).frame(width: 24, height: 24).rotationEffect(.degrees(angle))
+                    .frame(width: 44, height: 44).background(theme.accent.opacity(0.07), in: Circle())
+                    .overlay(Circle().strokeBorder(theme.accent.opacity(0.3)))
+            }.buttonStyle(.plain).accessibilityLabel("Spin TwilDiary logo").accessibilityHint("Tap three times for a random pick").accessibilityIdentifier("random-pick-logo")
             if name == "TwilDiary" {
                 HStack(spacing: 0) {
                     Text("Twil").foregroundStyle(Color(webHex: "#f3f0f7"))
@@ -163,12 +174,13 @@ struct RatingBadge: View {
 
 struct PosterCard: View {
     let title: MediaTitle
+    var personalRating = false
     @Environment(DiaryStore.self) private var store
     @AppStorage("publicRatingSource") private var ratingSource = PublicRatingSource.tmdb
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             Artwork(path: title.poster, title: title.name).aspectRatio(2 / 3, contentMode: .fit)
-                .overlay(alignment: .topLeading) { if let score = store.publicScore(title, source: ratingSource) { RatingBadge(score: score).padding(6) } }
+                .overlay(alignment: .topLeading) { if let score = displayedScore { RatingBadge(score: score).padding(6) } }
                 .overlay(alignment: .bottom) { if title.status == "watching" { GeometryReader { proxy in Rectangle().fill(.white.opacity(0.2)).overlay(alignment: .leading) { Rectangle().fill(.tint).frame(width: proxy.size.width * progress) } }.frame(height: 4) } }
                 .overlay(alignment: .bottomTrailing) { if title.status == "completed" { Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(.black).frame(width: 25, height: 25).background(Color(webHex: "#6ce3a5"), in: Circle()).padding(7) } }
                 .overlay(alignment: .bottomLeading) { if present || title.queued == true { DiaryIcon(name: present ? "monitor" : "download", size: 13).foregroundStyle(Color(webHex: present ? "#9edbc4" : "#b795f6")).padding(6).background(.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 6)).padding(7) } }
@@ -176,9 +188,10 @@ struct PosterCard: View {
             Text(title.name).font(.system(size: 14, weight: .semibold)).foregroundStyle(Color(webHex: "#f3f0f7")).lineLimit(2).frame(maxWidth: .infinity, alignment: .leading)
         }.contentShape(Rectangle()).accessibilityElement(children: .ignore).accessibilityLabel(title.name).accessibilityValue(accessibleDetails)
     }
+    private var displayedScore: Double? { personalRating ? title.score : store.publicScore(title, source: ratingSource) }
     private var present: Bool { store.workspace.locations.contains { $0.titleId == title.id && $0.evidence == "present" } }
     private var accessibleDetails: String {
-        [title.categoryName, title.status.capitalized, store.publicScore(title, source: ratingSource).map { "Rating " + $0.formatted(.number.precision(.fractionLength(1))) }, title.status == "watching" ? "\(Int((progress * 100).rounded())) percent watched" : nil].compactMap { $0 }.joined(separator: ", ")
+        [title.categoryName, title.status.capitalized, displayedScore.map { "Rating " + $0.formatted(.number.precision(.fractionLength(1))) }, title.status == "watching" ? "\(Int((progress * 100).rounded())) percent watched" : nil].compactMap { $0 }.joined(separator: ", ")
     }
     private var progress: Double {
         LibraryProgress.fraction(title: title, workspace: store.workspace)
