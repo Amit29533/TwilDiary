@@ -5,6 +5,12 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary â†’ ios-native â†
 ## Current request and exact next action
 
 
+### Build 27 pushed; latest requested IPA delivered
+
+Build 27 is source **0efbc94**, running **40107203106**, https://github.com/Amit29533/TwilDiary/actions/runs/40107203106. Exact next action: follow simulator compile, all eight early regression cases, device Release/IPA, full native unit/primary UI and compact/large layout gates; review downloaded results, recordings and screenshots before acceptance. Local diff, project YAML (existing .local/validation-tools parser), Python AST and exact eight-selector checks pass. Initial parser lookup used the wrong runtime path; corrected without source changes. Swift remains CI-only. Avoid pushing ios/** until this run completes.
+
+User asks for the latest IPA now. GitHub artifact inventory confirms the newest packaged IPA is still build 25 / run40098826990 / source6130cdf (created13:54UTC); build26 skipped packaging after early UI failures and build27 is still running. Reverified ZIP integrity, build25 metadata, arm64 Mach-O, absence of code-signature data/provisioning and SHA256, then copied to **D:/Downloads/TwilDiary-native-build25-test.ipa** (5,135,667 bytes; c170c98b8df8c4921b55c108e3e0d2f95691bf110812555c1fc08b7594b7f9e4). Shared a clickable link and explicitly labeled it a test build: Core54/54, nativeunit99/99, primaryUI33/40, extra layouts skipped; overall failure. Adjacent verification.json/sha256 record completed failed status, replacing the stale pending label in the local artifact record. This does not promote it as an accepted release. User's prior build22 trial and green14 files remain unchanged. No hosted writes/deployments/Codemagic run.
+
 ### Build 26 reviewed; build 27 prepared
 
 Build 26 / 40104599130 / 71ebe48 completes **failure**: Core 54/54 and simulator/test-bundle compilation pass, zero build warnings. Early regression **5/8** pass: confirmed-write refresh + Undo, native Explore Done/tab/full-content Back, retained global/scoped Glance search, clear full-bleed hero moving away while scrolling to Notes, real episode-piece slider/watch/Undo/movie history. Full unit/primary/all-phone suites and device Release/IPA are correctly skipped after early failure. No accepted-release or build-26 IPA claim.
