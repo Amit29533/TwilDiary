@@ -2,6 +2,8 @@
 
 ## Current state — build31 reviewed; build32 prepared
 
+Build32 is now pushed as **7ec6249**, active run **40126884412**, https://github.com/Amit29533/TwilDiary/actions/runs/40126884412. All local pending editor/evidence/navigation commits are included. Exact next action: follow Core64/compilation/native119/early10, download and share the new scoped passed-screen artifact when available, then full43 and both extra-phone layouts. No native32 result is claimed yet. A local Bash tree-sitter grammar and embedded-Python/YAML/changed-Swift parsers pass; no Mac/Xcode/Swift execution exists locally. Keep ios/** pushes until this run finishes so evidence is not cancelled.
+
 Run40120123169/source d8a8476750e3290ebbef370784ae971369ac8027 completes FAILURE. Zero warnings in simulator/device/Core builds; Core56/56, native unit119/119 and early UI10/10 pass. Physical unsigned build31 IPA is packaged/downloaded, but primary UI40/43 and skipped extra-phone layouts prevent acceptance. Latest trial is still explicitly unaccepted; last fully green scoped build remains14. Logs/device metadata from CRC-verified397735032-byte artifact12573041436 and full exported screenshots/recordings from156886077-byte artifact12573076618 are under .local/ios-app-build-40120123169. Full xcresult remains available in the GitHub artifact; only logs/metadata were extracted from that large ZIP locally. Three failures and recordings are reviewed:
 
 1. Synopsis layout: leading x/y remain stable; the removed ellipsis changes glyph-ink width204.33→201pt. The assertion now checks unchanged leading copy, position and two-line height, plus containment/full-width continuation. No fake accessibility geometry or relaxed positional tolerance.
