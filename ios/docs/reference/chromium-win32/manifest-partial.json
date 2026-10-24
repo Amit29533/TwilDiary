@@ -1,7 +1,7 @@
 [
   {
-    "id": "catalog-show",
-    "path": "/preview/discover/tv/900001",
+    "id": "manual-add",
+    "path": "/preview/home",
     "scenario": "default",
     "theme": "twilight",
     "engine": "chromium",
@@ -11,14 +11,14 @@
       "width": 390,
       "height": 844,
       "documentWidth": 390,
-      "documentHeight": 1603,
+      "documentHeight": 1750,
       "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
     },
     "errors": [],
     "controls": [
       {
         "tag": "BUTTON",
-        "label": "Back",
+        "label": "Spin TwilDiary logo",
         "value": ""
       },
       {
@@ -33,171 +33,96 @@
       },
       {
         "tag": "BUTTON",
-        "label": "Add to Planned",
+        "label": "Back to results",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Close add title",
         "value": ""
       },
       {
         "tag": "INPUT",
-        "label": "Season 1 episodes watched",
-        "value": "0"
-      },
-      {
-        "tag": "SELECT",
-        "label": "Season",
-        "value": "1"
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 1 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 2 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 3 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 4 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Show all 12 episodes",
-        "value": ""
-      }
-    ],
-    "file": "catalog-show.png",
-    "sha256": "88585e52504d3641328b855c63012941150ccf606d254c7f73766ecb3284d4dd",
-    "passed": true
-  },
-  {
-    "id": "catalog-movie",
-    "path": "/preview/discover/movie/900001",
-    "scenario": "default",
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 944,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
-        "label": "Back",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Search",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Add to Planned",
-        "value": ""
-      }
-    ],
-    "file": "catalog-movie.png",
-    "sha256": "49125e52549da932051985c45ee436c56896e12e6649722b079c8c6e4736574c",
-    "passed": true
-  },
-  {
-    "id": "catalog-revealed-episode",
-    "path": "/preview/discover/tv/900001",
-    "scenario": "default",
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 1633,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
-        "label": "Back",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Search",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Add to Planned",
+        "label": "",
         "value": ""
       },
       {
         "tag": "INPUT",
-        "label": "Season 1 episodes watched",
-        "value": "0"
+        "label": "",
+        "value": ""
       },
       {
         "tag": "SELECT",
-        "label": "Season",
-        "value": "1"
+        "label": "MovieShowAnimeAnime movie",
+        "value": "show"
       },
       {
-        "tag": "BUTTON",
-        "label": "Episode 1 details",
+        "tag": "SELECT",
+        "label": "PlannedWatchingCompletedDropped",
+        "value": "planned"
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Rating"
+      },
+      {
+        "tag": "INPUT",
+        "label": "",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 2 details",
+        "label": "Add to library",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 3 details",
+        "label": "Mark episode 9 watched for 18 Again",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 4 details",
+        "label": "Mark episode 13 watched for Frieren: Beyond Journey’s End",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Show all 12 episodes",
+        "label": "Mark episode 6 watched for Call of the Night",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 4 watched for Severance",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Previous continue watching title",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Next continue watching title",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Start automatic carousel",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Pick for meChoose from 1 unwatched planned titles",
         "value": ""
       }
     ],
-    "file": "catalog-revealed-episode.png",
-    "sha256": "764d0e06f9271299764525fcedb82230c4b5995bbc7a6d100536e39e8901e4bb",
+    "file": "manual-add.png",
+    "sha256": "8110b5c9d618bec5366ca9a0ea01a755689477b5a95a55f4f43dea467649f6b9",
     "passed": true
   },
   {
-    "id": "catalog-second-season",
-    "path": "/preview/discover/tv/900001",
+    "id": "manual-review",
+    "path": "/preview/home",
     "scenario": "default",
     "theme": "twilight",
     "engine": "chromium",
@@ -207,14 +132,14 @@
       "width": 390,
       "height": 844,
       "documentWidth": 390,
-      "documentHeight": 1603,
+      "documentHeight": 1750,
       "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
     },
     "errors": [],
     "controls": [
       {
         "tag": "BUTTON",
-        "label": "Back",
+        "label": "Spin TwilDiary logo",
         "value": ""
       },
       {
@@ -229,164 +154,91 @@
       },
       {
         "tag": "BUTTON",
-        "label": "Add to Planned",
+        "label": "Back to results",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Close add title",
         "value": ""
       },
       {
         "tag": "INPUT",
-        "label": "Season 2 episodes watched",
-        "value": "0"
-      },
-      {
-        "tag": "SELECT",
-        "label": "Season",
-        "value": "2"
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 1 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 2 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 3 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 4 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Show all 12 episodes",
-        "value": ""
-      }
-    ],
-    "file": "catalog-second-season.png",
-    "sha256": "117bd9e5c004fc5db58c8abad80ee26cbfceb9e2b2909b3c4cb8a1b362216878",
-    "passed": true
-  },
-  {
-    "id": "catalog-all-episodes",
-    "path": "/preview/discover/tv/900001",
-    "scenario": "default",
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 2275,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
-        "label": "Back",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Search",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Add to Planned",
-        "value": ""
+        "label": "",
+        "value": "Manual reference movie"
       },
       {
         "tag": "INPUT",
-        "label": "Season 1 episodes watched",
-        "value": "0"
+        "label": "",
+        "value": "1800"
       },
       {
         "tag": "SELECT",
-        "label": "Season",
-        "value": "1"
+        "label": "MovieShowAnimeAnime movie",
+        "value": "movie"
+      },
+      {
+        "tag": "SELECT",
+        "label": "PlannedWatchingCompletedDropped",
+        "value": "watching"
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Rating"
+      },
+      {
+        "tag": "INPUT",
+        "label": "",
+        "value": "7.5"
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 1 details",
+        "label": "Add to library",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 2 details",
+        "label": "Mark episode 9 watched for 18 Again",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 3 details",
+        "label": "Mark episode 13 watched for Frieren: Beyond Journey’s End",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 4 details",
+        "label": "Mark episode 6 watched for Call of the Night",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 5 details",
+        "label": "Mark episode 4 watched for Severance",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 6 details",
+        "label": "Previous continue watching title",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 7 details",
+        "label": "Next continue watching title",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 8 details",
+        "label": "Start automatic carousel",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Episode 9 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 10 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 11 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Episode 12 details",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Show fewer episodes",
+        "label": "Pick for meChoose from 1 unwatched planned titles",
         "value": ""
       }
     ],
-    "file": "catalog-all-episodes.png",
-    "sha256": "a811a4e39f9c63d0ea21b537386d57701563df63aa2b1c46befa64550430f7d6",
+    "file": "manual-review.png",
+    "sha256": "8e190a80449210d5d009523854d1f887f0d395c13eb8a8ff8b07deb8e1398065",
     "passed": true
   }
 ]

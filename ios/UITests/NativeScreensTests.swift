@@ -134,6 +134,7 @@ import UIKit
         year.tap(); year.typeText("1799"); app.buttons["manual-keyboard-done"].tap()
         app.buttons["manual-save"].tap(); XCTAssertTrue(app.staticTexts["Choose a valid release year"].waitForExistence(timeout: 5)); capture("Manual invalid year")
         year.tap(); year.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4) + "1800"); app.buttons["manual-keyboard-done"].tap()
+        app.buttons["manual-category"].tap(); app.buttons["Movie"].tap()
         app.buttons["manual-status"].tap(); app.buttons["Watching"].tap()
         app.buttons["Rating"].tap()
         let score = app.textFields["manual-score"]

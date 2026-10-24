@@ -2026,6 +2026,248 @@
     "passed": true
   },
   {
+    "id": "manual-add",
+    "path": "/preview/home",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1750,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Back to results",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Close add title",
+        "value": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": "",
+        "value": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": "",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "MovieShowAnimeAnime movie",
+        "value": "show"
+      },
+      {
+        "tag": "SELECT",
+        "label": "PlannedWatchingCompletedDropped",
+        "value": "planned"
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Rating"
+      },
+      {
+        "tag": "INPUT",
+        "label": "",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Add to library",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 9 watched for 18 Again",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 13 watched for Frieren: Beyond Journey’s End",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 6 watched for Call of the Night",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 4 watched for Severance",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Previous continue watching title",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Next continue watching title",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Start automatic carousel",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Pick for meChoose from 1 unwatched planned titles",
+        "value": ""
+      }
+    ],
+    "file": "manual-add.png",
+    "sha256": "8110b5c9d618bec5366ca9a0ea01a755689477b5a95a55f4f43dea467649f6b9",
+    "passed": true
+  },
+  {
+    "id": "manual-review",
+    "path": "/preview/home",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1750,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Back to results",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Close add title",
+        "value": ""
+      },
+      {
+        "tag": "INPUT",
+        "label": "",
+        "value": "Manual reference movie"
+      },
+      {
+        "tag": "INPUT",
+        "label": "",
+        "value": "1800"
+      },
+      {
+        "tag": "SELECT",
+        "label": "MovieShowAnimeAnime movie",
+        "value": "movie"
+      },
+      {
+        "tag": "SELECT",
+        "label": "PlannedWatchingCompletedDropped",
+        "value": "watching"
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Rating"
+      },
+      {
+        "tag": "INPUT",
+        "label": "",
+        "value": "7.5"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Add to library",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 9 watched for 18 Again",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 13 watched for Frieren: Beyond Journey’s End",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 6 watched for Call of the Night",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 4 watched for Severance",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Previous continue watching title",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Next continue watching title",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Start automatic carousel",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Pick for meChoose from 1 unwatched planned titles",
+        "value": ""
+      }
+    ],
+    "file": "manual-review.png",
+    "sha256": "8e190a80449210d5d009523854d1f887f0d395c13eb8a8ff8b07deb8e1398065",
+    "passed": true
+  },
+  {
     "id": "catalog-show",
     "path": "/preview/discover/tv/900001",
     "scenario": "default",

@@ -34,6 +34,14 @@ export const referenceStates = [
   screen('more-search','/preview/more',{action:async page=>search(page,'Search library and online','Frieren')}),
   screen('stats-search','/preview/activity',{action:async page=>search(page,'Search library and online','Frieren')}),
   screen('files-search','/preview/files',{action:async page=>search(page,'Search library and online','Frieren')}),
+  screen('manual-add','/preview/home',{action:async page=>{await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('button',{name:'Add manually',exact:true}).click();}}),
+  screen('manual-review','/preview/home',{action:async page=>{
+    await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('button',{name:'Add manually',exact:true}).click();
+    const dialog=page.getByRole('dialog',{name:'Add title'});
+    await dialog.getByLabel('Title',{exact:true}).fill('Manual reference movie');await dialog.getByLabel('Release year',{exact:true}).fill('1800');
+    await dialog.getByRole('combobox',{name:/^Category/}).selectOption('movie');await dialog.getByRole('combobox',{name:/^Watch status/}).selectOption('watching');await dialog.locator('summary').filter({hasText:'Rating'}).click();
+    await dialog.getByLabel('Your score / 10',{exact:true}).fill('7.5');
+  }}),
   screen('catalog-show','/preview/discover/tv/900001'),
   screen('catalog-movie','/preview/discover/movie/900001'),
   screen('catalog-revealed-episode','/preview/discover/tv/900001',{action:async page=>page.getByRole('button',{name:'Episode 1 details',exact:true}).click()}),

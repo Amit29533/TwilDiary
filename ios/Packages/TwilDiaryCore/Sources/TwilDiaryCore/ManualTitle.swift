@@ -1,7 +1,7 @@
 import Foundation
 
 public struct ManualTitleDraft: Sendable {
-    public var name = "", category = "movie", year = "", status = "planned", score = ""
+    public var name = "", category = "show", year = "", status = "planned", score = ""
     public init() { }
     public func validated(id: String) throws -> ManualTitleInput {
         let clean = name.precomposedStringWithCompatibilityMapping.trimmingCharacters(in: .whitespacesAndNewlines)
