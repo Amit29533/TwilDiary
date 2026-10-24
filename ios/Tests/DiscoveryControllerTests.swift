@@ -20,7 +20,71 @@ import TwilDiaryCore
     }
 }
 
+@MainActor private final class HeldRecommendations: DiscoveryServing {
+    var recommendationScope: UUID? = UUID()
+    var recommendationOwner: String? = "Account-A"
+    var cached: [CatalogItem]?
+    var pending: [(kind: MediaKind, continuation: CheckedContinuation<CatalogPage, any Error>?)] = []
+    func traktConnected() async throws -> Bool { true }
+    func cachedRecommendations(limit: Int) -> [CatalogItem]? { cached }
+    func page(_ query: [String: String]) async throws -> CatalogPage {
+        let kind = MediaKind(rawValue: query["type"] ?? "") ?? .tv
+        return try await withCheckedThrowingContinuation { pending.append((kind, $0)) }
+    }
+    func finish(_ index: Int, id: Int? = nil) {
+        guard let continuation = pending[index].continuation else { return }
+        pending[index].continuation = nil
+        if let id { continuation.resume(returning: CatalogPage(items: [CatalogItem(id: id, mediaType: pending[index].kind, name: "Replacement")], page: 1, totalPages: 1)) }
+        else { continuation.resume(throwing: APIError.message("Synthetic recommendation outage")) }
+    }
+    func finishAll() { for index in pending.indices { finish(index) } }
+}
+
 @MainActor final class DiscoveryControllerTests: XCTestCase {
+    func testRecommendationsStartBothMediaTypesAndRetainStaleContentDuringPartialRefresh() async throws {
+        let service = HeldRecommendations()
+        service.cached = [CatalogItem(id: 70, mediaType: .movie, name: "Saved movie"), CatalogItem(id: 80, mediaType: .tv, name: "Saved show")]
+        let model = DiscoveryRecommendations(service: service)
+        let loading = Task { await model.load(limit: 24) }
+        defer { service.finishAll() }
+        try await waitForRequests(2, service: service)
+        XCTAssertTrue(model.loading)
+        XCTAssertEqual(model.items.map(\.key), ["movie:70", "tv:80"])
+        // Neither request had to finish before the other could begin.
+        for index in service.pending.indices { service.finish(index, id: service.pending[index].kind == .tv ? 81 : nil) }
+        await loading.value
+        XCTAssertEqual(model.items.map(\.key), ["movie:70", "tv:81"])
+        XCTAssertEqual(model.error, "Some recommendations could not load.")
+        XCTAssertFalse(model.loading)
+    }
+    func testNewOwnerClearsOldVisibleRecommendationsAndRejectsLateResponses() async throws {
+        let service = HeldRecommendations()
+        service.cached = [CatalogItem(id: 70, mediaType: .movie, name: "Account A")]
+        let model = DiscoveryRecommendations(service: service)
+        let old = Task { await model.load() }
+        defer { service.finishAll() }
+        try await waitForRequests(2, service: service)
+        XCTAssertEqual(model.items.first?.id, 70)
+        service.recommendationScope = UUID(); service.recommendationOwner = "Account-B"; service.cached = nil
+        let fresh = Task { await model.load() }
+        try await waitForRequests(4, service: service)
+        XCTAssertTrue(model.items.isEmpty)
+        service.finish(2, id: 200); service.finish(3, id: 200)
+        await fresh.value
+        XCTAssertEqual(Set(model.items.map(\.key)), ["movie:200", "tv:200"])
+        service.finish(0, id: 999); service.finish(1, id: 999)
+        await old.value
+        XCTAssertEqual(Set(model.items.map(\.key)), ["movie:200", "tv:200"])
+        XCTAssertNil(model.error)
+    }
+    private func waitForRequests(_ count: Int, service: HeldRecommendations) async throws {
+        for _ in 0..<200 {
+            if service.pending.count >= count { return }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        XCTFail("Concurrent recommendation requests did not start")
+        throw APIError.message("Synthetic request wait timed out")
+    }
     func testPagingRetainsFirstIdentityAndRejectsAnotherFilterScope() async {
         let service = DiscoveryStub()
         let results = DiscoveryResults(service: service)

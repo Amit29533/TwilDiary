@@ -124,6 +124,7 @@ private struct DiscoveryNotice: View {
 }
 
 private struct RecommendedDiscoveryView: View {
+    @Environment(DiaryStore.self) private var store
     let section: Bool
     @State private var results: DiscoveryRecommendations
     init(service: any DiscoveryServing, section: Bool) { self.section = section; _results = State(initialValue: DiscoveryRecommendations(service: service)) }
@@ -131,11 +132,11 @@ private struct RecommendedDiscoveryView: View {
         VStack(alignment: .leading, spacing: 10) {
             ExploreHeading(section: .recommended)
             DiscoveryTrack(items: results.items)
-            if results.loading { ProgressView("Loading recommendations…").font(.system(size: 13)) }
-            else if let error = results.error { DiscoveryNotice(text: error) { Task { await results.load() } } }
+            if results.loading { ProgressView(results.items.isEmpty ? "Loading recommendations…" : "Updating recommendations…").font(.system(size: 13)) }
+            else if let error = results.error { DiscoveryNotice(text: error) { Task { await results.load(refresh: true) } } }
             else if !results.connected { DiscoveryNotice(text: "Trakt not connected.") }
             else if results.items.isEmpty { DiscoveryNotice(text: "No recommendations yet.") }
-        }.task { await results.load(limit: section ? 24 : 8) }
+        }.task(id: store.discoveryRevision) { await results.load(limit: section ? 24 : 8) }
     }
 }
 
@@ -197,7 +198,7 @@ private struct DiscoveryBrowser: View {
             guard section.source == "tmdb" else { return }
             guard filters.error(section: section) == nil, !promptForGenre || !filters.genre.isEmpty else { results.clear(); return }
             do { try await Task.sleep(for: .milliseconds(250)); try Task.checkCancellation(); await results.load(filters.query(section: section)) } catch { }
-        }.task { if section == .recommended { await recommendations.load(limit: 24) } }
+        }.task(id: store.discoveryRevision) { if section == .recommended { await recommendations.load(limit: 24) } }
     }
     private var genreToolbar: some View {
         HStack(spacing: 10) {
@@ -225,7 +226,7 @@ private struct DiscoveryBrowser: View {
             }
             if busy { ProgressView("Loading titles…").frame(maxWidth: .infinity).padding(.vertical, 24) }
             if let error = section == .recommended ? recommendations.error : results.error {
-                DiscoveryNotice(text: error) { Task { if section == .recommended { await recommendations.load(limit: 24) } else { await results.load(filters.query(section: section), more: results.page > 0) } } }
+                DiscoveryNotice(text: error) { Task { if section == .recommended { await recommendations.load(limit: 24, refresh: true) } else { await results.load(filters.query(section: section), more: results.page > 0) } } }
             } else if !busy && displayed.isEmpty {
                 if section == .recommended && !recommendations.connected { DiscoveryNotice(text: "Connect Trakt in More to load your recommendations.") }
                 else { ContentUnavailableView(section == .daily ? "No unwatched titles in this mix" : "No titles in this mix", systemImage: "sparkles", description: Text("Try another genre, year or rating.")) }

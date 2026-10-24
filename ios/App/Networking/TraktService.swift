@@ -30,7 +30,11 @@ import TwilDiaryCore
         return try await store.read("/api/trakt/sync/\(id)/apply", method: "POST", body: body)
     }
     func cancel(id: String) async throws { let _: EmptyResponse = try await store.read("/api/trakt/sync/\(id)/cancel", method: "POST", body: [:]) }
-    func disconnect() async throws { let _: EmptyResponse = try await store.read("/api/trakt/disconnect", method: "POST", body: [:]) }
+    func disconnect() async throws {
+        store.invalidateDiscovery()
+        defer { store.invalidateDiscovery() }
+        let _: EmptyResponse = try await store.read("/api/trakt/disconnect", method: "POST", body: [:])
+    }
 }
 
 @MainActor @Observable final class TraktController {

@@ -45,7 +45,7 @@ import TwilDiaryCore
                     NavigationStack {
                         TraktSignIn(credential: credential) { result in
                             showSignIn = false
-                            switch result { case .success: Task { await controller.refresh() }; case .failure(let error): controller.error = error.localizedDescription }
+                            switch result { case .success: store.invalidateDiscovery(); Task { await controller.refresh() }; case .failure(let error): controller.error = error.localizedDescription }
                         }.navigationTitle("Connect Trakt").navigationBarTitleDisplayMode(.inline)
                             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showSignIn = false } } }
                     }

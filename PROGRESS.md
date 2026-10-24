@@ -1,5 +1,12 @@
 # Native TwilDiary progress
 
+## Prepared recommendation optimization — local source, not yet CI-validated
+
+Verified current cause: LiveDiscoveryService caches were per-view and movie/TV recommendation reads were sequential. Prepared a DiaryStore-owned bounded session cache shared across service instances; pending metadata/status calls coalesce, personal keys require verified Trakt account identity, sessions/accounts discard cached/in-flight data, unknown identities never reuse personal content, and current library identity is re-derived before display. Read connection status again on re-entry, fetch movie/TV concurrently with shared24/type pages, show verified cached items during refresh, preserve an old successful type through provider failure with an honest error, and allow force Retry. Access authentication invalidates before and after commit, and Trakt disconnect/reconnect invalidate; no cross-owner old response can publish. Seven cache and two controller regressions are prepared. Expected next native inventory130 (not a pass claim), Core64/primary43 plus layout sizes. No third-party dependency, backend change/deployment, secret or hosted diary mutation.
+
+GitHub33 has compiled and its native unit stage succeeds; its ten UI gate is running. Codemagic32 independently advanced through early gate/Release into the complete primary suite; exact final logs/artifacts remain pending, so32 is still not accepted. Source changes after3cd25b0 remain local and do not cancel either running revision. Next: finish source review/commit this cache batch locally, inspect both CI results and use the user's authorized two-provider validation without dropping any failed test.
+
+
 ## Parallel checkpoint — build33 on GitHub; next Trash/menu batch local only
 
 GitHub build33/source3cd25b01f75039cf502a78caa684953abdef343a is active run40130893194, https://github.com/Amit29533/TwilDiary/actions/runs/40130893194. Codemagic independently runs build32/source72f081cf59b13f23a17fb4626cef522222ff2b94 (same native app7ec6249). Preserve both runs and report their exact outcomes separately.

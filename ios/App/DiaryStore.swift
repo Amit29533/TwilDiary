@@ -28,6 +28,9 @@ import TwilDiaryCore
         for read in cardReads.values { read.task.cancel() }
         cardReads = [:]; cachedCards = [:]; cardInputs = [:]; cardRevisions = [:]
     }
+    let discoveryCache = DiscoveryCache()
+    private(set) var discoveryRevision = UUID()
+    func invalidateDiscovery() { discoveryCache.reset(); discoveryRevision = UUID() }
     var cachedPeople: [Int: (at: Date, value: PersonResponse)] = [:]
     var loading = false
     var busy = false { didSet { if !busy { resumeMutationWaiters() } } }
@@ -104,9 +107,13 @@ import TwilDiaryCore
     func connect(_ credential: AccessCredential) async {
         let previousScope = api.credential?.cacheScope
         let generation = UUID(); sessionGeneration = generation; snapshotGeneration = UUID()
+        invalidateDiscovery()
         do {
             try await api.authenticate(credential)
             guard generation == sessionGeneration else { return }
+            // Reads started while authentication still used the previous
+            // credential must not survive under the newly authenticated owner.
+            invalidateDiscovery()
             communityRatings.reset(); cachedPeople = [:]; clearCards(); cardActions = [:]; resumeMutationWaiters()
             if previousScope != credential.cacheScope {
                 workspace = Workspace(); hasLoadedWorkspace = false; showingCachedSnapshot = false; lastRefreshedAt = nil; cacheWarning = nil
@@ -124,6 +131,7 @@ import TwilDiaryCore
         failNextFixtureRefresh = false
         #endif
         sessionGeneration = UUID(); snapshotGeneration = UUID()
+        invalidateDiscovery()
         needsMutationRefresh = false
         api.signOut(); workspace = Workspace(); communityRatings.reset(); cachedPeople = [:]; clearCards(); cardActions = [:]; resumeMutationWaiters(); hasLoadedWorkspace = false; error = nil
         showingCachedSnapshot = false; lastRefreshedAt = nil; loading = false; busy = false
