@@ -126,7 +126,8 @@ struct RootView: View {
                         onOpen: { id in router.randomPick = nil; router.openTitle(id, tab: router.selectedTab) },
                         onAdd: { router.randomPick = nil; router.library("add") }).id(scope.id)
                 }
-            }.task { await store.refresh() }
+            }.onChange(of: store.sessionRevision) { _, _ in router.randomPick = nil }
+            .task { await store.refresh() }
     }
     private var showNavigation: Bool { !router.detailTabs.contains(router.selectedTab) }
     private var navigation: some View {

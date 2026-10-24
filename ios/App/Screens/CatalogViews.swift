@@ -21,7 +21,7 @@ struct CatalogPoster: View {
     let item: CatalogItem
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Artwork(path: item.artwork, title: item.name)
+            Artwork(path: item.artwork, title: item.name, initialsOnly: false)
                 .aspectRatio(2 / 3, contentMode: .fit)
                 .overlay(alignment: .bottomLeading) {
                     if let score = item.rating, score > 0 {
@@ -92,7 +92,7 @@ struct CatalogSearchView: View {
     }
     private func onlineRow(_ item: CatalogItem) -> some View {
         HStack(spacing: 12) {
-            Artwork(path: item.artwork, title: item.name).frame(width: 72, height: 108).clipShape(RoundedRectangle(cornerRadius: 8))
+            Artwork(path: item.artwork, title: item.name, initialsOnly: false).frame(width: 72, height: 108).clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 4) { Text(item.name).font(.system(size: 15, weight: .semibold)); Text([item.year.map(String.init), item.mediaType == .tv ? "Show" : "Movie"].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 13)).foregroundStyle(.secondary) }
             Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint)
         }.padding(.vertical, 9).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)

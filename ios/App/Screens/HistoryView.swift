@@ -118,7 +118,7 @@ struct HistoryRow: View {
     let entry: HistoryEntry
     var body: some View {
         HStack(spacing: 10) {
-            Artwork(path: entry.title.poster, title: entry.title.name).frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 8))
+            Artwork(path: entry.title.poster, title: entry.title.name, initialsOnly: false).frame(width: 60, height: 90).clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 0) {
                 Text(entry.title.name).font(.system(size: 15, weight: .semibold)).fixedSize(horizontal: false, vertical: true).shadow(color: .black.opacity(0.53), radius: 4, y: 1)
                 InlineFlowLayout {

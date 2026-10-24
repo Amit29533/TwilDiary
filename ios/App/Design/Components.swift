@@ -138,15 +138,23 @@ struct SearchField: View {
 struct Artwork: View {
     let path: String?
     var title: String = ""
+    var initialsOnly = true
     var body: some View {
         GeometryReader { proxy in
           ZStack {
-            LinearGradient(colors: [tint, Color(webHex: "#1c1728")], startPoint: .topLeading, endPoint: .bottomTrailing)
+            if initialsOnly { LinearGradient(colors: [tint, Color(webHex: "#1c1728")], startPoint: .topLeading, endPoint: .bottomTrailing) }
+            else {
+                LinearGradient(colors: [Color(webHex: "#243638"), Color(webHex: "#17151e"), Color(webHex: "#17151e")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                RadialGradient(colors: [Color(webHex: "#a27ac535"), .clear], center: UnitPoint(x: 0.8, y: 0.05), startRadius: 0, endRadius: max(proxy.size.width, proxy.size.height) * 0.7)
+            }
             if let path, path.hasPrefix("asset:") || path.hasPrefix("/demo/") || path.hasPrefix("scene:"), let image = DemoArtwork.image(path) { Image(uiImage: image).resizable().scaledToFill().frame(width: proxy.size.width, height: proxy.size.height).clipped() }
             else if let image = fixtureImage(path) { Image(uiImage: image).resizable().scaledToFill().frame(width: proxy.size.width, height: proxy.size.height).clipped() }
             else if let path, let url = URL(string: path), url.scheme == "https" {
-                AsyncImage(url: url) { phase in if let image = phase.image { image.resizable().scaledToFill().frame(width: proxy.size.width, height: proxy.size.height).clipped() } else { initials } }
-            } else { initials }
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image { image.resizable().scaledToFill().frame(width: proxy.size.width, height: proxy.size.height).clipped() }
+                    else if phase.error != nil { placeholder(size: proxy.size) }
+                }
+            } else { placeholder(size: proxy.size) }
           }.frame(width: proxy.size.width, height: proxy.size.height).clipped()
         }.contentShape(Rectangle()).accessibilityHidden(true)
     }
@@ -161,6 +169,15 @@ struct Artwork: View {
         #else
         return nil
         #endif
+    }
+    @ViewBuilder private func placeholder(size: CGSize) -> some View {
+        if initialsOnly { initials }
+        else {
+            VStack(spacing: 16) {
+                DiaryIcon(name: "clapperboard", size: 28)
+                Text(title).font(.system(size: 12.8, weight: .semibold)).lineSpacing(3).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+            }.foregroundStyle(Color(webHex: "#d2c4e4")).padding(.horizontal, size.width * 0.14).padding(.vertical, size.height * 0.14)
+        }
     }
     private var initials: some View { Text(title.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined().uppercased()).font(.system(size: 24, weight: .bold)).foregroundStyle(Color(webHex: "#eee6fb99")) }
 }
@@ -181,7 +198,7 @@ struct PosterCard: View {
     @AppStorage("publicRatingSource") private var ratingSource = PublicRatingSource.tmdb
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Artwork(path: title.poster, title: title.name).aspectRatio(2 / 3, contentMode: .fit)
+            Artwork(path: title.poster, title: title.name, initialsOnly: !personalRating).aspectRatio(2 / 3, contentMode: .fit)
                 .overlay(alignment: .topLeading) { if let score = displayedScore { RatingBadge(score: score).padding(6) } }
                 .overlay(alignment: .bottom) { if title.status == "watching" { GeometryReader { proxy in Rectangle().fill(.white.opacity(0.2)).overlay(alignment: .leading) { Rectangle().fill(.tint).frame(width: proxy.size.width * progress) } }.frame(height: 4) } }
                 .overlay(alignment: .bottomTrailing) { if title.status == "completed" { Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(.black).frame(width: 25, height: 25).background(Color(webHex: "#6ce3a5"), in: Circle()).padding(7) } }
@@ -253,7 +270,7 @@ struct ProgressCard: View {
         VStack {
             Spacer(minLength: 0)
             HStack(alignment: .bottom, spacing: 10) {
-                Button { openTitle() } label: { Artwork(path: title.poster, title: title.name).frame(width: 42, height: 62).clipShape(RoundedRectangle(cornerRadius: 6)) }.buttonStyle(.plain)
+                Button { openTitle() } label: { Artwork(path: title.poster, title: title.name, initialsOnly: false).frame(width: 42, height: 62).clipShape(RoundedRectangle(cornerRadius: 6)) }.buttonStyle(.plain)
                 VStack(alignment: .leading, spacing: 7) {
                     Button { openTitle() } label: { Text(title.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white).lineLimit(1) }.buttonStyle(.plain)
                     timeLine.font(.system(size: 12, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
@@ -267,7 +284,7 @@ struct ProgressCard: View {
     private var glanceContent: some View {
         VStack(spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
-                Button { openTitle() } label: { Artwork(path: title.poster, title: title.name).frame(width: 94, height: 118).clipShape(RoundedRectangle(cornerRadius: 8)) }.buttonStyle(.plain)
+                Button { openTitle() } label: { Artwork(path: title.poster, title: title.name, initialsOnly: false).frame(width: 94, height: 118).clipShape(RoundedRectangle(cornerRadius: 8)) }.buttonStyle(.plain)
                 VStack(alignment: .leading, spacing: 7) {
                     HStack(alignment: .top) {
                         Button { openTitle() } label: { Text(title.name).font(.system(size: 18, weight: .semibold)).foregroundStyle(.white).lineLimit(2).multilineTextAlignment(.leading) }.buttonStyle(.plain).accessibilityIdentifier("progress-title-" + title.id)

@@ -92,7 +92,7 @@ struct HomeView: View {
     }
     private func upcomingRow(_ item: HomeOverview.Upcoming) -> some View {
         HStack(spacing: 12) {
-            Artwork(path: item.title.poster, title: item.title.name).frame(width: 42, height: 62).clipShape(RoundedRectangle(cornerRadius: 8))
+            Artwork(path: item.title.poster, title: item.title.name, initialsOnly: false).frame(width: 42, height: 62).clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 5) { Text(item.title.name).font(.system(size: 14, weight: .semibold)).lineLimit(2); Text("S\(item.episode.season) E\(item.episode.number)").font(.system(size: 12)).foregroundStyle(.secondary) }
             Spacer(minLength: 4)
             VStack(alignment: .trailing, spacing: 5) { Text(item.daysAway == 0 ? "Today" : item.daysAway == 1 ? "Tomorrow" : "In \(item.daysAway) days").font(.system(size: 12, weight: .semibold)).foregroundStyle(.tint); Text(item.date, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated)).font(.system(size: 11)).foregroundStyle(.secondary) }

@@ -64,7 +64,7 @@ struct RandomPickDialog: View {
                     .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(theme.accent.opacity(0.3137)))
                     .shadow(color: theme.accent.opacity(0.11), radius: 45)
                     .shadow(color: .black.opacity(0.8), radius: 50, y: 30)
-                    .accessibilityAddTraits(.isModal).accessibilityIdentifier("random-pick-dialog")
+                    .accessibilityElement(children: .contain).accessibilityAddTraits(.isModal).accessibilityIdentifier("random-pick-dialog")
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }.onAppear { choose() }
             .onChange(of: active.map(\.id)) { _, _ in if picked == nil { rolling = false; choose() } }
@@ -77,7 +77,7 @@ struct RandomPickDialog: View {
 
     private func pickCard(_ title: MediaTitle, compact: Bool) -> some View {
         HStack(spacing: compact ? 12 : 18) {
-            Artwork(path: title.poster, title: title.name).frame(width: compact ? 85 : 115, height: compact ? 128 : 173)
+            Artwork(path: title.poster, title: title.name, initialsOnly: false).frame(width: compact ? 85 : 115, height: compact ? 128 : 173)
                 .clipShape(RoundedRectangle(cornerRadius: 11)).shadow(color: .black.opacity(0.53), radius: 13, y: 10).rotationEffect(.degrees(-3))
             VStack(alignment: .leading, spacing: 10) {
                 Text("FROM YOUR COLLECTION").font(.system(size: 11)).tracking(0.77).foregroundStyle(theme.accent)

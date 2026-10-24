@@ -17,7 +17,7 @@ struct TitleHero<PersonalRating: View>: View {
     }
     var body: some View {
         HStack(alignment: .top, spacing: 15) {
-            Artwork(path: poster, title: name).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 12))
+            Artwork(path: poster, title: name, initialsOnly: false).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 12))
             VStack(alignment: .leading, spacing: 0) {
                 Text(name).font(.system(size: 24, weight: .bold)).tracking(-1.08).fixedSize(horizontal: false, vertical: true)
                 Text([year.map(String.init) ?? "—", category, runtime.map { series ? "\($0) min per episode" : "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 14.4)).lineSpacing(4.3).foregroundStyle(.secondary).frame(minHeight: 21.6, alignment: .top).padding(.top, 14)
@@ -42,7 +42,10 @@ struct TitleArtworkBackdrop: View {
     let path: String?
     let name: String
     var body: some View {
-        Artwork(path: path, title: name).frame(height: 380)
+        ZStack {
+            LinearGradient(stops: [.init(color: Color(webHex: "#3c2c48"), location: 0), .init(color: Color(webHex: "#473c37"), location: 0.45), .init(color: Color(webHex: "#253b3b"), location: 1)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            if let path { Artwork(path: path, title: name) }
+        }.frame(height: 380)
             .overlay(LinearGradient(stops: [.init(color: .clear, location: 0.2), .init(color: .black.opacity(1.0 / 15), location: 0.45), .init(color: .black.opacity(13.0 / 15), location: 0.75), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
     }
 }
