@@ -419,6 +419,26 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         let accepted = await pending.value
         XCTAssertFalse(accepted); XCTAssertTrue(store.needsSignIn); XCTAssertNil(store.error)
     }
+    func testLateUnauthorizedReadAfterSignOutIsCancellationNotANewLoginError() async throws {
+        StubProtocol.state.reset { _ in
+            var reply = StubProtocol.Reply(401, #"{"error":{"message":"Expired synthetic session"}}"#)
+            reply.delay = 0.15; return reply
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage))
+        let pending = Task { () -> Bool in
+            do { let _: EmptyResponse = try await store.read("/api/metadata/status"); return false }
+            catch is CancellationError { return true }
+            catch { return false }
+        }
+        for _ in 0..<100 {
+            if !StubProtocol.state.recorded().isEmpty { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        store.signOut()
+        let cancelled = await pending.value
+        XCTAssertTrue(cancelled); XCTAssertTrue(store.needsSignIn); XCTAssertNil(store.error)
+    }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
                                        "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),

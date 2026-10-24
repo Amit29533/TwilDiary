@@ -283,6 +283,7 @@ struct ProgressCard: View {
         return SeasonProgress.calculate(title: title, workspace: store.workspace, season: card.season?.number ?? 1).remainingMinutes
     }
     private func loadCard() async {
+        guard !store.needsSignIn, !Task.isCancelled else { return }
         do { let result = try await store.card(title); guard !Task.isCancelled else { return }; card = result }
         catch is CancellationError { }
         catch { if !Task.isCancelled { store.error = error.localizedDescription } }

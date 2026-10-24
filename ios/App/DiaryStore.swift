@@ -122,7 +122,11 @@ import TwilDiaryCore
             guard generation == sessionGeneration else { throw CancellationError() }
             return value
         }
-        catch { if generation == sessionGeneration, case APIError.signIn = error { fail(error) }; throw error }
+        catch {
+            guard generation == sessionGeneration else { throw CancellationError() }
+            if case APIError.signIn = error { fail(error) }
+            throw error
+        }
     }
     @discardableResult func trash(_ title: MediaTitle) async -> Bool {
         await perform {
