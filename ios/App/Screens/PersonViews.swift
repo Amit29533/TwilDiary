@@ -9,37 +9,39 @@ struct PersonView: View {
     @State private var failure: String?
     @State private var expanded = false
     var body: some View {
-        ScrollView {
-            if let person {
-                VStack(alignment: .leading, spacing: 28) {
-                    header(person)
+        GeometryReader { geometry in
+            ScrollView {
+                if let person {
                     VStack(alignment: .leading, spacing: 28) {
-                        if let role = route.sourceRole, let title = route.sourceTitle, !role.isEmpty, !title.isEmpty {
-                            Button(role + " in " + title) { dismiss() }.font(.system(size: 15)).buttonStyle(.plain)
-                        }
-                        if !person.biography.isEmpty {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(person.biography).font(.system(size: 16)).lineSpacing(6).foregroundStyle(.secondary).lineLimit(expanded ? nil : 4)
-                                Button(expanded ? "Less" : "More") { expanded.toggle() }.font(.system(size: 14)).frame(minHeight: 36).accessibilityLabel(expanded ? "Collapse biography" : "Expand biography")
+                        header(person)
+                        VStack(alignment: .leading, spacing: 28) {
+                            if let role = route.sourceRole, let title = route.sourceTitle, !role.isEmpty, !title.isEmpty {
+                                Button(role + " in " + title) { dismiss() }.font(.system(size: 15)).buttonStyle(.plain)
                             }
+                            if !person.biography.isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(person.biography).font(.system(size: 16)).lineSpacing(6).foregroundStyle(.secondary).lineLimit(expanded ? nil : 4)
+                                    Button(expanded ? "Less" : "More") { expanded.toggle() }.font(.system(size: 14)).frame(minHeight: 36).accessibilityLabel(expanded ? "Collapse biography" : "Expand biography")
+                                }
+                            }
+                            facts(person)
+                            server(person)
+                            let sections = PersonSections(person: person, workspace: store.workspace)
+                            shelf("Known for", person: person, kind: .knownFor, items: sections.knownFor)
+                            shelf("Shows", person: person, kind: .shows, items: sections.shows)
+                            shelf("Movies", person: person, kind: .movies, items: sections.movies)
+                            Link("Biography, credits and artwork: TMDB", destination: URL(string: "https://www.themoviedb.org/person/\(person.id)")!).font(.system(size: 13)).foregroundStyle(.secondary)
+                        }.padding(.horizontal, 14)
+                    }.padding(.bottom, 28)
+                        .background(alignment: .top) {
+                            Artwork(path: CatalogTools.image(person.profilePath, size: "w780"), title: person.name).frame(height: 310 + geometry.safeAreaInsets.top)
+                                .overlay(LinearGradient(stops: [.init(color: .black.opacity(2.0 / 15), location: 0), .init(color: .black.opacity(7.0 / 15), location: 0.55), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).offset(y: -geometry.safeAreaInsets.top).allowsHitTesting(false).accessibilityHidden(true)
                         }
-                        facts(person)
-                        server(person)
-                        let sections = PersonSections(person: person, workspace: store.workspace)
-                        shelf("Known for", person: person, kind: .knownFor, items: sections.knownFor)
-                        shelf("Shows", person: person, kind: .shows, items: sections.shows)
-                        shelf("Movies", person: person, kind: .movies, items: sections.movies)
-                        Link("Biography, credits and artwork: TMDB", destination: URL(string: "https://www.themoviedb.org/person/\(person.id)")!).font(.system(size: 13)).foregroundStyle(.secondary)
-                    }.padding(.horizontal, 14)
-                }.padding(.bottom, 28)
-                    .background(alignment: .top) {
-                        Artwork(path: CatalogTools.image(person.profilePath, size: "w780"), title: person.name).frame(height: 310)
-                            .overlay(LinearGradient(stops: [.init(color: .black.opacity(2.0 / 15), location: 0), .init(color: .black.opacity(7.0 / 15), location: 0.55), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top).accessibilityHidden(true)
-                    }
-            } else if let failure { RetryNotice(message: failure) { Task { await load() } }.padding(14) }
-            else { ProgressView("Loading person…").frame(maxWidth: .infinity).padding(40) }
-        }.background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
-            .task(id: route.id) { if person == nil { await load() } }
+                } else if let failure { RetryNotice(message: failure) { Task { await load() } }.padding(14) }
+                else { ProgressView("Loading person…").frame(maxWidth: .infinity).padding(40) }
+            }.scrollClipDisabled().background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+                .task(id: route.id) { if person == nil { await load() } }
+        }
     }
     private func header(_ person: PersonDetails) -> some View {
         HStack(spacing: 14) {

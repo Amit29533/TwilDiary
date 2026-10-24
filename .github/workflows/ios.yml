@@ -66,8 +66,8 @@ jobs:
       - name: Wait for simulator readiness
         timeout-minutes: 15
         run: bash ios/scripts/ci.sh boot
-      - name: Verify progress drag and Undo before Release compilation
-        timeout-minutes: 10
+      - name: Verify progress, navigation and recent device regressions before Release
+        timeout-minutes: 20
         run: bash ios/scripts/ci.sh test-progress
       - name: Compile unsigned physical iPhone application
         id: device

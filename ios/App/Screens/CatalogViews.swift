@@ -50,6 +50,7 @@ struct CatalogSearchView: View {
     @State private var loading = false
     @State private var failure: String?
     @State private var showManual = false
+    @State private var savedManualID: String?
     @State private var page = 1
     @State private var totalPages = 0
     @State private var libraryLimit = 20
@@ -89,7 +90,10 @@ struct CatalogSearchView: View {
         }.padding(.horizontal, 14).padding(.bottom, 12)
             .task(id: normalized) { if completedQuery != normalized || failure != nil { await search(number: 1, reset: true) } }
             .onDisappear { pageTask?.cancel(); generation = UUID(); loading = false }
-            .sheet(isPresented: $showManual) { ManualTitleView(initialName: normalized) { id in chooseLibrary(id) } }
+            .sheet(isPresented: $showManual, onDismiss: {
+                guard let id = savedManualID else { return }
+                savedManualID = nil; chooseLibrary(id)
+            }) { ManualTitleView(initialName: normalized) { id in savedManualID = id; showManual = false } }
     }
     private func onlineRow(_ item: CatalogItem) -> some View {
         HStack(spacing: 12) {
@@ -109,6 +113,7 @@ struct CatalogSearchView: View {
         }.padding(.vertical, 9).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)
     }
     private func chooseLibrary(_ id: String) {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         Task {
             if store.title(id) == nil { await store.refresh() }
             guard store.title(id) != nil else { failure = "This title is no longer available. Refresh your library and try again."; return }
@@ -149,29 +154,31 @@ struct CatalogDetailView: View {
     @State private var loading = false
     @State private var showOverview = false
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                if let details {
-                    TitleHero(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), year: details.details.year, category: details.details.suggestedCategory == "anime-movie" ? "Anime movie" : details.details.suggestedCategory.capitalized, runtime: details.details.runtimeMinutes, series: route.kind == .tv, score: details.details.communityScore, summary: details.details.overview, expanded: $showOverview) { EmptyView() }
-                    if details.libraryTitle?.trashed == true {
-                        NavigationLink { TrashView().onAppear { router.detailTabs.remove(router.selectedTab) } } label: { Text("Restore from Trash") }.buttonStyle(.borderedProminent).controlSize(.large)
-                    } else if let saved = details.libraryTitle {
-                        Button("Open in Library") { accepted(saved.id) }.buttonStyle(.borderedProminent).controlSize(.large)
-                    } else {
-                        Button { Task { if let id = await store.importTitle(details.details, category: details.details.suggestedCategory) { accepted(id) } } } label: {
-                            Text(store.busy ? "Adding…" : "Add to Planned").font(.system(size: 15, weight: .semibold)).foregroundStyle(theme.ink).frame(maxWidth: .infinity).frame(minHeight: 48)
-                        }.buttonStyle(.plain).background(theme.accent, in: RoundedRectangle(cornerRadius: 14)).disabled(store.busy || !store.canMutate).accessibilityIdentifier("catalog-add")
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    if let details {
+                        TitleHero(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), year: details.details.year, category: details.details.suggestedCategory == "anime-movie" ? "Anime movie" : details.details.suggestedCategory.capitalized, runtime: details.details.runtimeMinutes, series: route.kind == .tv, score: details.details.communityScore, summary: details.details.overview, expanded: $showOverview) { EmptyView() }
+                        if details.libraryTitle?.trashed == true {
+                            NavigationLink { TrashView().onAppear { router.detailTabs.remove(router.selectedTab) } } label: { Text("Restore from Trash") }.buttonStyle(.borderedProminent).controlSize(.large)
+                        } else if let saved = details.libraryTitle {
+                            Button("Open in Library") { accepted(saved.id) }.buttonStyle(.borderedProminent).controlSize(.large)
+                        } else {
+                            Button { Task { if let id = await store.importTitle(details.details, category: details.details.suggestedCategory) { accepted(id) } } } label: {
+                                Text(store.busy ? "Adding…" : "Add to Planned").font(.system(size: 15, weight: .semibold)).foregroundStyle(theme.ink).frame(maxWidth: .infinity).frame(minHeight: 48)
+                            }.buttonStyle(.plain).background(theme.accent, in: RoundedRectangle(cornerRadius: 14)).disabled(store.busy || !store.canMutate).accessibilityIdentifier("catalog-add")
+                        }
+                        if route.kind == .tv { CatalogSeasonPreview(route: route, details: details.details, store: store) }
+                        CastAndRelated(route: route, sourceTitle: details.details.name)
+                    } else if loading { ProgressView("Loading title…").frame(maxWidth: .infinity).padding(40) }
+                    if let failure { RetryNotice(message: failure) { Task { await load() } } }
+                }.padding(.horizontal, 14).padding(.bottom, 32)
+                    .background(alignment: .top) {
+                        if let details { TitleArtworkBackdrop(path: CatalogTools.image(details.details.backdropPath, size: "w780"), name: details.details.name, topExtension: geometry.safeAreaInsets.top) }
                     }
-                    if route.kind == .tv { CatalogSeasonPreview(route: route, details: details.details, store: store) }
-                    CastAndRelated(route: route, sourceTitle: details.details.name)
-                } else if loading { ProgressView("Loading title…").frame(maxWidth: .infinity).padding(40) }
-                if let failure { RetryNotice(message: failure) { Task { await load() } } }
-            }.padding(.horizontal, 14).padding(.bottom, 32)
-                .background(alignment: .top) {
-                    if let details { TitleArtworkBackdrop(path: CatalogTools.image(details.details.backdropPath, size: "w780"), name: details.details.name) }
-                }
-        }.background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
-            .task(id: route) { await load() }
+            }.scrollClipDisabled().background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+                .task(id: route) { await load() }
+        }
     }
     private func accepted(_ id: String) { if let onImported { onImported(id) } else { router.replaceTitle(id, tab: router.selectedTab) } }
     private func load() async {

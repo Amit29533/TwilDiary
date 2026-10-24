@@ -45,83 +45,85 @@ struct TitleDetailView: View {
     var body: some View {
         Group {
             if let title = store.title(id) {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 28) {
-                            header(title)
-                            progressPanel(title).padding(.top, -8)
-                            if title.isSeries { episodeSection(title).id("episodes") }
-                            if let tmdbId = title.tmdbId { CastAndRelated(route: CatalogRoute(kind: title.isSeries ? .tv : .movie, id: tmdbId), sourceTitle: title.name) }
-                            VStack(spacing: 20) {
-                                DisclosureGroup("Notes", isExpanded: $showNotes) {
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        TextEditor(text: $notes).frame(minHeight: 110).scrollContentBackground(.hidden).focused($notesFocused).accessibilityIdentifier("title-notes").accessibilityLabel("Title notes")
-                                        if notes.utf16.count > 20_000 { Text("Keep notes within 20,000 characters.").font(.caption).foregroundStyle(.orange) }
-                                        Button("Save notes") { Task { if await store.patch(title, values: ["notes": notes], expectedVersion: notesVersion) { notesVersion = store.title(id)?.version } } }.disabled(store.writesBlocked || notes == title.notes || notes.utf16.count > 20_000)
-                                    }.padding(.top, 12)
-                                }.id("notes")
-                                Divider()
-                                DisclosureGroup(isExpanded: $showLocation) {
-                                    VStack(alignment: .leading, spacing: 10) {
-                                        ForEach(locations) { location in locationRow(location, title: title) }
-                                        if locations.isEmpty { Text("No mapped files yet. A Windows scan will add matching locations here.").font(.system(size: 13)).foregroundStyle(.secondary) }
-                                        NavigationLink("All files & drives →", value: AppDestination.files).font(.system(size: 14, weight: .semibold)).frame(minHeight: 48).accessibilityIdentifier("title-all-files")
-                                    }.padding(.top, 12)
-                                } label: { Text(serverLabel).font(.subheadline.weight(.semibold)).accessibilityIdentifier("title-locations") }
-                                    .id("files")
-                            }.diaryPanel()
-                        }.padding(.horizontal, 14).padding(.bottom, 32)
-                            .background(alignment: .top) {
-                                TitleArtworkBackdrop(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, name: title.name)
+                GeometryReader { geometry in
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 28) {
+                                header(title)
+                                progressPanel(title).padding(.top, -8)
+                                if title.isSeries { episodeSection(title).id("episodes") }
+                                if let tmdbId = title.tmdbId { CastAndRelated(route: CatalogRoute(kind: title.isSeries ? .tv : .movie, id: tmdbId), sourceTitle: title.name) }
+                                VStack(spacing: 20) {
+                                    DisclosureGroup("Notes", isExpanded: $showNotes) {
+                                        VStack(alignment: .leading, spacing: 12) {
+                                            TextEditor(text: $notes).frame(minHeight: 110).scrollContentBackground(.hidden).focused($notesFocused).accessibilityIdentifier("title-notes").accessibilityLabel("Title notes")
+                                            if notes.utf16.count > 20_000 { Text("Keep notes within 20,000 characters.").font(.caption).foregroundStyle(.orange) }
+                                            Button("Save notes") { Task { if await store.patch(title, values: ["notes": notes], expectedVersion: notesVersion) { notesVersion = store.title(id)?.version } } }.disabled(store.writesBlocked || notes == title.notes || notes.utf16.count > 20_000)
+                                        }.padding(.top, 12)
+                                    }.id("notes")
+                                    Divider()
+                                    DisclosureGroup(isExpanded: $showLocation) {
+                                        VStack(alignment: .leading, spacing: 10) {
+                                            ForEach(locations) { location in locationRow(location, title: title) }
+                                            if locations.isEmpty { Text("No mapped files yet. A Windows scan will add matching locations here.").font(.system(size: 13)).foregroundStyle(.secondary) }
+                                            NavigationLink("All files & drives →", value: AppDestination.files).font(.system(size: 14, weight: .semibold)).frame(minHeight: 48).accessibilityIdentifier("title-all-files")
+                                        }.padding(.top, 12)
+                                    } label: { Text(serverLabel).font(.subheadline.weight(.semibold)).accessibilityIdentifier("title-locations") }
+                                        .id("files")
+                                }.diaryPanel()
+                            }.padding(.horizontal, 14).padding(.bottom, 32)
+                                .background(alignment: .top) {
+                                    TitleArtworkBackdrop(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, name: title.name, topExtension: geometry.safeAreaInsets.top)
+                                }
+                        }.scrollClipDisabled().scrollDismissesKeyboard(.interactively).background(.black)
+                            .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItemGroup(placement: .topBarTrailing) {
+                                    Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
+                                    Menu {
+                                        Button(title.queued == true ? "Remove from Queue" : "Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }.disabled(store.writesBlocked)
+                                        Button("Notes") { showNotes = true; Task { await Task.yield(); proxy.scrollTo("notes", anchor: .top) } }.accessibilityIdentifier("title-menu-notes")
+                                        Button("File locations") { showLocation = true; Task { await Task.yield(); proxy.scrollTo("files", anchor: .top) } }.accessibilityIdentifier("title-menu-files")
+                                    } label: { Image(systemName: "ellipsis") }.accessibilityLabel("More options for " + title.name).accessibilityIdentifier("title-more")
+                                }
                             }
-                    }.scrollDismissesKeyboard(.interactively).background(.black)
-                        .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItemGroup(placement: .topBarTrailing) {
-                                Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
-                                Menu {
-                                    Button(title.queued == true ? "Remove from Queue" : "Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }.disabled(store.writesBlocked)
-                                    Button("Notes") { showNotes = true; Task { await Task.yield(); proxy.scrollTo("notes", anchor: .top) } }.accessibilityIdentifier("title-menu-notes")
-                                    Button("File locations") { showLocation = true; Task { await Task.yield(); proxy.scrollTo("files", anchor: .top) } }.accessibilityIdentifier("title-menu-files")
-                                } label: { Image(systemName: "ellipsis") }.accessibilityLabel("More options for " + title.name).accessibilityIdentifier("title-more")
+                            .toolbar { ToolbarItemGroup(placement: .keyboard) { if notesFocused { Spacer(); Button("Done") { notesFocused = false }.accessibilityIdentifier("notes-keyboard-done") } } }
+                            .task { if !initializedEditor { initializedEditor = true; watchDate = store.now; notes = title.notes; notesVersion = title.version; rating = title.score ?? 7 } }
+                            .task(id: season) {
+                                if configuredSeason != season { configuredSeason = season; sliderDraft = nil; showAllEpisodes = false }
+                                await prepareSeason(title)
+                                if focusEpisodes && !didFocusEpisodes && !Task.isCancelled {
+                                    await Task.yield()
+                                    didFocusEpisodes = true
+                                    proxy.scrollTo("episodes", anchor: .top)
+                                }
+                                if !hideSpoilers { await revealSeason(title) }
                             }
-                        }
-                        .toolbar { ToolbarItemGroup(placement: .keyboard) { if notesFocused { Spacer(); Button("Done") { notesFocused = false }.accessibilityIdentifier("notes-keyboard-done") } } }
-                        .task { if !initializedEditor { initializedEditor = true; watchDate = store.now; notes = title.notes; notesVersion = title.version; rating = title.score ?? 7 } }
-                        .task(id: season) {
-                            if configuredSeason != season { configuredSeason = season; sliderDraft = nil; showAllEpisodes = false }
-                            await prepareSeason(title)
-                            if focusEpisodes && !didFocusEpisodes && !Task.isCancelled {
-                                await Task.yield()
-                                didFocusEpisodes = true
-                                proxy.scrollTo("episodes", anchor: .top)
+                            .task(id: cardRevision(title)) { await loadCard(title) }
+                            .task {
+                                if focusNotes && !didFocusNotes {
+                                    showNotes = true
+                                    await Task.yield()
+                                    guard !Task.isCancelled else { return }
+                                    didFocusNotes = true; proxy.scrollTo("notes", anchor: .top)
+                                }
                             }
-                            if !hideSpoilers { await revealSeason(title) }
-                        }
-                        .task(id: cardRevision(title)) { await loadCard(title) }
-                        .task {
-                            if focusNotes && !didFocusNotes {
-                                showNotes = true
-                                await Task.yield()
-                                guard !Task.isCancelled else { return }
-                                didFocusNotes = true; proxy.scrollTo("notes", anchor: .top)
+                            .sheet(isPresented: $choosingWatchDate) {
+                                NavigationStack {
+                                    ScrollView { DatePicker("Watch date", selection: $watchDate, in: ...store.now, displayedComponents: .date).datePickerStyle(.graphical).padding(16) }
+                                        .navigationTitle("Watch date").navigationBarTitleDisplayMode(.inline)
+                                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { choosingWatchDate = false } } }
+                                }.presentationDetents([.medium, .large])
                             }
-                        }
-                        .sheet(isPresented: $choosingWatchDate) {
-                            NavigationStack {
-                                ScrollView { DatePicker("Watch date", selection: $watchDate, in: ...store.now, displayedComponents: .date).datePickerStyle(.graphical).padding(16) }
-                                    .navigationTitle("Watch date").navigationBarTitleDisplayMode(.inline)
-                                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { choosingWatchDate = false } } }
-                            }.presentationDetents([.medium, .large])
-                        }
-                        .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
-                        .onChange(of: title.version) { _, version in
-                            // A confirmed notes save may be followed by delayed snapshot reconciliation.
-                            if notes == title.notes { notesVersion = version }
-                        }
-                        .confirmationDialog("Reset progress to 0? Logged watches will be removed, with Undo available.", isPresented: $resetConfirmation, titleVisibility: .visible) {
-                            Button("Reset to Planned", role: .destructive) { Task { await store.setStatus(title, status: "planned"); await loadCard(title) } }
-                        }
+                            .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
+                            .onChange(of: title.version) { _, version in
+                                // A confirmed notes save may be followed by delayed snapshot reconciliation.
+                                if notes == title.notes { notesVersion = version }
+                            }
+                            .confirmationDialog("Reset progress to 0? Logged watches will be removed, with Undo available.", isPresented: $resetConfirmation, titleVisibility: .visible) {
+                                Button("Reset to Planned", role: .destructive) { Task { await store.setStatus(title, status: "planned"); await loadCard(title) } }
+                            }
+                    }
                 }
             } else { ContentUnavailableView("Title unavailable", systemImage: "film") }
         }

@@ -34,6 +34,7 @@ struct RandomPickDialog: View {
                     ScrollView { panel(compact: proxy.size.width < 359) }
                 }.frame(width: min(480, max(0, proxy.size.width - 38)))
                     .padding(.vertical, 16)
+                    .accessibilityElement(children: .contain).accessibilityAddTraits(.isModal).accessibilityIdentifier("random-pick-dialog")
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }.onAppear { choose() }
             .onChange(of: active.map(\.id)) { _, _ in if picked == nil { rolling = false; choose() } }
@@ -75,7 +76,7 @@ struct RandomPickDialog: View {
                         .background(Color(webHex: "#0d0d12"), in: RoundedRectangle(cornerRadius: 26))
                         .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(theme.accent.opacity(0.3137)))
                         .shadow(color: .black.opacity(0.6), radius: 30, y: 15)
-                        .accessibilityElement(children: .contain).accessibilityAddTraits(.isModal).accessibilityIdentifier("random-pick-dialog")
+
     }
 
     private func pickCard(_ title: MediaTitle, compact: Bool) -> some View {

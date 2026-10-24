@@ -57,6 +57,13 @@ PY
     xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 360 \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testTitleWatchAndUndoUpdateTheEpisodePiecesAndMovieHistory \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testConfirmedWatchRefreshFailureRecoversWithoutAnotherWatchAndPreservesUndo \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testFilesAndScannerMatchPublishLocationWithoutChangingWatchHistory \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testManualTitleYearValidationStatusRatingAndSavedNavigation \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeExploreReturnsByDoneActiveHomeTabAndFullContentSwipe \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testRandomPickKeepsPlannedScopeAndLogoRerollsWithoutRepeating \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testSearchReturnsDirectlyToRetainedResultsAndGlanceRemainsScoped \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testTitleArtworkScrollsAwayBeforeTheEpisodeAndNotesContent \
       -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/ProgressGate.xcresult" \
       2>&1 | tee "$ARTIFACTS/logs/progress-tests.log"
     ;;

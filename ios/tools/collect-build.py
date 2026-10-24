@@ -46,7 +46,20 @@ if progress_log.exists():
     value = progress_log.read_text(encoding='utf-8', errors='replace')
     if '** TEST EXECUTE SUCCEEDED **' not in value or re.search(r'Test Case .* failed', value):
         raise SystemExit('Progress drag/Undo preflight did not pass.')
-    progress_smoke = {'ui': 1, 'status': 'success'}
+    expected_progress = {
+        'testTitleWatchAndUndoUpdateTheEpisodePiecesAndMovieHistory',
+        'testConfirmedWatchRefreshFailureRecoversWithoutAnotherWatchAndPreservesUndo',
+        'testFilesAndScannerMatchPublishLocationWithoutChangingWatchHistory',
+        'testManualTitleYearValidationStatusRatingAndSavedNavigation',
+        'testNativeExploreReturnsByDoneActiveHomeTabAndFullContentSwipe',
+        'testRandomPickKeepsPlannedScopeAndLogoRerollsWithoutRepeating',
+        'testSearchReturnsDirectlyToRetainedResultsAndGlanceRemainsScoped',
+        'testTitleArtworkScrollsAwayBeforeTheEpisodeAndNotesContent',
+    }
+    observed_progress = set(re.findall(r"Test Case '-\[TwilDiaryUITests\.NativeScreensTests ([^]]+)\]' passed", value))
+    if observed_progress != expected_progress:
+        raise SystemExit('Early device regression suite is incomplete: ' + repr(observed_progress))
+    progress_smoke = {'ui': len(observed_progress), 'status': 'success'}
 ipa = args.input / 'ipa' / 'TwilDiary-unsigned.ipa'
 digest = hashlib.sha256(ipa.read_bytes()).hexdigest()
 expected = (ipa.with_suffix('.ipa.sha256')).read_text(encoding='utf-8').split()[0]
@@ -74,8 +87,14 @@ if layout_config.exists():
         if '** TEST EXECUTE SUCCEEDED **' not in value:
             raise SystemExit('Missing/failed layout run: ' + device['name'])
         cases = set(re.findall(r"Test Case '-\[(TwilDiaryUITests\.LayoutScreensTests) ([^]]+)\]' passed", value))
-        if len(cases) != 2:
-            raise SystemExit('Expected both layout tests: ' + device['name'])
+        expected_cases = {
+            'testPhoneChromeGridSearchAndEpisodeTrackStayInsideTheViewport',
+            'testEveryThemeIsSelectableAndGlassSearchKeepsOneContainedField',
+            'testExpandedSummaryAndWatchDateRemainInsideEveryPhone',
+        }
+        observed_cases = {name for _, name in cases}
+        if observed_cases != expected_cases:
+            raise SystemExit('Missing or unexpected layout tests for ' + device['name'] + ': ' + repr(observed_cases))
         layout_tests.append({'device': device['name'], 'ui': len(cases), 'status': 'success'})
 manifest = []
 attachment_manifests = list((args.input / 'screenshots').rglob('manifest.json'))

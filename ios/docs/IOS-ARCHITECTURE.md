@@ -71,9 +71,11 @@ PersonSections mirrors people.ts including confirmed-disk identity by media kind
 
 Native profile now presents source birthday/place, collapsed biography, facts, source-role return, server shelves, Known for, shows/movies and attribution. Typed filmography routes have native filter menus, 40-at-a-time expansion, loading/error/empty states and fixed safe dismissal. Public person metadata shares the source's 32-entry/15-minute session cache, so returning from a title can restore a populated grid before scroll restoration. Session changes clear it; all production reads remain authenticated. Fixture-only tests make no provider calls. Profile/shelf/full-grid screenshot acceptance remains pending.
 
-## Simulator-diagnosed gesture arbitration (build 17, awaiting CI)
+## Simulator-diagnosed gesture arbitration (historical build 17; superseded in 25)
 
 Build-16 recordings establish two distinct conflicts: Glance's simultaneous drag logged a watch then activated its child NavigationLink, and a title range drag initiated the iOS 26 full-content interactive pop. ProgressCard now guards only title navigation during a recognized swipe and its release animation; vertical scrolling and plus/minus remain independent. EdgeSwipeBackOnly uses the public UINavigationController.interactiveContentPopGestureRecognizer property during title/person lifecycle, restoring its previous state when leaving; it preserves the standard edge recognizer and Back button. Apple reference: https://developer.apple.com/documentation/uikit/uinavigationcontroller/interactivecontentpopgesturerecognizer . CI must prove the range commits a real Undo receipt without leaving the title.
+
+Current build 25 removes EdgeSwipeBackOnly and retains UIKit's native full-content content-pop behavior on title/catalog/person/Explore routes. TrackSlider disables that recognizer only during its active tracking, then restores it on end/cancel/window removal. The early build-25 physical slider/watch/Undo/movie preflight passes; full-content return and tab scrub tests remain in the running full UI suite. The earlier paragraph describes the historical workaround, not the current implementation.
 
 Paging regression additionally requires the entire Load more bounds above the capsule; bottom clearance permits that on long section/filmography grids. The notes/cast regression now opts into a DEBUG-only linked-metadata workspace variant because the baseline title is manual with no provider ID and correctly has no cast. Production/manual behavior is unchanged.
 

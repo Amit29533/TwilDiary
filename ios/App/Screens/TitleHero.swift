@@ -45,11 +45,12 @@ struct TitleHero<PersonalRating: View>: View {
 struct TitleArtworkBackdrop: View {
     let path: String?
     let name: String
+    var topExtension: CGFloat = 0
     var body: some View {
         ZStack {
             LinearGradient(stops: [.init(color: Color(webHex: "#3c2c48"), location: 0), .init(color: Color(webHex: "#473c37"), location: 0.45), .init(color: Color(webHex: "#253b3b"), location: 1)], startPoint: .topLeading, endPoint: .bottomTrailing)
             if let path { Artwork(path: path, title: name) }
-        }.frame(height: 380)
-            .overlay(LinearGradient(stops: [.init(color: .clear, location: 0.2), .init(color: .black.opacity(1.0 / 15), location: 0.45), .init(color: .black.opacity(13.0 / 15), location: 0.75), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top).allowsHitTesting(false).accessibilityHidden(true)
+        }.frame(height: 380 + topExtension)
+            .overlay(LinearGradient(stops: [.init(color: .clear, location: 0.2), .init(color: .black.opacity(1.0 / 15), location: 0.45), .init(color: .black.opacity(13.0 / 15), location: 0.75), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).offset(y: -topExtension).allowsHitTesting(false).accessibilityHidden(true)
     }
 }

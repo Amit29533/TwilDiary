@@ -132,9 +132,10 @@ struct SearchField: View {
         HStack(spacing: 10) {
             DiaryIcon(name: "search", size: 19).foregroundStyle(Color(webHex: "#a09aa9"))
             TextField(placeholder, text: $text).font(.system(size: 16)).textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search).focused($focused).onSubmit { focused = false }.accessibilityLabel(label)
-            if !text.isEmpty { Button { text = "" } label: { DiaryIcon(name: "x", size: 16).frame(width: 26, height: 32) }.buttonStyle(.plain).accessibilityLabel("Clear search") }
+            if !text.isEmpty { Button { text = ""; focused = true } label: { DiaryIcon(name: "x", size: 16).frame(width: 26, height: 32) }.buttonStyle(.plain).accessibilityLabel("Clear search") }
         }.padding(.horizontal, 14).frame(minHeight: 48).background { DiaryControlSurface(shape: RoundedRectangle(cornerRadius: 12), field: true) }
             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(focused ? theme.accent.opacity(0.65) : .clear))
+            .onDisappear { focused = false }
             .onChange(of: focusRevision) { _, _ in focused = true }
             .task { if autoFocus && !didAutoFocus { didAutoFocus = true; focused = true } }
     }
