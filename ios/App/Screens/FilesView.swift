@@ -7,13 +7,15 @@ struct FilesView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.dismiss) private var dismiss
     @AppStorage("theme") private var theme = DiaryTheme.twilight
+    @State private var showSearch = false
     @State private var selected = "all"
     @State private var copied = ""
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Files & drives", onDone: { dismiss() }, doneIdentifier: "files-done")
+            PageHeader(name: "Files & drives", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "files-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     ForEach(DiskSummary.make(activeLocations)) { disk in diskButton(disk) }
                     HStack { Text("Mapped folders").font(.system(size: 19, weight: .semibold)); Spacer(); Button("Browse titles →") { router.libraryDisk(selected) }.font(.caption.bold()) }
                     if selected != "all" { Button("All drives") { selected = "all" }.font(.caption.bold()) }

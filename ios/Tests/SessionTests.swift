@@ -372,6 +372,33 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertEqual(undo["undoOf"] as? String, b["operationId"] as? String)
         XCTAssertNotEqual(undo["operationId"] as? String, undo["undoOf"] as? String)
     }
+    func testUnifiedSearchUsesExistingDiaryEndpointAndPreservesProviderFailureAsPartialData() async throws {
+        StubProtocol.state.reset { _ in .init(#"{"library":[{"id":"known","name":"Identity match","year":2020,"category":"show","posterPath":null}],"online":[],"page":2,"totalPages":4,"onlineError":"Online search temporarily unavailable"}"#) }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage))
+        let result = try await store.searchDiary(DiarySearchTools.normalize("https://imdb.com/title/TT1234567/"), page: 2)
+        XCTAssertEqual(result.library.first?.id, "known"); XCTAssertEqual(result.page, 2); XCTAssertFalse(result.onlineError.isEmpty)
+        let request = try XCTUnwrap(StubProtocol.state.recorded().first)
+        XCTAssertEqual(request.url?.path, "/api/search")
+        let parts = URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)
+        let query = Dictionary(uniqueKeysWithValues: (parts?.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+        XCTAssertEqual(query, ["q": "tt1234567", "scope": "online", "page": "2"])
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Cookie"), "CF_Authorization=synthetic-test-session")
+    }
+    func testDiscoveryCacheUsesCompleteQueryAndCannotServeAfterSignOut() async throws {
+        StubProtocol.state.reset { _ in .init(#"{"items":[],"page":1,"totalPages":1}"#) }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)), query = DiscoveryFilters(section: .ratedShows).query(section: .ratedShows)
+        let service = LiveDiscoveryService(store: store)
+        _ = try await service.page(query); _ = try await service.page(query)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+        _ = try await service.page(DiscoveryFilters(section: .ratedMovies).query(section: .ratedMovies))
+        XCTAssertEqual(StubProtocol.state.recorded().count, 2)
+        store.signOut()
+        do { _ = try await service.page(query); XCTFail("Signed-out discovery must not open cached private data") }
+        catch { XCTAssertTrue(store.needsSignIn) }
+        XCTAssertEqual(StubProtocol.state.recorded().count, 2)
+    }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
                                        "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),

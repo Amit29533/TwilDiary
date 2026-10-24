@@ -2,13 +2,13 @@ import Foundation
 import TwilDiaryCore
 
 extension DiaryStore {
-    func searchCatalog(_ query: String, type: String = "all", page: Int = 1) async throws -> CatalogPage {
-        if isPreview { return PreviewCatalog.page(query: query, page: page, type: type) }
-        return try await read(CatalogTools.apiPath("/api/metadata/search", query: ["q": query, "type": type, "page": String(page)]))
-    }
-    func discover(_ kind: MediaKind, sort: String = "rating", page: Int = 1) async throws -> CatalogPage {
-        if isPreview { return PreviewCatalog.page(page: page, type: kind.rawValue) }
-        return try await read(CatalogTools.apiPath("/api/discovery", query: ["type": kind.rawValue, "sort": sort, "page": String(page)]))
+    func searchDiary(_ query: String, page: Int = 1) async throws -> DiarySearchPage {
+        guard DiarySearchTools.ready(query), (1...500).contains(page) else { throw APIError.message("Enter a title or IMDb ID (2–200 characters)") }
+        if isPreview {
+            let result = PreviewCatalog.page(query: query, page: page)
+            return DiarySearchPage(library: [], online: result.items, page: result.page, totalPages: result.totalPages)
+        }
+        return try await read(CatalogTools.apiPath("/api/search", query: ["q": query, "scope": "online", "page": String(page)]))
     }
     func browse(_ route: CatalogRoute) async throws -> CatalogBrowse {
         if isPreview { return PreviewCatalog.browse(route) }

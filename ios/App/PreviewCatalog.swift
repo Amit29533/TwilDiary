@@ -11,6 +11,14 @@ enum PreviewCatalog {
         let fixture: CatalogPage = decode("catalog-page")
         return CatalogPage(items: fixture.items.filter { (type == "all" || $0.mediaType.rawValue == type) && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)) }, page: 1, totalPages: 1)
     }
+    static func discovery(_ query: [String: String]) -> CatalogPage {
+        var filters = DiscoveryFilters(section: .genres)
+        filters.type = query["type"] ?? "tv"; filters.genre = query["genre"] ?? ""
+        filters.year = query["year"] ?? ""; filters.sort = query["sort"] ?? "popular"; filters.minimum = query["minimum"] ?? "0"
+        let fixture: CatalogPage = decode("catalog-page")
+        let items = filters.applying(fixture.items), page = max(1, Int(query["page"] ?? "1") ?? 1)
+        return CatalogPage(items: Array(items.dropFirst((page - 1) * 12).prefix(12)), page: page, totalPages: max(1, (items.count + 11) / 12))
+    }
     static func browse(_ route: CatalogRoute) -> CatalogBrowse {
         let url = Bundle.main.url(forResource: "catalog-browse", withExtension: "json")!
         var value = try! JSONSerialization.jsonObject(with: Data(contentsOf: url)) as! [String: Any]

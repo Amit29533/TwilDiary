@@ -71,7 +71,24 @@ import UIKit
         let app = launch(); app.buttons["tab-home"].tap()
         let explore = app.buttons["explore-shortcut"]
         XCTAssertTrue(explore.waitForExistence(timeout: 5)); explore.tap()
-        XCTAssertTrue(app.buttons["catalog-tv:900002"].waitForExistence(timeout: 10)); capture("Explore")
+        XCTAssertTrue(app.buttons["explore-daily-pick"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Highest rated shows"].exists); capture("Explore")
+        let more = app.buttons["explore-more-rated-shows"]
+        if !more.isHittable { app.swipeUp() }
+        XCTAssertTrue(more.isHittable); more.tap()
+        XCTAssertTrue(app.staticTexts["Highest rated shows"].waitForExistence(timeout: 5)); capture("Explore rated shows")
+        app.buttons["explore-filters"].tap()
+        let minimum = app.buttons["explore-minimum"]
+        XCTAssertTrue(minimum.waitForExistence(timeout: 5)); minimum.tap(); app.buttons["9+"].tap()
+        XCTAssertTrue(app.staticTexts["No titles in this mix"].waitForExistence(timeout: 5)); capture("Explore filtered empty")
+        app.buttons["Reset filters"].tap()
+        XCTAssertTrue(app.staticTexts["12 titles"].waitForExistence(timeout: 5))
+        let loadMore = app.buttons["Load more"]
+        for _ in 0..<10 { if loadMore.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(loadMore.isHittable); loadMore.tap()
+        XCTAssertTrue(app.staticTexts["16 titles"].waitForExistence(timeout: 5)); capture("Explore second page")
+        app.buttons["explore-section-done"].tap()
+        XCTAssertTrue(app.buttons["explore-daily-pick"].waitForExistence(timeout: 5))
     }
     func testHomeStatsUsesTodayAndKeepsTheOriginalRangeBar() {
         let app = launch(); app.buttons["tab-stats"].tap()
@@ -192,6 +209,24 @@ import UIKit
         XCTAssertTrue(path.exists); capture("Confirmed scanned location")
         let filesDone = app.buttons["files-done"]
         XCTAssertTrue(filesDone.isHittable); filesDone.tap()
+        XCTAssertTrue(app.staticTexts["Appearance & region"].waitForExistence(timeout: 5))
+    }
+    func testStatsMoreAndFilesOfferInlineSearchWithoutChangingTheActiveTab() {
+        let app = launch()
+        for tab in ["stats", "more"] {
+            app.buttons["tab-" + tab].tap(); app.buttons["search-" + tab].tap()
+            let field = app.textFields["Search library and online"]
+            XCTAssertTrue(field.waitForExistence(timeout: 5)); field.typeText("Frieren\n")
+            XCTAssertTrue(app.buttons["search-library-frieren"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.buttons["tab-" + tab].isSelected); capture("Inline search " + tab)
+            app.buttons["Close search"].tap()
+            XCTAssertFalse(field.exists)
+        }
+        app.buttons["settings-files"].tap(); app.buttons["search-files & drives"].tap()
+        let field = app.textFields["Search library and online"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5)); field.typeText("Frieren\n")
+        XCTAssertTrue(app.buttons["search-library-frieren"].waitForExistence(timeout: 5)); capture("Inline search Files")
+        app.buttons["Close search"].tap(); app.buttons["files-done"].tap()
         XCTAssertTrue(app.staticTexts["Appearance & region"].waitForExistence(timeout: 5))
     }
     private func capture(_ name: String) {

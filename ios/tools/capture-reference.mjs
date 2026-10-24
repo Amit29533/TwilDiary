@@ -37,3 +37,10 @@ for (const state of states) {
 }
 console.log(JSON.stringify({captured:results.filter(x=>x.file).length,passed:results.filter(x=>x.passed).length,total:results.length,folder}));
 if(results.some(x=>!x.passed))process.exitCode=1;
+else if (filter) {
+  let previous=[];
+  try { previous=JSON.parse(await readFile(resolve(folder,'manifest.json'),'utf8')); } catch {}
+  const byID=new Map([...previous,...results].map(row=>[row.id,row]));
+  const inventory=referenceStates.map(state=>byID.get(state.id)).filter(Boolean);
+  await writeFile(resolve(folder,'manifest.json'),JSON.stringify(inventory,null,2)+'\n');
+}

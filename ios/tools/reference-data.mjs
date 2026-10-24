@@ -1,3 +1,4 @@
+import { filterDiscovery } from '../../src/lib/discovery.ts';
 import { sampleDiary } from '../../src/lib/preview/fixtures.ts';
 
 export const referenceOrigin = 'http://127.0.0.1:5193';
@@ -34,7 +35,13 @@ export function providerResponse(url, scenario = 'default') {
     birthday:'1990-05-01',deathday:null,birthplace:'Reference City',department:'Acting',profilePath:'/reference_poster.jpg',aliases:['Reference Name'],
     credits:catalog.map((item,i)=>({...item,character:`Character ${i+1}`,job:'',popularity:100-i,episodeCount:item.mediaType==='tv'?12:null}))
   }, stale:false}};
-  if (path === '/api/discovery') return {body: {items:scenario==='provider-empty'?[]:catalog.filter(t=>t.mediaType===(url.searchParams.get('type')??'tv')).slice(0,12),page:Number(url.searchParams.get('page')??1),totalPages:2}};
+  if (path === '/api/discovery') {
+    const page=Number(url.searchParams.get('page')??1);
+    const filtered=scenario==='provider-empty'?[]:filterDiscovery(catalog.filter(t=>t.mediaType===(url.searchParams.get('type')??'tv')), {
+      genre:url.searchParams.get('genre')??'', year:url.searchParams.get('year')??'', sort:url.searchParams.get('sort')??'popular', minimum:Number(url.searchParams.get('minimum')??0)
+    });
+    return {body:{items:filtered.slice((page-1)*12,page*12),page,totalPages:Math.max(1,Math.ceil(filtered.length/12))}};
+  }
   if (path === '/api/discovery/seeds') return {body: {items:catalog.slice(0,5)}};
   if (path === '/api/metadata/search') return {body: {items:catalog.slice(0,5),page:1,totalPages:1}};
   if (path === '/api/metadata/browse' || path === '/api/metadata/title') {
@@ -46,7 +53,11 @@ export function providerResponse(url, scenario = 'default') {
   }
   if (path === '/api/metadata/season') return {body: {items:Array.from({length:12},(_,i)=>({number:i+1,tmdbId:100+i,name:url.searchParams.get('reveal')==='1'?`Chapter ${i+1}`:'',overview:'Reference episode summary.',airedOn:'2024-01-01',stillPath:url.searchParams.get('reveal')==='1'?'/reference_backdrop.jpg':null,communityScore:8.1}))}};
   if (path === '/api/library/ratings') return {body: {source:'trakt',items:{}}};
-  if (path === '/api/search') return {body: {items:[],nextCursor:null}};
+  if (path === '/api/search') {
+    const query=(url.searchParams.get('q')??'').normalize('NFKC').toLowerCase(),page=Number(url.searchParams.get('page')??1);
+    const items=catalog.filter(t=>t.name.toLowerCase().includes(query));
+    return {body:{library:[],online:items.slice((page-1)*20,page*20),nextCursor:null,page,totalPages:Math.ceil(items.length/20),onlineError:scenario==='provider-error'?'Online search is temporarily unavailable.':''}};
+  }
   if (path === '/api/trakt/status') return {body: {configured:true,connected:scenario.startsWith('trakt-'),username:scenario.startsWith('trakt-')?'reference-user':null,lastSyncAt:null,needsReconnect:scenario==='trakt-expired'}};
   if (path === '/api/trakt/sync') {
     const connected = scenario.startsWith('trakt-');

@@ -27,12 +27,23 @@ public struct CatalogItem: Decodable, Hashable, Sendable {
     public let posterPath: String?
     public let backdropPath: String?
     public let rating: Double?
+    public let votes: Int?
     public let genres: [String]?
     public let inLibraryId: String?
+    public let poster: String?
+    public let backdrop: String?
     public let character: String?
     public let job: String?
     public var key: String { "\(mediaType.rawValue):\(id)" }
     public var route: CatalogRoute { CatalogRoute(kind: mediaType, id: id) }
+    public var displayKey: String { inLibraryId ?? key }
+    public var artwork: String? { poster ?? CatalogTools.image(posterPath) }
+    public init(id: Int, mediaType: MediaKind, name: String, year: Int? = nil, overview: String = "", posterPath: String? = nil, backdropPath: String? = nil, rating: Double? = nil, votes: Int? = nil, genres: [String] = [], inLibraryId: String? = nil, poster: String? = nil, backdrop: String? = nil) {
+        self.id = id; self.mediaType = mediaType; self.name = name; self.year = year; self.overview = overview
+        self.posterPath = posterPath; self.backdropPath = backdropPath; self.rating = rating; self.votes = votes
+        self.genres = genres; self.inLibraryId = inLibraryId; self.poster = poster; self.backdrop = backdrop
+        character = nil; job = nil
+    }
 }
 
 public struct CatalogPage: Decodable, Sendable {
@@ -99,8 +110,8 @@ public enum CatalogTools {
         return components.string ?? path
     }
     public static func merging(_ existing: [CatalogItem], _ page: [CatalogItem]) -> [CatalogItem] {
-        var seen = Set(existing.map(\.key))
-        return existing + page.filter { seen.insert($0.key).inserted }
+        var seen = Set<String>()
+        return (existing + page).filter { seen.insert($0.key).inserted }
     }
 }
 

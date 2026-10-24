@@ -1,58 +1,15 @@
 import SwiftUI
 import TwilDiaryCore
 
-struct ExploreView: View {
-    @Environment(DiaryStore.self) private var store
-    @State private var kind = MediaKind.tv
-    @State private var sort = "rating"
-    @State private var items: [CatalogItem] = []
-    @State private var page = 0
-    @State private var totalPages = 1
-    @State private var loading = false
-    @State private var failure: String?
-    @State private var showSearch = false
-    var body: some View {
-        VStack(spacing: 0) {
-            PageHeader(name: "Explore", onSearch: { showSearch.toggle() })
-            if showSearch { CatalogSearchView() }
-            HStack {
-                Picker("Media type", selection: $kind) { ForEach(MediaKind.allCases, id: \.self) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
-                Picker("Sort", selection: $sort) { Text("Highest rated").tag("rating"); Text("Popular").tag("popular"); Text("Newest").tag("newest") }.pickerStyle(.menu).fixedSize()
-            }.padding(.horizontal, 14).padding(.bottom, 12)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    if let failure { RetryNotice(message: failure) { Task { await load(reset: true) } } }
-                    if loading && items.isEmpty { ProgressView("Loading titles…").frame(maxWidth: .infinity).padding(30) }
-                    CatalogGrid(items: items)
-                    if !loading && items.isEmpty && failure == nil { ContentUnavailableView("No titles found", systemImage: "sparkles", description: Text("Change your filters and try again.")) }
-                    if page < totalPages && !items.isEmpty { Button(loading ? "Loading…" : "Load more") { Task { await load(reset: false) } }.buttonStyle(.bordered).disabled(loading).frame(maxWidth: .infinity) }
-                }.padding(.horizontal, 14).padding(.bottom, 24)
-            }.refreshable { await load(reset: true) }
-        }.background(.black).toolbar(.hidden, for: .navigationBar)
-            .task(id: kind.rawValue + sort) { await load(reset: true) }
-    }
-    private func load(reset: Bool) async {
-        if reset { items = []; page = 0 }
-        loading = true; failure = nil
-        defer { loading = false }
-        do {
-            let result = try await store.discover(kind, sort: sort, page: reset ? 1 : page + 1)
-            guard !Task.isCancelled else { return }
-            items = reset ? result.items : CatalogTools.merging(items, result.items)
-            page = result.page; totalPages = result.totalPages
-        } catch { if !Task.isCancelled { failure = error.localizedDescription } }
-    }
-}
-
 struct CatalogGrid: View {
     let items: [CatalogItem]
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), alignment: .leading, spacing: 20) {
-            ForEach(items, id: \.key) { item in
+            ForEach(items, id: \.displayKey) { item in
                 Group {
                     if let saved = item.inLibraryId { NavigationLink(value: saved) { CatalogPoster(item: item) } }
                     else { NavigationLink(value: item.route) { CatalogPoster(item: item) } }
-                }.buttonStyle(.plain).accessibilityIdentifier("catalog-" + item.key)
+                }.buttonStyle(.plain).accessibilityIdentifier("catalog-" + item.displayKey)
             }
         }
     }
@@ -61,13 +18,19 @@ struct CatalogGrid: View {
 struct CatalogPoster: View {
     let item: CatalogItem
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Artwork(path: CatalogTools.image(item.posterPath), title: item.name)
+        VStack(alignment: .leading, spacing: 0) {
+            Artwork(path: item.artwork, title: item.name)
                 .aspectRatio(2 / 3, contentMode: .fit)
-                .overlay(alignment: .topLeading) { if let score = item.rating, score > 0 { RatingBadge(score: score).padding(6) } }
+                .overlay(alignment: .bottomLeading) {
+                    if let score = item.rating, score > 0 {
+                        HStack(spacing: 5) { Image(systemName: "star.fill").font(.system(size: 13)); Text(String(format: "%.1f", score)).frame(height: 18) }
+                            .font(.system(size: 12)).foregroundStyle(Color(webHex: "#e7ca90"))
+                            .padding(.horizontal, 5).padding(.vertical, 3).background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 6)).padding(6)
+                    }
+                }
                 .clipShape(RoundedRectangle(cornerRadius: 8))
-            Text(item.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary).lineLimit(2)
-            if let year = item.year { Text(String(year)).font(.caption).foregroundStyle(.secondary) }
+            Text(item.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(.primary).lineLimit(1).frame(minHeight: 20.25).padding(.top, 8)
+            Text((item.year.map(String.init) ?? "Year unknown") + (item.inLibraryId == nil ? "" : " · In your library")).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1).frame(height: 18).padding(.top, 4)
         }.accessibilityElement(children: .combine)
     }
 }
@@ -75,53 +38,94 @@ struct CatalogPoster: View {
 struct CatalogSearchView: View {
     var onLibraryChoose: ((String) -> Void)? = nil
     var allowsManual = true
+    var onClose: (() -> Void)? = nil
     @Environment(DiaryStore.self) private var store
+    @Environment(AppRouter.self) private var router
     @State private var query = ""
+    @State private var identified: [SearchLibraryTitle] = []
     @State private var results: [CatalogItem] = []
     @State private var loading = false
     @State private var failure: String?
     @State private var showManual = false
+    @State private var page = 1
+    @State private var totalPages = 0
+    @State private var libraryLimit = 20
+    @State private var generation = UUID()
+    @State private var pageTask: Task<Void, Never>?
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SearchField(placeholder: "Title or IMDb ID…", text: $query, label: "Search library and online")
-            if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("In Library").font(.subheadline.bold())
-                ForEach(localMatches.prefix(8)) { title in
-                    if let onLibraryChoose { Button { onLibraryChoose(title.id) } label: { titleRow(title) }.buttonStyle(.plain).accessibilityIdentifier("match-title-" + title.id) }
-                    else { NavigationLink(value: title.id) { titleRow(title) }.buttonStyle(.plain) }
+            HStack(spacing: 4) {
+                SearchField(placeholder: "Title or IMDb ID…", text: $query, label: "Search library and online", autoFocus: true)
+                if let onClose { Button(action: onClose) { DiaryIcon(name: "x", size: 18).frame(width: 44, height: 44) }.buttonStyle(.plain).accessibilityLabel("Close search") }
+            }
+            if !ready { Text("Find a title, or paste an IMDb ID.").font(.system(size: 14)).foregroundStyle(.secondary) }
+            else {
+                Text("In Library · \(localMatches.count)").font(.system(size: 15, weight: .semibold))
+                ForEach(localMatches.prefix(libraryLimit)) { title in
+                    Button { chooseLibrary(title.id) } label: { searchRow(title) }.buttonStyle(.plain)
+                        .accessibilityIdentifier((onLibraryChoose == nil ? "search-library-" : "match-title-") + title.id)
                 }
-                if localMatches.isEmpty { Text("No library matches").font(.caption).foregroundStyle(.secondary) }
-                Text("Not In Library · TMDB").font(.subheadline.bold())
+                if localMatches.count > libraryLimit { Button("More library matches") { libraryLimit += 20 }.font(.system(size: 13)).frame(minHeight: 44) }
+                if localMatches.isEmpty { Text("No library matches").font(.system(size: 13)).foregroundStyle(.secondary) }
+                Text("Not In Library · TMDB").font(.system(size: 15, weight: .semibold))
                 if loading { ProgressView("Searching…") }
-                if let failure { Text(failure).font(.caption).foregroundStyle(.secondary) }
-                ForEach(results.filter { $0.inLibraryId == nil }, id: \.key) { item in
+                if let failure { HStack { Text(failure).font(.system(size: 13)).foregroundStyle(.secondary); Spacer(minLength: 0); Button("Retry") { requestPage(page) }.font(.system(size: 13)) } }
+                ForEach(results, id: \.key) { item in
                     NavigationLink(value: item.route) {
-                        HStack(spacing: 10) {
-                            Artwork(path: CatalogTools.image(item.posterPath), title: item.name).frame(width: 40, height: 60).clipShape(RoundedRectangle(cornerRadius: 6))
-                            VStack(alignment: .leading, spacing: 4) { Text(item.name).font(.subheadline.bold()); Text([item.year.map(String.init), item.mediaType == .tv ? "Show" : "Movie"].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary) }
-                            Spacer(); Image(systemName: "chevron.right").font(.caption)
-                        }.foregroundStyle(.primary)
+                        HStack(spacing: 12) {
+                            Artwork(path: item.artwork, title: item.name).frame(width: 72, height: 108).clipShape(RoundedRectangle(cornerRadius: 8))
+                            VStack(alignment: .leading, spacing: 4) { Text(item.name).font(.system(size: 15, weight: .semibold)); Text([item.year.map(String.init), item.mediaType == .tv ? "Show" : "Movie"].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 13)).foregroundStyle(.secondary) }
+                            Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint)
+                        }.padding(.vertical, 9).foregroundStyle(.primary)
                     }.buttonStyle(.plain).accessibilityIdentifier("search-" + item.key)
                 }
-                if !loading && results.isEmpty && failure == nil { Text("No online matches").font(.caption).foregroundStyle(.secondary) }
+                if !loading && results.isEmpty && failure == nil { Text("No online matches").font(.system(size: 13)).foregroundStyle(.secondary) }
+                if totalPages > 1 {
+                    HStack { Button("Previous") { requestPage(page - 1) }.disabled(page <= 1 || loading); Spacer(); Text("Page \(page) of \(totalPages)").font(.system(size: 13)).foregroundStyle(.secondary); Spacer(); Button("Next") { requestPage(page + 1) }.disabled(page >= min(500, totalPages) || loading) }.font(.system(size: 13))
+                }
             }
-            if allowsManual { Button("Add manually") { showManual = true }.font(.subheadline.weight(.semibold)) }
-        }.padding(14).background(Color(white: 0.06), in: RoundedRectangle(cornerRadius: 16)).padding(.horizontal, 14).padding(.bottom, 12)
-            .task(id: query) { await search() }
-            .sheet(isPresented: $showManual) { ManualTitleView(initialName: query) }
+            if allowsManual { Button("Add manually") { showManual = true }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 44) }
+        }.padding(.horizontal, 14).padding(.bottom, 12)
+            .task(id: normalized) { await search(number: 1, reset: true) }
+            .onDisappear { pageTask?.cancel(); generation = UUID() }
+            .sheet(isPresented: $showManual) { ManualTitleView(initialName: normalized) }
     }
-    private var localMatches: [MediaTitle] { store.workspace.activeTitles.filter { $0.name.localizedCaseInsensitiveContains(query.trimmingCharacters(in: .whitespacesAndNewlines)) } }
-    private func search() async {
-        let value = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        results = []; failure = nil
-        guard value.count >= 2 else { loading = false; return }
-        loading = true
+    private var normalized: String { DiarySearchTools.normalize(query) }
+    private var ready: Bool { DiarySearchTools.ready(normalized) }
+    private var localMatches: [SearchLibraryTitle] { DiarySearchTools.merging(DiarySearchTools.matches(store.workspace, query: normalized), identified) }
+    private func searchRow(_ title: SearchLibraryTitle) -> some View {
+        HStack(spacing: 12) {
+            Artwork(path: title.artwork, title: title.name).frame(width: 72, height: 108).clipShape(RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 4) { Text(title.name).font(.system(size: 15, weight: .semibold)); Text([title.year.map(String.init), title.category == "anime-movie" ? "Anime movie" : title.category.capitalized].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 13)).foregroundStyle(.secondary) }
+            Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint)
+        }.padding(.vertical, 9).foregroundStyle(.primary)
+    }
+    private func chooseLibrary(_ id: String) {
+        Task {
+            if store.title(id) == nil { await store.refresh() }
+            guard store.title(id) != nil else { failure = "This title is no longer available. Refresh your library and try again."; return }
+            if let onLibraryChoose { onLibraryChoose(id) }
+            else { onClose?(); router.openTitle(id, tab: router.selectedTab) }
+        }
+    }
+    private func requestPage(_ number: Int) { pageTask?.cancel(); pageTask = Task { await search(number: number) } }
+    private func search(number: Int, reset: Bool = false) async {
+        let request = UUID(); generation = request
+        if reset { results = []; identified = []; page = 1; totalPages = 0; libraryLimit = 20 }
+        failure = nil
+        guard ready else { loading = false; return }
+        let value = normalized; loading = true
+        defer { if generation == request { loading = false } }
         do {
-            try await Task.sleep(for: .milliseconds(250))
-            let response = try await store.searchCatalog(value)
-            guard !Task.isCancelled else { return }
-            results = response.items; loading = false
-        } catch { if !Task.isCancelled { failure = error.localizedDescription; loading = false } }
+            if reset { try await Task.sleep(for: .milliseconds(300)) }
+            let response = try await store.searchDiary(value, page: number)
+            guard !Task.isCancelled, request == generation, normalized == value else { return }
+            guard response.page == number else { throw APIError.message("Search returned an unexpected page. Please retry.") }
+            identified = DiarySearchTools.merging(identified, response.library)
+            results = response.online; page = response.page; totalPages = response.totalPages
+            failure = response.onlineError.isEmpty ? nil : response.onlineError
+        } catch is CancellationError { }
+        catch { if !Task.isCancelled, request == generation { failure = error.localizedDescription } }
     }
 }
 

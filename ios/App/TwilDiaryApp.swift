@@ -120,6 +120,7 @@ struct RootView: View {
             content().background(tab == .library ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
                 .navigationDestination(for: String.self) { TitleDetailView(id: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
+                .navigationDestination(for: ExploreSectionRoute.self) { ExploreSectionView(route: $0, store: store).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) } }
                 .navigationDestination(for: PersonRoute.self) { PersonView(id: $0.id).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: AppDestination.self) { destination in
                     Group { switch destination { case .explore: ExploreView(); case .history: HistoryView(); case .files: FilesView(); case .trash: TrashView() } }.toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }

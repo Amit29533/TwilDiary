@@ -8,15 +8,17 @@ struct SettingsView: View {
     @AppStorage("publicRatingSource") private var ratingSource = PublicRatingSource.tmdb
     @AppStorage("hideSpoilers") private var hideSpoilers = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showSearch = false
     @State private var confirmSignOut = false
     @State private var summary: TraktController?
     @State private var showExport = false
     @State private var exportDocument = DiaryJSONDocument(data: Data())
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "More")
+            PageHeader(name: "More", onSearch: { showSearch.toggle() })
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
+                    if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     traktSummary
                     settingsSection("Library") {
                         HStack(spacing: 8) { settingsIcon("star"); VStack(alignment: .leading, spacing: 3) { Text("Library ratings").font(.subheadline.weight(.semibold)); Text("Community scores, not your rating").font(.caption).foregroundStyle(.secondary) }; Spacer(minLength: 0); Picker("Library ratings", selection: $ratingSource) { ForEach(PublicRatingSource.allCases) { Text($0.label).tag($0) } }.pickerStyle(.menu).font(.caption).fixedSize() }.padding(14)

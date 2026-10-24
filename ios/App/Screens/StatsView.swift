@@ -6,6 +6,7 @@ struct StatsView: View {
     @Environment(DiaryStore.self) private var store
     @Environment(AppRouter.self) private var router
     @AppStorage("theme") private var theme = DiaryTheme.twilight
+    @State private var showSearch = false
     @State private var period = Period.today
     @State private var year: Int?
     @State private var appliedShortcutRevision = 0
@@ -17,9 +18,10 @@ struct StatsView: View {
     var body: some View {
         let data = StatsOverview(workspace: store.workspace, period: period, year: year, now: clock)
         VStack(spacing: 0) {
-            PageHeader(name: "Stats")
+            PageHeader(name: "Stats", onSearch: { showSearch.toggle() })
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     coverage(data.coverage)
                     trend(data)
                     streaks(data.streaks)

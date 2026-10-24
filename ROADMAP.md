@@ -147,3 +147,9 @@ Done: no unfinished native placeholders/dead controls; all tests/builds/warnings
 - Library reviewed Queue/Trash/restore/purge UI passes. Files/scanner mapping core/transport tests pass; dismissal hit bounds need correction. Trakt safe apply works; conflict button accessibility needs correction.
 - Current source audit removes obsolete gaps from older mockups: no Glance waiting/sort, hourly Stats, settings import/backup or offline write outbox exists in current web code.
 - Next gate: build-14 header Done / unique conflict action regression, complete CI green, downloaded screenshots and verified IPA; then remaining real parity work.
+
+## Discovery/search checkpoint — build 15 prepared, uncompiled
+
+- Existing source sections, filters, deterministic unwatched daily choice, real Trakt recommendation reads and provider paging are ported. Combined /api/search replaces metadata-only search; scoped Library/Glance search stays unchanged.
+- 20 web golden cases/five daily picks and controller/transport/UI regressions are added. Await CI before checking acceptance boxes.
+- Reference inventory expands from 70 to 78 passing states. Read-only provider fixtures honor source filter/paging and search response contracts. No web product file changed.

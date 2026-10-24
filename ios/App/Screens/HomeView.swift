@@ -13,7 +13,7 @@ struct HomeView: View {
             PageHeader(name: "TwilDiary", onSearch: { showSearch.toggle() })
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    if showSearch { CatalogSearchView().padding(.horizontal, -14) }
+                    if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     VStack(spacing: 10) {
                         SectionHeading(name: "Pick up where you left off") { Button("Glance →") { router.selectedTab = .glance } }
                         if watching.isEmpty { Text("Your next watch starts in Library.").foregroundStyle(.secondary).padding(.vertical, 20) }
@@ -152,6 +152,7 @@ struct HistoryView: View {
     @Environment(\.dismiss) private var dismiss
     var initialDay: Date? = nil
     var initialUnknown = false
+    @State private var showSearch = false
     @State private var query = ""
     @State private var period = "all"
     @State private var showRange = false
@@ -160,9 +161,10 @@ struct HistoryView: View {
     @State private var includeUnknown = false
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Recently watched", onDone: { dismiss() }, doneIdentifier: "history-done")
+            PageHeader(name: "Recently watched", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "history-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     HStack {
                         Text("Your watch history").font(.system(size: 17, weight: .semibold)); Spacer(minLength: 2)
                         Picker("Date filter", selection: $period) { Text("Any date").tag("all"); Text("Today").tag("today"); Text("Last 7 days").tag("7d"); Text("This month").tag("month"); Text("Date range").tag("range"); Text("Undated").tag("unknown") }.pickerStyle(.menu).fixedSize().font(.system(size: 13))

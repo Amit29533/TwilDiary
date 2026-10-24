@@ -4,6 +4,7 @@ import TwilDiaryCore
 struct ScannerReviewView: View {
     @Environment(DiaryStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @State private var showSearch = false
     @State private var items: [UnmatchedScan] = []
     @State private var next: String?
     @State private var seen = Set<String>()
@@ -13,9 +14,10 @@ struct ScannerReviewView: View {
     @State private var message: String?
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Fix mismatches", onDone: { dismiss() }, doneIdentifier: "scanner-done")
+            PageHeader(name: "Fix mismatches", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "scanner-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     HStack { Text("Unmatched scans").font(.system(size: 19, weight: .semibold)); Spacer(); Button("Refresh unmatched scans", systemImage: "arrow.clockwise") { Task { await load() } }.labelStyle(.iconOnly).disabled(loading) }
                     Text("Scanned folders that need a title match.").font(.subheadline).foregroundStyle(.secondary)
                     if let failure { RetryNotice(message: failure) { Task { await load() } } }
