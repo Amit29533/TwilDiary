@@ -76,7 +76,7 @@ struct CatalogSearchView: View {
                             Artwork(path: item.artwork, title: item.name).frame(width: 72, height: 108).clipShape(RoundedRectangle(cornerRadius: 8))
                             VStack(alignment: .leading, spacing: 4) { Text(item.name).font(.system(size: 15, weight: .semibold)); Text([item.year.map(String.init), item.mediaType == .tv ? "Show" : "Movie"].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 13)).foregroundStyle(.secondary) }
                             Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint)
-                        }.padding(.vertical, 9).foregroundStyle(.primary)
+                        }.padding(.vertical, 9).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)
                     }.buttonStyle(.plain).accessibilityIdentifier("search-" + item.key)
                 }
                 if !loading && results.isEmpty && failure == nil { Text("No online matches").font(.system(size: 13)).foregroundStyle(.secondary) }
@@ -98,7 +98,7 @@ struct CatalogSearchView: View {
             Artwork(path: title.artwork, title: title.name).frame(width: 72, height: 108).clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 4) { Text(title.name).font(.system(size: 15, weight: .semibold)); Text([title.year.map(String.init), title.category == "anime-movie" ? "Anime movie" : title.category.capitalized].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 13)).foregroundStyle(.secondary) }
             Spacer(minLength: 0); DiaryIcon(name: "arrow-up-right", size: 18).foregroundStyle(.tint)
-        }.padding(.vertical, 9).foregroundStyle(.primary)
+        }.padding(.vertical, 9).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)
     }
     private func chooseLibrary(_ id: String) {
         Task {

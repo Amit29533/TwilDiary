@@ -86,7 +86,13 @@ import UIKit
         let loadMore = app.buttons["Load more"]
         for _ in 0..<10 { if loadMore.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(loadMore.isHittable); loadMore.tap()
-        XCTAssertTrue(app.staticTexts["16 titles"].waitForExistence(timeout: 5)); capture("Explore second page")
+        let lastResult = app.buttons["catalog-tv:900002"]
+        for _ in 0..<8 { if lastResult.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(lastResult.isHittable, "The second page must publish its final unique result")
+        capture("Explore second page")
+        let count = app.staticTexts["16 titles"]
+        for _ in 0..<12 { if count.isHittable { break }; app.swipeDown() }
+        XCTAssertTrue(count.isHittable)
         app.buttons["explore-section-done"].tap()
         XCTAssertTrue(app.buttons["explore-daily-pick"].waitForExistence(timeout: 5))
     }
