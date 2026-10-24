@@ -3,6 +3,10 @@
 Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native → ios/**. Web source of truth: main baseline b43454e. The separate TwilDiary-iOS repository remains unchanged. No PR has been created or merged. No hosted writes or deployments.
 
 ## Current request and exact next action
+### Second review brief verified while build 25 runs
+
+User asks whether the second pasted quality review still applies. Verified against current source, web rules, current tests and the downloaded build-25 Release IPA; full findings are in NATIVE-REVIEW-2026-10-24.md. Still open: duplicate snapshot defenses (but backend uses ID keyset, not offset pagination), saved-title reveal-switch race, edited notes/rating captured-version retry failures, ratings swallowing Access expiry, missing Access webview completion/retry, Home/Stats/Person/Library derived-work costs, Trakt filter/scan race and slider parent-update tracking. Card-wide refetch/location/progress scan allegations are addressed in 25 source. Do not blindly adopt byte ID ordering (web uses localeCompare) or auto-retry conflicting edits. Release bundles fixture JSON/JPEGs, but --ui-testing cannot activate Release preview; PreviewTrakt is already DEBUG gated. No product code changed from this verification. Build 25 simulator/device compile and early watch/slider/Undo pass; full tests continue. Downloaded IPA is verified unsigned arm64/build25/checksum, still unaccepted pending full run.
+
 
 ### Build 25 running — exact next action
 
