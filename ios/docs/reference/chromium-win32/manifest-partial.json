@@ -1,8 +1,8 @@
 [
   {
-    "id": "more-trakt-review",
-    "path": "/preview/more",
-    "scenario": "trakt-review",
+    "id": "home-upcoming-later-season",
+    "path": "/preview/home",
+    "scenario": "upcoming",
     "theme": "twilight",
     "engine": "chromium",
     "browserVersion": "156.0.8078.4",
@@ -11,7 +11,7 @@
       "width": 390,
       "height": 844,
       "documentWidth": 390,
-      "documentHeight": 1859,
+      "documentHeight": 1762,
       "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
     },
     "errors": [],
@@ -32,29 +32,54 @@
         "value": ""
       },
       {
-        "tag": "SELECT",
-        "label": "TMDBTrakt",
-        "value": "tmdb"
-      },
-      {
-        "tag": "INPUT",
-        "label": "Hide episode spoilers",
-        "value": "on"
+        "tag": "BUTTON",
+        "label": "Mark episode 9 watched for 18 Again",
+        "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Export diaryTitles, progress, notes and file mappings",
+        "label": "Mark episode 13 watched for Frieren: Beyond Journey’s End",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 6 watched for Call of the Night",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 4 watched for Severance",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Previous continue watching title",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Next continue watching title",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Start automatic carousel",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Pick for meChoose from 1 unwatched planned titles",
         "value": ""
       }
     ],
-    "file": "more-trakt-review.png",
-    "sha256": "741bdcbcd5a4f4926de316a5604cbc59f31921b76f663eab8cb9ca707d817f37",
+    "file": "home-upcoming-later-season.png",
+    "sha256": "0471fcfd7d64ae0b79b76cbf2790ead9fd1fbf666e7450c31aece56eef95f75d",
     "passed": true
   },
   {
-    "id": "more-trakt-scanning",
-    "path": "/preview/more",
-    "scenario": "trakt-scanning",
+    "id": "title-linked-season-episodes",
+    "path": "/preview/home",
+    "scenario": "upcoming",
     "theme": "twilight",
     "engine": "chromium",
     "browserVersion": "156.0.8078.4",
@@ -63,14 +88,14 @@
       "width": 390,
       "height": 844,
       "documentWidth": 390,
-      "documentHeight": 1859,
+      "documentHeight": 1239,
       "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
     },
     "errors": [],
     "controls": [
       {
         "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
+        "label": "Back",
         "value": ""
       },
       {
@@ -84,75 +109,96 @@
         "value": ""
       },
       {
-        "tag": "SELECT",
-        "label": "TMDBTrakt",
-        "value": "tmdb"
-      },
-      {
-        "tag": "INPUT",
-        "label": "Hide episode spoilers",
-        "value": "on"
-      },
-      {
         "tag": "BUTTON",
-        "label": "Export diaryTitles, progress, notes and file mappings",
-        "value": ""
-      }
-    ],
-    "file": "more-trakt-scanning.png",
-    "sha256": "725c4b7e6ddb407b5b9c6861438ca17288af068cf3a3e6a65c4ea1c40fb6bdfb",
-    "passed": true
-  },
-  {
-    "id": "more-trakt-expired",
-    "path": "/preview/more",
-    "scenario": "trakt-expired",
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 1859,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Search",
+        "label": "Add to favorites",
         "value": ""
       },
       {
         "tag": "SELECT",
-        "label": "TMDBTrakt",
-        "value": "tmdb"
-      },
-      {
-        "tag": "INPUT",
-        "label": "Hide episode spoilers",
-        "value": "on"
+        "label": "More options for 18 Again",
+        "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Export diaryTitles, progress, notes and file mappings",
+        "label": "Your rating7.5",
         "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Watch status",
+        "value": "watching"
+      },
+      {
+        "tag": "INPUT",
+        "label": "Season 2 episodes watched",
+        "value": "0"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Season caught up",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Watched today",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Rate show",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Season",
+        "value": "2"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 1 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 1 watched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 2 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 2 watched",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Episode 3 details",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 3 watched",
+        "value": ""
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Notes"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Save notes",
+        "value": ""
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "Not Available on Server"
       }
     ],
-    "file": "more-trakt-expired.png",
-    "sha256": "35333144e0748f9f808354fc143172531f69161e3eda8b5fded78ae214204b3a",
+    "file": "title-linked-season-episodes.png",
+    "sha256": "5b671d32f73a01f863dd1c96cef45cb999524367b98330ce3a038a292477c53c",
     "passed": true
   }
 ]

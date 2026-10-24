@@ -3,6 +3,9 @@ import TwilDiaryCore
 
 struct TitleDetailView: View {
     let id: String
+    var linkedSeason: Int? = nil
+    var focusEpisodes = false
+    @State private var didFocusEpisodes = false
     @Environment(DiaryStore.self) private var store
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     @AppStorage("hideSpoilers") private var hideSpoilers = true
@@ -37,56 +40,63 @@ struct TitleDetailView: View {
     var body: some View {
         Group {
             if let title = store.title(id) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 28) {
-                        header(title)
-                        progressPanel(title).padding(.top, -8)
-                        if title.isSeries { episodeSection(title) }
-                        if let tmdbId = title.tmdbId { CastAndRelated(route: CatalogRoute(kind: title.isSeries ? .tv : .movie, id: tmdbId), sourceTitle: title.name) }
-                        VStack(spacing: 20) {
-                            DisclosureGroup("Notes", isExpanded: $showNotes) {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    TextEditor(text: $notes).frame(minHeight: 110).scrollContentBackground(.hidden).focused($notesFocused).accessibilityIdentifier("title-notes").accessibilityLabel("Title notes")
-                                    if notes.utf16.count > 20_000 { Text("Keep notes within 20,000 characters.").font(.caption).foregroundStyle(.orange) }
-                                    Button("Save notes") { Task { if await store.patch(title, values: ["notes": notes], expectedVersion: notesVersion) { notesVersion = store.title(id)?.version } } }.disabled(store.writesBlocked || notes == title.notes || notes.utf16.count > 20_000)
-                                }.padding(.top, 12)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 28) {
+                            header(title)
+                            progressPanel(title).padding(.top, -8)
+                            if title.isSeries { episodeSection(title).id("episodes") }
+                            if let tmdbId = title.tmdbId { CastAndRelated(route: CatalogRoute(kind: title.isSeries ? .tv : .movie, id: tmdbId), sourceTitle: title.name) }
+                            VStack(spacing: 20) {
+                                DisclosureGroup("Notes", isExpanded: $showNotes) {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        TextEditor(text: $notes).frame(minHeight: 110).scrollContentBackground(.hidden).focused($notesFocused).accessibilityIdentifier("title-notes").accessibilityLabel("Title notes")
+                                        if notes.utf16.count > 20_000 { Text("Keep notes within 20,000 characters.").font(.caption).foregroundStyle(.orange) }
+                                        Button("Save notes") { Task { if await store.patch(title, values: ["notes": notes], expectedVersion: notesVersion) { notesVersion = store.title(id)?.version } } }.disabled(store.writesBlocked || notes == title.notes || notes.utf16.count > 20_000)
+                                    }.padding(.top, 12)
+                                }
+                                Divider()
+                                DisclosureGroup(isExpanded: $showLocation) { ForEach(locations) { location in
+                                    VStack(alignment: .leading, spacing: 7) { Text(location.evidence == "present" ? "Available · \(location.deviceName)" : location.evidence.capitalized).font(.subheadline.bold()); Text(location.path).font(.caption.monospaced()).textSelection(.enabled); Text("\(location.fileCount) files").font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 12)
+                                } } label: { Text(serverLabel).font(.subheadline.weight(.semibold)) }
+                            }.diaryPanel()
+                        }.padding(.horizontal, 14).padding(.bottom, 32)
+                    }.scrollDismissesKeyboard(.interactively).background(alignment: .top) {
+                        TitleArtworkBackdrop(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, name: title.name)
+                    }.background(.black).background(EdgeSwipeBackOnly())
+                        .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItemGroup(placement: .topBarTrailing) {
+                                Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
+                                Menu {
+                                    Button(title.queued == true ? "Remove from Queue" : "Add to Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }.disabled(store.writesBlocked)
+                                    Button("Notes") { showNotes = true }
+                                    Button("File locations") { showLocation = true }
+                                } label: { Image(systemName: "ellipsis") }
                             }
-                            Divider()
-                            DisclosureGroup(isExpanded: $showLocation) { ForEach(locations) { location in
-                                VStack(alignment: .leading, spacing: 7) { Text(location.evidence == "present" ? "Available · \(location.deviceName)" : location.evidence.capitalized).font(.subheadline.bold()); Text(location.path).font(.caption.monospaced()).textSelection(.enabled); Text("\(location.fileCount) files").font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 12)
-                            } } label: { Text(serverLabel).font(.subheadline.weight(.semibold)) }
-                        }.diaryPanel()
-                    }.padding(.horizontal, 14).padding(.bottom, 32)
-                }.scrollDismissesKeyboard(.interactively).background(alignment: .top) {
-                    TitleArtworkBackdrop(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, name: title.name)
-                }.background(.black).background(EdgeSwipeBackOnly())
-                    .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItemGroup(placement: .topBarTrailing) {
-                            Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
-                            Menu {
-                                Button(title.queued == true ? "Remove from Queue" : "Add to Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }.disabled(store.writesBlocked)
-                                Button("Notes") { showNotes = true }
-                                Button("File locations") { showLocation = true }
-                            } label: { Image(systemName: "ellipsis") }
                         }
-                    }
-                    .toolbar { ToolbarItemGroup(placement: .keyboard) { if notesFocused { Spacer(); Button("Done") { notesFocused = false }.accessibilityIdentifier("notes-keyboard-done") } } }
-                    .task { if !initializedEditor { initializedEditor = true; watchDate = store.now; notes = title.notes; notesVersion = title.version; rating = title.score ?? 7 } }
-                    .task(id: season) {
-                        if configuredSeason != season { configuredSeason = season; sliderDraft = nil; showAllEpisodes = false }
-                        await prepareSeason(title)
-                        if !hideSpoilers { await revealSeason(title) }
-                    }
-                    .task(id: cardRevision(title)) { await loadCard(title) }
-                    .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
-                    .onChange(of: title.version) { _, version in
-                        // A confirmed notes save may be followed by delayed snapshot reconciliation.
-                        if notes == title.notes { notesVersion = version }
-                    }
-                    .confirmationDialog("Reset progress to 0? Logged watches will be removed, with Undo available.", isPresented: $resetConfirmation, titleVisibility: .visible) {
-                        Button("Reset to Planned", role: .destructive) { Task { await store.setStatus(title, status: "planned"); await loadCard(title) } }
-                    }
+                        .toolbar { ToolbarItemGroup(placement: .keyboard) { if notesFocused { Spacer(); Button("Done") { notesFocused = false }.accessibilityIdentifier("notes-keyboard-done") } } }
+                        .task { if !initializedEditor { initializedEditor = true; watchDate = store.now; notes = title.notes; notesVersion = title.version; rating = title.score ?? 7 } }
+                        .task(id: season) {
+                            if configuredSeason != season { configuredSeason = season; sliderDraft = nil; showAllEpisodes = false }
+                            await prepareSeason(title)
+                            if focusEpisodes && !didFocusEpisodes && !Task.isCancelled {
+                                await Task.yield()
+                                didFocusEpisodes = true
+                                proxy.scrollTo("episodes", anchor: .top)
+                            }
+                            if !hideSpoilers { await revealSeason(title) }
+                        }
+                        .task(id: cardRevision(title)) { await loadCard(title) }
+                        .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
+                        .onChange(of: title.version) { _, version in
+                            // A confirmed notes save may be followed by delayed snapshot reconciliation.
+                            if notes == title.notes { notesVersion = version }
+                        }
+                        .confirmationDialog("Reset progress to 0? Logged watches will be removed, with Undo available.", isPresented: $resetConfirmation, titleVisibility: .visible) {
+                            Button("Reset to Planned", role: .destructive) { Task { await store.setStatus(title, status: "planned"); await loadCard(title) } }
+                        }
+                }
             } else { ContentUnavailableView("Title unavailable", systemImage: "film") }
         }
     }
@@ -191,7 +201,11 @@ struct TitleDetailView: View {
                     Text("\(card?.progress.watched ?? 0) / \(card?.progress.total ?? episodes.count) watched").font(.system(size: 13.6)).foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
-                Picker("Season", selection: Binding(get: { season }, set: { chosenSeason = $0 })) { ForEach(title.seasons ?? [], id: \.number) { Text($0.number == 0 ? "Specials" : "Season \($0.number)").tag($0.number) } }.pickerStyle(.menu)
+                if !seasonNumbers.isEmpty {
+                    Picker("Season", selection: Binding(get: { season }, set: { chosenSeason = $0 })) {
+                        ForEach(seasonNumbers, id: \.self) { number in Text(number == 0 ? "Specials" : "Season \(number)").tag(number) }
+                    }.pickerStyle(.menu).accessibilityIdentifier("title-season").accessibilityValue(season == 0 ? "Specials" : "Season \(season)")
+                }
             }
             if !seasonCanEdit(title) { Button("Load season episodes") { Task { await store.loadSeason(title, number: season); await loadCard(title) } }.buttonStyle(.bordered).disabled(store.writesBlocked) }
             if preparingSeason { ProgressView("Loading season…").font(.caption) }
@@ -307,7 +321,8 @@ struct TitleDetailView: View {
         let episodes: [Episode]
         let seasons: [Season]
     }
-    private var season: Int { chosenSeason ?? EpisodeSelection.preferredSeason(in: store.workspace, titleID: id, today: DiaryDate.day(store.now)) }
+    private var seasonNumbers: [Int] { EpisodeSelection.seasons(in: store.workspace, titleID: id) }
+    private var season: Int { chosenSeason ?? EpisodeSelection.preferredSeason(in: store.workspace, titleID: id, today: DiaryDate.day(store.now), linkedSeason: linkedSeason) }
     private func cardRevision(_ title: MediaTitle) -> CardRevision {
         CardRevision(season: season, events: store.workspace.events.filter { $0.titleId == id }, episodes: episodes, seasons: title.seasons ?? [])
     }

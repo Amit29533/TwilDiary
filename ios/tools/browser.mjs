@@ -2,7 +2,7 @@ import { chromium, webkit } from 'playwright';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { providerResponse, referenceOrigin, referenceTime } from './reference-data.mjs';
+import { providerResponse, referenceOrigin, referenceTime, upcomingReferenceWorkspace } from './reference-data.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 export async function referenceBrowser(scenario = 'default', options = {}) {
   const engine = process.env.REFERENCE_ENGINE === 'webkit' ? webkit : chromium;
@@ -18,6 +18,11 @@ export async function referenceBrowser(scenario = 'default', options = {}) {
     if (url.origin !== referenceOrigin) return route.abort('blockedbyclient');
     if (url.pathname==='/api/workspace' && scenario==='loading') return;
     if (url.pathname==='/api/workspace' && scenario==='workspace-error') return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{code:'fixture_unavailable',message:'The connection is temporarily unavailable. Try again.'}})});
+    if (url.pathname==='/api/workspace' && scenario==='upcoming') {
+      const workspace=upcomingReferenceWorkspace(),section=url.searchParams.get('section');
+      if(!['titles','episodes','events','locations'].includes(section)) throw new Error('Unexpected fixture workspace section');
+      return route.fulfill({contentType:'application/json',body:JSON.stringify({items:workspace[section],next:null})});
+    }
     if (url.pathname==='/api/workspace' && scenario==='empty') return route.fulfill({contentType:'application/json',body:'{"items":[],"next":null}'});
     const fixture = providerResponse(url,scenario);
     if (fixture) return route.fulfill({status:fixture.status??200,contentType:'application/json',body:JSON.stringify(fixture.body)});
@@ -31,6 +36,8 @@ export async function referenceBrowser(scenario = 'default', options = {}) {
 
 export async function settle(page) {
   await page.waitForLoadState('networkidle');
+  // The route transition overlay has a minimum lifetime after network idle.
+  await page.getByRole('status',{name:'Loading page',exact:true}).waitFor({state:'hidden'});
   await page.evaluate(async () => {
     await document.fonts.ready;
     await Promise.all([...document.images].filter(image=>image.complete).map(image=>image.decode().catch(()=>{})));

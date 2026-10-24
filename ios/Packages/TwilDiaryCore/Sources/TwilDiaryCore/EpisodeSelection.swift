@@ -19,10 +19,16 @@ public enum EpisodeSelection {
         let start = anchor.map { max(0, $0 - 1) } ?? max(0, ordered.count - max(0, size))
         return Array(ordered.dropFirst(start).prefix(max(0, size)))
     }
-    public static func preferredSeason(in workspace: Workspace, titleID: String, today: String) -> Int {
-        if let episode = next(in: workspace, titleID: titleID, today: today) { return episode.season }
+    public static func seasons(in workspace: Workspace, titleID: String) -> [Int] {
         let manifest = workspace.titles.first { $0.id == titleID }?.seasons?.map(\.number) ?? []
         let loaded = workspace.episodes.filter { $0.titleId == titleID }.map(\.season)
-        return (manifest + loaded).filter { $0 > 0 }.min() ?? 1
+        return Set(manifest + loaded).sorted()
+    }
+    public static func preferredSeason(in workspace: Workspace, titleID: String, today: String, linkedSeason: Int? = nil) -> Int {
+        let available = seasons(in: workspace, titleID: titleID)
+        // TitleScreen accepts a linked season only when it exists for this title, including Specials.
+        if let linkedSeason, linkedSeason >= 0, available.contains(linkedSeason) { return linkedSeason }
+        if let episode = next(in: workspace, titleID: titleID, today: today) { return episode.season }
+        return available.first { $0 > 0 } ?? 1
     }
 }

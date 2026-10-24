@@ -29,6 +29,11 @@ enum AppTab: String, CaseIterable, Hashable {
     }
 }
 enum AppDestination: Hashable { case explore, history, files, trash }
+struct SavedTitleRoute: Hashable {
+    let id: String
+    let season: Int
+    var focusEpisodes = true
+}
 
 @MainActor @Observable final class AppRouter {
     var selectedTab = AppTab.glance
@@ -155,6 +160,7 @@ struct RootView: View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {
             content().background(tab == .library && theme != .glass ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
                 .navigationDestination(for: String.self) { TitleDetailView(id: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
+                .navigationDestination(for: SavedTitleRoute.self) { TitleDetailView(id: $0.id, linkedSeason: $0.season, focusEpisodes: $0.focusEpisodes).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: ExploreSectionRoute.self) { ExploreSectionView(route: $0, store: store).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) } }
                 .navigationDestination(for: PersonFilmographyRoute.self) { PersonFilmographyView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) } }

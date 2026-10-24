@@ -7,6 +7,21 @@ enum PreviewData {
         return try! JSONDecoder().decode(Workspace.self, from: Data(contentsOf: url))
     }
     #if DEBUG
+    static var upcomingWorkspace: Workspace {
+        var object = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace)) as! [String: Any]
+        var titles = object["titles"] as! [[String: Any]], episodes = object["episodes"] as! [[String: Any]]
+        if let index = titles.firstIndex(where: { $0["id"] as? String == "again" }) {
+            var seasons = titles[index]["seasons"] as! [[String: Any]]
+            seasons.append(["number": 2, "name": "Season 2", "expectedEpisodes": 3, "metadataLoadedAt": "2026-10-23T12:00:00Z", "metadataVersion": 1])
+            titles[index]["seasons"] = seasons
+        }
+        for number in 1...3 {
+            episodes.append(["id": "again-upcoming-\(number)", "titleId": "again", "season": 2, "number": number,
+                "name": "Future episode \(number)", "overview": "", "airedOn": "2026-10-24", "skipped": false])
+        }
+        object["titles"] = titles; object["episodes"] = episodes
+        return try! JSONDecoder().decode(Workspace.self, from: JSONSerialization.data(withJSONObject: object))
+    }
     static var metadataWorkspace: Workspace {
         let value = workspace
         var object = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as! [String: Any]

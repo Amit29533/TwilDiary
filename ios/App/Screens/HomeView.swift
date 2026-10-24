@@ -63,7 +63,7 @@ struct HomeView: View {
                     VStack(spacing: 10) {
                         SectionHeading(name: "New episodes") { Button("Glance →") { router.selectedTab = .glance } }
                         ForEach(overview.upcoming.prefix(upcomingLimit)) { item in
-                            NavigationLink(value: item.title.id) { upcomingRow(item) }.buttonStyle(.plain)
+                            NavigationLink(value: SavedTitleRoute(id: item.title.id, season: item.episode.season)) { upcomingRow(item) }.buttonStyle(.plain).accessibilityIdentifier("home-upcoming-" + item.title.id)
                         }
                         if overview.upcoming.isEmpty { Text("No upcoming air dates in your library for the next 30 days.").font(.system(size: 13)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).diaryPanel() }
                         if overview.upcoming.count > upcomingLimit { Button("Show more episodes") { upcomingLimit += 5 } }

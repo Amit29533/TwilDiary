@@ -29,3 +29,19 @@ private func selectionEpisode(_ id: String, season: Int, number: Int, aired: Str
     #expect(EpisodeSelection.window(rows, season: 1, nextID: nil).map(\.number) == [3, 4, 5, 6])
     #expect(EpisodeSelection.window(rows, season: 1, all: true, nextID: "e6").count == 6)
 }
+
+@Test func linkedSeasonUsesOnlyThisTitlesManifestOrEpisodesBeforeTheNextUnwatchedSeason() throws {
+    let title = try #require(SampleWorkspace.make().titles.first { $0.id == "again" })
+    let regular = try selectionEpisode("next-regular", season: 1, number: 1)
+    let future = try selectionEpisode("later-season", season: 2, number: 1, aired: "2027-01-01")
+    let special = try selectionEpisode("special", season: 0, number: 1)
+    let workspace = Workspace(titles: [title], episodes: [regular, future, special])
+    #expect(EpisodeSelection.seasons(in: workspace, titleID: title.id) == [0, 1, 2])
+    #expect(EpisodeSelection.seasons(in: workspace, titleID: "another-title").isEmpty)
+    #expect(EpisodeSelection.preferredSeason(in: workspace, titleID: title.id, today: "2026-10-23") == 1)
+    #expect(EpisodeSelection.preferredSeason(in: workspace, titleID: title.id, today: "2026-10-23", linkedSeason: 2) == 2)
+    #expect(EpisodeSelection.preferredSeason(in: workspace, titleID: title.id, today: "2026-10-23", linkedSeason: 0) == 0)
+    #expect(EpisodeSelection.preferredSeason(in: workspace, titleID: title.id, today: "2026-10-23", linkedSeason: -1) == 1)
+    #expect(EpisodeSelection.preferredSeason(in: workspace, titleID: title.id, today: "2026-10-23", linkedSeason: 999) == 1)
+    #expect(EpisodeSelection.preferredSeason(in: workspace, titleID: "another-title", today: "2026-10-23", linkedSeason: 2) == 1)
+}

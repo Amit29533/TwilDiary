@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import { filterDiscovery } from '../../src/lib/discovery.ts';
 import { sampleDiary } from '../../src/lib/preview/fixtures.ts';
 
@@ -11,6 +12,14 @@ export function referenceWorkspace() {
   value.titles.find(t => t.id === 'frieren').score = 9.5;
   value.titles.find(t => t.id === 'again').score = 7.5;
   value.titles.find(t => t.id === 'quiet-orbit').queued = true;
+  return value;
+}
+
+export function upcomingReferenceWorkspace() {
+  const value = JSON.parse(readFileSync(new URL('../Fixtures/reference-workspace.json',import.meta.url),'utf8'));
+  value.skippedEpisodeIds=value.episodes.filter(item=>item.skipped).map(item=>item.id);
+  value.titles.find(title=>title.id==='again').seasons.push({number:2,name:'Season 2',expectedEpisodes:3,metadataLoadedAt:'2026-10-23T12:00:00Z',metadataVersion:1});
+  for(let number=1;number<=3;number++) value.episodes.push({id:`again-upcoming-${number}`,titleId:'again',season:2,number,name:`Future episode ${number}`,overview:'',airedOn:'2026-10-24',skipped:false});
   return value;
 }
 

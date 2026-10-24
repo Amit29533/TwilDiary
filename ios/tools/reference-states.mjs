@@ -6,6 +6,12 @@ const search = async (page,name,value)=>{
 };
 export const referenceStates = [
   screen('home','/preview/home'),
+  screen('home-upcoming-later-season','/preview/home',{scenario:'upcoming',action:async page=>{await page.locator('.upcoming-list').scrollIntoViewIfNeeded();}}),
+  screen('title-linked-season-episodes','/preview/home',{scenario:'upcoming',action:async page=>{
+    await page.locator('a[href="/preview/title/again?season=2#episodes"]').click();
+    await page.waitForURL('**/preview/title/again?season=2#episodes');
+    if(await page.getByRole('combobox',{name:'Season',exact:true}).inputValue()!=='2') throw new Error('Linked season was lost');
+  }}),
   screen('library','/preview/library'),
   screen('library-add-search','/preview/library?add=1'),
   screen('library-trakt-ratings','/preview/library',{ratingSource:'trakt'}),

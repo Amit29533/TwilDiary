@@ -3,7 +3,7 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
         if scanner { app.launchArguments.append("--ui-scanner") }
@@ -11,6 +11,7 @@ import UIKit
         if titleMetadata { app.launchArguments.append("--ui-title-metadata") }
         if empty { app.launchArguments.append("--ui-empty") }
         if refreshFailure { app.launchArguments.append("--ui-refresh-failure") }
+        if upcoming { app.launchArguments.append("--ui-upcoming") }
         if let traktScenario { app.launchArguments.append("--ui-trakt=" + traktScenario) }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
@@ -58,6 +59,22 @@ import UIKit
         app.buttons["tab-stats"].tap()
         XCTAssertTrue(app.staticTexts["Log a movie or episode to start your stats."].waitForExistence(timeout: 5)); capture("Empty Stats")
         XCTAssertTrue(app.buttons["stats-calendar"].isHittable)
+    }
+
+    func testUpcomingEpisodeOpensItsLinkedSeasonAndEpisodesWithoutChangingOrdinaryTitleNavigation() {
+        let app = launch(upcoming: true); app.buttons["tab-home"].tap()
+        let upcoming = app.buttons["home-upcoming-again"]
+        for _ in 0..<12 { if upcoming.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(upcoming.isHittable); capture("Home upcoming later season"); upcoming.tap()
+        let season = app.buttons["title-season"]
+        XCTAssertTrue(season.waitForExistence(timeout: 10)); XCTAssertEqual(season.value as? String, "Season 2")
+        XCTAssertTrue(season.isHittable, "Upcoming navigation must land at Episodes, as the web hash link does")
+        XCTAssertTrue(app.buttons["title-episode-1"].isHittable); capture("Upcoming linked season Episodes")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 5))
+        app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
+        for _ in 0..<8 { if season.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(season.isHittable); XCTAssertEqual(season.value as? String, "Season 1")
     }
 
     func testRandomPickKeepsPlannedScopeAndLogoRerollsWithoutRepeating() {

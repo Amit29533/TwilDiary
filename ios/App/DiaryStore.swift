@@ -59,6 +59,7 @@ import TwilDiaryCore
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--ui-empty") { workspace = Workspace() }
             if ProcessInfo.processInfo.arguments.contains("--ui-title-metadata") { workspace = PreviewData.metadataWorkspace }
+            if ProcessInfo.processInfo.arguments.contains("--ui-upcoming") { workspace = PreviewData.upcomingWorkspace }
             #endif
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--ui-mutations") { fixture = FixtureDiaryBackend(workspace: workspace, scanner: ProcessInfo.processInfo.arguments.contains("--ui-scanner")) }
