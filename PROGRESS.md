@@ -4,6 +4,30 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native �
 
 ## Current request and exact next action
 
+**Build 19 is running: run 40072178351, native source 2b4618a5d4470fed522cb37ab125c96c9f336f7d.** URL: https://github.com/Amit29533/TwilDiary/actions/runs/40072178351. It is pushed to ios-native in Amit29533/TwilDiary. No native code is pending locally. A subsequent root-only progress commit does not change the compiled iOS source or trigger another run.
+
+**Latest completed run: build 18 / 40067854460 / 99b84af failed one UI regression.** All 36 Core + 63 native unit tests pass, both target builds have zero warnings, and 18/19 primary UI tests pass. The two base-device layout/theme tests pass; compact/Pro Max runs were skipped after the primary failure. Downloaded all results/63 retained screenshots/recordings/unsigned IPA under .local/ios-app-build-40067854460. This run is diagnostic, never accepted as a passed build. Last full green remains build 14, run 40056346004 (66 tests, zero warnings), with verified IPA D:/Downloads/TwilDiary-native-build14.ipa.
+
+The failed range-drag recording and accessibility hierarchy show the title remains open (the content-pop repair works), but the nearly transparent SwiftUI Slider never commits. Build 19 uses a real UISlider subclass with explicit full-track tracking, a transparent appearance and a 44pt adjustable touch area. It previews integer counts, commits on release and discards a cancelled draft. The original UI requirement for a real Undo receipt and 10-of-16 remains. The same control covers the continuous movie range. This replacement is uncompiled until the new CI run finishes.
+
+Build 19 also includes these source-driven improvements, all awaiting native CI/visual acceptance:
+- Shared saved/catalog hero and backdrop; online TV season picker, read-only episode pieces, four-row/expanded lists, explicit spoiler reveal, lazy season cache and retries.
+- Exact suggested-category imports, archived-identity Restore routing, replace navigation after import, session/cancellation guards, and in-memory opt-in import fixtures that preserve notes/ratings/history.
+- Full manual-add status and optional rating fields; Show default; normalized 300-UTF-16 names, source 1800–2200 year bounds; stable retry identity; Completed delegates to the existing progress transaction. Added Core, transport, fixture and UI regressions.
+- Provider-linked saved seasons prepare missing/stale metadata automatically through the existing endpoint and atomic complete reload. Six-hour/version/loaded-count rules, lazy fixture preparation and unloaded manifest progress totals are covered. No personal watch is created by preparation.
+- Individual saved episode reveals survive collapsing while neighboring episodes remain hidden; source episode headings, thumbnails and public-score metadata.
+- Home hides empty Continue/recent sections and includes Fix mismatches. Library/Glance use the source dashed empty state. A DEBUG-only empty-workspace scenario covers all four main content tabs.
+- Library's single grid/list toggle plus genre control, source sort/filter summary placement and owner-defined drive shortcuts; composed status/genre/drive regression; deterministic fixture-only preferences.
+- Visual review caught zero-width Person fact labels and excessive row heights despite a passing interaction test. Fixed label column/wrapping and artwork behind navigation; added row geometry assertions. Diagnostic contact sheet: .local/ios-app-build-40067854460/diagnostic/contact-sheet.jpg.
+- Bounded async test prerequisites and explicit XCTest execution timeouts; no assertions or tests skipped. Core passing build cache now saves before later UI outcomes.
+
+Primary web reference manifest is **85/85 passing states at 390×844**, all image hashes verified. New states cover catalog reveal/season/list and manual add/review. They use isolated loopback data and blocked hosted/provider requests. Secondary 402×778 references remain comparison inputs. Native build-19 screenshots have not yet been captured.
+
+**Exact next action:** inspect run 40072178351 Core/simulator/device compilation and tests. On failure retrieve the complete failed logs, repair every compiler/test issue and rerun. On a full pass, download all results/screenshots/IPA, run ios/tools/collect-build.py, inspect full screenshots and web side-by-sides, save scoped evidence, share actual passed-build screenshots/IPA, then continue the first unfinished parity items. Browser CUA remains disabled in Work settings; CLI/isolated Playwright and CI artifacts are available, so this does not block development. No Mac/local Swift, hosted writes or deployments.
+
+## Historical implementation notes (status labels superseded above)
+
+
 **Latest completed run: build 18 / source 99b84af / 40067854460 failed one UI regression.** All **36 Core + 63 native unit tests pass**, both simulator/device targets compile with **zero warnings**, and **18/19 primary UI tests pass** (including both base-device layout/theme tests). Compact/Pro Max runs were skipped because the primary suite failed. Logs/xcresult/screenshots/IPA are downloaded under .local/ios-app-build-40067854460; no new accepted build or installable preview is claimed. Last full green remains build 14.
 
 Visual review of the 63 retained build-18 screenshots found a separate issue despite the passing Person interaction test: fact values took the entire row width, squeezing labels to zero and making rows excessively tall. Build 19 gives the source label column a fixed width, keeps values wrapping, asserts compact label/value geometry, and moves person artwork behind the navigation area to remove its black top strip. The diagnostic contact sheet is .local/ios-app-build-40067854460/diagnostic/contact-sheet.jpg; failed-run images are not accepted release evidence.
@@ -79,6 +103,7 @@ Prepared locally for **build 16** (not pushed/compiled): isolated watch/rewatch/
 The real unchanged local backend probe passed **30 requests**, including retry after Undo, conflict identities, stale versions and rewatch removal preserving earlier viewings. It creates/deletes only its own synthetic UUID on fixed 127.0.0.1:5193; all pre-existing fixture versions are unchanged and hosted requests are zero. Updated evidence: ios/docs/LOCAL-API-CONTRACTS.json.
 
 Build-16 CI adds a keyed incremental Core build cache (swift test still always executes), a 65-minute job allowance and 35-minute native test allowance to accommodate the expanded suite on the pinned Intel runner. Planned counts: **33 core + 49 native unit + 13 UI**, pending CI discovery/confirmation. Exact next action: verify run 40059536963 final failure/evidence, commit the two diagnosed UI corrections, then push the reviewed build-16 batch, then continue parity/multi-size/error-state coverage. No full roadmap step is claimed complete.
+
 
 ## Source audit corrections
 

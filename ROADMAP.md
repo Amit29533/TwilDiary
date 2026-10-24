@@ -90,7 +90,7 @@ Done: every title variant and mutation/recovery state matches the web; no fabric
 
 ## 7. Explore and discovery
 
-Build-19 local follow-up: shared catalog/title hero, lazy read-only season preview and reveal/cache regression, source category import and isolated identity-preservation fixture. Three additional web references captured; native compile/UI evidence pending.
+Build-19 pushed follow-up (run 40072178351): shared catalog/title hero, lazy read-only season preview and reveal/cache regression, source category import and isolated identity-preservation fixture. Five additional web references captured (85 total); native compile/UI evidence pending.
 
 Goal: reproduce provider search/review/import and exploration without accidental imports.
 
