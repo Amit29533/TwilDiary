@@ -31,6 +31,9 @@ struct TitleDetailView: View {
     @State private var revealedEpisodeIDs = Set<String>()
     @State private var revealing = false
     @State private var episodeError: String?
+    @State private var preparingSeason = false
+    @State private var seasonRequest = UUID()
+    @State private var seasonLoadError: String?
     var body: some View {
         Group {
             if let title = store.title(id) {
@@ -72,6 +75,7 @@ struct TitleDetailView: View {
                     .task { if !initializedEditor { initializedEditor = true; watchDate = store.now; notes = title.notes; notesVersion = title.version; rating = title.score ?? 7 } }
                     .task(id: season) {
                         if configuredSeason != season { configuredSeason = season; sliderDraft = nil; showAllEpisodes = false }
+                        await prepareSeason(title)
                         if !hideSpoilers { await revealSeason(title) }
                     }
                     .task(id: cardRevision(title)) { await loadCard(title) }
@@ -189,6 +193,8 @@ struct TitleDetailView: View {
                 Picker("Season", selection: Binding(get: { season }, set: { chosenSeason = $0 })) { ForEach(title.seasons ?? [], id: \.number) { Text($0.number == 0 ? "Specials" : "Season \($0.number)").tag($0.number) } }.pickerStyle(.menu)
             }
             if !seasonCanEdit(title) { Button("Load season episodes") { Task { await store.loadSeason(title, number: season); await loadCard(title) } }.buttonStyle(.bordered).disabled(store.busy) }
+            if preparingSeason { ProgressView("Loading season…").font(.caption) }
+            if let seasonLoadError { RetryNotice(message: seasonLoadError) { Task { await prepareSeason(title, force: true) } } }
             if revealing { ProgressView("Loading episode details…").font(.caption) }
             if let episodeError { Text(episodeError).font(.caption).foregroundStyle(.secondary); Button("Retry episode details") { Task { await revealSeason(title) } } }
             LazyVStack(spacing: 10) { ForEach(visibleEpisodes) { episode in episodeRow(title, episode: episode) } }
@@ -240,6 +246,16 @@ struct TitleDetailView: View {
     private func toggleEpisode(_ title: MediaTitle, episode: Episode) {
         if expandedEpisodes.contains(episode.id) { expandedEpisodes.remove(episode.id) }
         else { expandedEpisodes.insert(episode.id); revealedEpisodeIDs.insert(episode.id); if revealedEpisodes[episode.id] == nil { Task { await revealSeason(title) } } }
+    }
+    private func prepareSeason(_ title: MediaTitle, force: Bool = false) async {
+        if store.isPreview && !store.canMutate { return }
+        let request = UUID(), selected = season
+        seasonRequest = request; seasonLoadError = nil
+        guard force || SeasonMetadata.needsPreparation(title: title, workspace: store.workspace, season: selected, now: store.now) else { preparingSeason = false; return }
+        preparingSeason = true; defer { if seasonRequest == request { preparingSeason = false } }
+        do { try await store.prepareSavedSeason(title, number: selected, force: force) }
+        catch is CancellationError { }
+        catch { if seasonRequest == request, selected == season, !Task.isCancelled { seasonLoadError = error.localizedDescription } }
     }
     private func revealSeason(_ title: MediaTitle) async {
         guard !revealing else { return }

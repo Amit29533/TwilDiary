@@ -54,6 +54,24 @@ import TwilDiaryCore
                 let title: [String: Any] = ["id": id, "name": input.name, "category": input.category, "year": input.year as Any? ?? NSNull(), "overview": "", "poster": NSNull(), "backdrop": NSNull(), "communityScore": NSNull(), "tmdbId": NSNull(), "genres": [], "tags": [], "runtimeMinutes": NSNull(), "status": status, "score": input.score as Any? ?? NSNull(), "favorite": false, "queued": false, "notes": "", "deletedAt": NSNull(), "version": 1, "seasons": []]
                 titles.append(title); response = ["title": title]
             }
+        } else if parts.count == 6, parts[0] == "api", parts[1] == "titles", parts[3] == "seasons", parts[5] == "metadata", method == "POST" {
+            guard let index = titles.firstIndex(where: { $0["id"] as? String == parts[2] }), let title = workspace.activeTitles.first(where: { $0.id == parts[2] }), title.tmdbId != nil,
+                  let number = Int(parts[4]), let season = title.seasons?.first(where: { $0.number == number }) else { throw APIError.rejected(409, "Link this title to TMDb before loading episodes") }
+            var episodeObjects = try objects(workspace.episodes)
+            let existing = workspace.episodes.filter { $0.titleId == title.id && $0.season == number }
+            if existing.isEmpty {
+                let count = min(5000, max(0, season.expectedEpisodes ?? 0))
+                for offset in 0..<count {
+                    let n = offset + 1
+                    episodeObjects.append(["id": title.id + "-s\(number)e\(n)", "titleId": title.id, "season": number, "number": n, "name": "", "overview": "", "airedOn": "2024-01-01", "still": NSNull(), "hidden": true, "communityScore": 8.1, "skipped": false])
+                }
+            }
+            var manifests = titles[index]["seasons"] as? [[String: Any]] ?? []
+            if let manifestIndex = manifests.firstIndex(where: { $0["number"] as? Int == number }) {
+                manifests[manifestIndex]["metadataLoadedAt"] = stamp; manifests[manifestIndex]["metadataVersion"] = 2
+                manifests[manifestIndex]["expectedEpisodes"] = episodeObjects.filter { $0["titleId"] as? String == title.id && $0["season"] as? Int == number }.count
+            }
+            titles[index]["seasons"] = manifests; archive["episodes"] = episodeObjects; response = [:]
         } else if route == "/api/scanner/review", method == "GET" {
             response = ["items": scans, "nextCursor": NSNull()]
         } else if parts.count == 5, Array(parts.prefix(3)) == ["api", "scanner", "review"], parts[4] == "resolve", method == "POST" {

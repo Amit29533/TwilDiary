@@ -85,6 +85,18 @@ import TwilDiaryCore
         let movie: ImportReceipt = try fixture.request("/api/metadata/import", method: "POST", body: ["mediaType": "movie", "tmdbId": 900001, "category": "movie", "status": "planned"])
         XCTAssertNotEqual(first.title.id, movie.title.id); XCTAssertEqual(movie.title.seasons?.count, 0)
     }
+    func testImportedSeasonLoadsLazilyWithoutChangingHistoryOrDuplicatingEpisodes() throws {
+        let fixture = FixtureDiaryBackend(workspace: PreviewData.workspace)
+        let history = fixture.workspace.events.map(\.id)
+        let first: ImportReceipt = try fixture.request("/api/metadata/import", method: "POST", body: ["mediaType": "tv", "tmdbId": 900001, "category": "anime", "status": "planned"])
+        XCTAssertFalse(fixture.workspace.episodes.contains { $0.titleId == first.title.id })
+        for _ in 0..<2 { let _: EmptyResponse = try fixture.request("/api/titles/" + first.title.id + "/seasons/1/metadata", method: "POST", body: [:]) }
+        XCTAssertEqual(fixture.workspace.episodes.filter { $0.titleId == first.title.id }.count, 12)
+        XCTAssertEqual(fixture.workspace.events.map(\.id), history)
+        let updated = try XCTUnwrap(fixture.workspace.titles.first { $0.id == first.title.id })
+        XCTAssertEqual(updated.version, first.title.version); XCTAssertEqual(updated.seasons?.first?.metadataVersion, 2)
+        XCTAssertFalse(SeasonMetadata.needsPreparation(title: updated, workspace: fixture.workspace, season: 1, now: DiaryDate.parse("2026-10-23T12:00:00Z")!))
+    }
     func testIsolatedImportRejectsTrashAndInvalidCategoryAtomically() throws {
         let fixture = FixtureDiaryBackend(workspace: PreviewData.workspace)
         let body: [String: Any] = ["mediaType": "tv", "tmdbId": 900001, "category": "anime", "status": "planned"]

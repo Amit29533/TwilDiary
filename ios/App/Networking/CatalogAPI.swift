@@ -40,6 +40,12 @@ extension DiaryStore {
         cachedPeople[id] = (.now, response)
         return response
     }
+    func prepareSavedSeason(_ title: MediaTitle, number: Int, force: Bool = false) async throws {
+        guard (0...999).contains(number) else { throw APIError.message("Choose a valid season.") }
+        guard force || SeasonMetadata.needsPreparation(title: title, workspace: workspace, season: number, now: now) else { return }
+        let _: EmptyResponse = try await read("/api/titles/\(title.id)/seasons/\(number)/metadata", method: "POST", body: [:])
+        try Task.checkCancellation(); try await reload()
+    }
     func catalogEpisodes(_ route: CatalogRoute, season: Int, reveal: Bool) async throws -> CatalogEpisodesPage {
         guard route.kind == .tv, (0...999).contains(season) else { throw APIError.message("Choose a valid series season.") }
         if isPreview {

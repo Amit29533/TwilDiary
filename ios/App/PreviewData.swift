@@ -25,8 +25,8 @@ enum PreviewData {
         let prior = workspace.activeEvents.filter { event in event.titleId == title.id && (!title.isSeries || episodes.contains(where: { $0.id == event.episodeId })) }.last
         let previousEpisode = workspace.episodes.first { $0.id == prior?.episodeId }
         let body: [String: Any] = [
-            "progress": ["watched": title.isSeries ? episodes.filter { watched.contains($0.id) }.count : (prior == nil ? 0 : 1), "total": title.isSeries ? episodes.count : 1],
-            "season": title.isSeries ? ["number": selected, "name": "Season \(selected)", "metadataLoadedAt": "2026-10-23T00:00:00Z"] as [String: Any] : NSNull(),
+            "progress": ["watched": title.isSeries ? episodes.filter { watched.contains($0.id) }.count : (prior == nil ? 0 : 1), "total": title.isSeries ? SeasonProgress.calculate(title: title, workspace: workspace, season: selected).total : 1],
+            "season": title.isSeries ? ["number": selected, "name": "Season \(selected)", "metadataLoadedAt": title.seasons?.first(where: { $0.number == selected })?.metadataLoadedAt as Any? ?? NSNull()] as [String: Any] : NSNull(),
             "next": next.map { ["id": $0.id, "number": $0.number] as [String: Any] } as Any? ?? NSNull(),
             "previous": prior.map { ["id": $0.id, "version": $0.version ?? 1, "episodeId": $0.episodeId as Any? ?? NSNull(), "number": previousEpisode?.number as Any? ?? NSNull()] as [String: Any] } as Any? ?? NSNull()
         ]

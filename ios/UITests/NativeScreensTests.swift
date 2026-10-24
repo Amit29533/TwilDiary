@@ -187,7 +187,10 @@ import UIKit
         XCTAssertTrue(add.isHittable); add.tap()
         XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 10))
         XCTAssertEqual(app.buttons["title-personal-rating"].value as? String, "Not rated")
-        XCTAssertTrue(app.buttons["title-watch-status"].exists); capture("Catalog imported title")
+        XCTAssertTrue(app.buttons["title-watch-status"].exists)
+        let importedTrack = app.sliders["episode-progress"]
+        XCTAssertTrue(importedTrack.waitForExistence(timeout: 10)); XCTAssertEqual(importedTrack.value as? String, "0 of 12 episodes watched")
+        capture("Catalog imported title")
     }
 
     func testExploreAndHomeStatsShortcut() {
