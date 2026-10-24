@@ -3,7 +3,9 @@ import {referenceBrowser,settle} from './browser.mjs';
 import {mkdir,writeFile} from 'node:fs/promises';
 const output = new URL('../docs/reference/chromium-win32-402x778/',import.meta.url);
 await mkdir(output,{recursive:true});
-for (const [name,path] of [['home','/preview/home'],['library','/preview/library'],['glance','/preview'],['stats-month','/preview/activity'],['title-show','/preview/title/again'],['explore','/preview/explore'],['explore-rated-shows','/preview/explore/rated-shows']]) {
+const filter=process.env.REFERENCE_FILTER?.split(',');
+const states=[['home','/preview/home'],['library','/preview/library'],['glance','/preview'],['stats-month','/preview/activity'],['title-show','/preview/title/again'],['explore','/preview/explore'],['explore-rated-shows','/preview/explore/rated-shows'],['person','/preview/person/700001'],['person-shows','/preview/person/700001/shows'],['person-movies','/preview/person/700001/movies'],['person-known-for','/preview/person/700001/known-for'],['person-server','/preview/person/700001/credits?scope=server']];
+for (const [name,path] of states.filter(([name])=>!filter||filter.includes(name))) {
  const {browser,page,origin}=await referenceBrowser('default',{viewport:{width:402,height:778}});
  await page.goto(origin+path);await settle(page);
  await page.screenshot({path:fileURLToPath(new URL(name+'.png',output)),animations:'disabled'});

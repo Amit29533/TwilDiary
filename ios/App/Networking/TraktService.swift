@@ -72,7 +72,8 @@ import TwilDiaryCore
             let next = try await service.review(kind: selectedKind, query: search, after: cursor)
             guard request == refreshID, kind == selectedKind, query == search else { return }
             accept(current.appending(next)); limit += 6
-        } catch { self.error = error.localizedDescription }
+        } catch is CancellationError { }
+        catch { if request == refreshID, kind == selectedKind, query == search, !Task.isCancelled { self.error = error.localizedDescription } }
     }
     func scan(start: Bool) async {
         guard !busy, cooldownUntil <= .now else { return }
