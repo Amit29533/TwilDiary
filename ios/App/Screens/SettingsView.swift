@@ -35,7 +35,7 @@ struct SettingsView: View {
                         settingsRow("star", "Rating scale", value: "10 · decimals")
                     }
                     settingsSection("Appearance & region") {
-                        NavigationLink { AppearanceView() } label: { settingsRow("palette", "Theme", value: theme.name, disclosure: true) }
+                        NavigationLink { AppearanceView() } label: { settingsRow("palette", "Theme", value: theme.name, disclosure: true) }.accessibilityIdentifier("settings-theme")
                         Divider().padding(.leading, 58)
                         settingsRow("activity", "Reduce motion", value: reduceMotion ? "Reduced · device" : "Follow device")
                         Divider().padding(.leading, 58)
@@ -99,7 +99,7 @@ struct AppearanceView: View {
         ScrollView { VStack(spacing: 14) { ForEach(DiaryTheme.allCases) { item in
             Button { theme = item } label: {
                 HStack(spacing: 16) { RoundedRectangle(cornerRadius: 16).fill(LinearGradient(colors: [item.accent.opacity(0.6), item.accent.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing)).frame(width: 70, height: 76).overlay { BrandMark().fill(item.accent).frame(width: 28, height: 28) }; VStack(alignment: .leading, spacing: 5) { Text(item.name).font(.headline); Text(item == .glass ? "Liquid accents on AMOLED black" : "AMOLED dark · \(item.name) accent").font(.caption).foregroundStyle(.secondary) }; Spacer(); if theme == item { Image(systemName: "checkmark.circle.fill").foregroundStyle(item.accent) } }.foregroundStyle(.white).diaryPanel()
-            }.buttonStyle(.plain).accessibilityAddTraits(theme == item ? .isSelected : [])
+            }.buttonStyle(.plain).accessibilityIdentifier("theme-" + item.rawValue).accessibilityAddTraits(theme == item ? .isSelected : [])
         } }.padding(16) }.background(.black).navigationTitle("Appearance").navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar).toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
     }
 }

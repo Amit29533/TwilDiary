@@ -23,6 +23,12 @@ if not candidates:
 runtime, device = max(candidates, key=lambda item: tuple(map(int, re.findall(r'\d+', item[0]))))
 record = {'runtime': runtime, 'name': device['name'], 'udid': device['udid']}
 (folder / 'simulator.json').write_text(json.dumps(record, indent=2) + '\n')
+layout = []
+for name in ['iPhone 17e', 'iPhone 17 Pro Max']:
+    match = next((item for item in devices[runtime] if item['name'] == name and item.get('isAvailable', True)), None)
+    if match is None: raise SystemExit('Required layout simulator unavailable: ' + name)
+    layout.append({'name': name, 'udid': match['udid']})
+(folder / 'layout-simulators.json').write_text(json.dumps(layout, indent=2) + '\n')
 print('Selected simulator:', json.dumps(record))
 with open(os.environ['GITHUB_ENV'], 'a') as file:
     file.write('SIMULATOR_ID=' + device['udid'] + '\n')
@@ -52,12 +58,30 @@ PY
       -parallel-testing-enabled NO -derivedDataPath "$PWD/ios/.derived/simulator" \
       -resultBundlePath "$ARTIFACTS/Tests.xcresult" 2>&1 | tee "$ARTIFACTS/logs/tests.log"
     ;;
+  test-layouts)
+    xcrun simctl shutdown "$SIMULATOR_ID" || true
+    while IFS=$'\t' read -r layout_name layout_id; do
+      xcrun simctl boot "$layout_id"
+      xcrun simctl bootstatus "$layout_id" -b
+      xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$layout_id,arch=$SIM_ARCH" \
+        -parallel-testing-enabled NO -only-testing:TwilDiaryUITests/LayoutScreensTests \
+        -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/Layout-$layout_name.xcresult" \
+        2>&1 | tee "$ARTIFACTS/logs/layout-$layout_name-tests.log"
+      xcrun simctl shutdown "$layout_id"
+    done < <(python3 -c 'import json; [print(item["name"].replace(" ", "") + "\t" + item["udid"]) for item in json.load(open("ios/.artifacts/layout-simulators.json"))]')
+    ;;
   screenshots)
     mkdir -p "$ARTIFACTS/screenshots"
     xcrun simctl io "$SIMULATOR_ID" screenshot "$ARTIFACTS/screenshots/final-screen.png" || true
     if [ -f "$ARTIFACTS/Tests.xcresult/Info.plist" ]; then
       xcrun xcresulttool export attachments --path "$ARTIFACTS/Tests.xcresult" --output-path "$ARTIFACTS/screenshots"
     fi
+    for result in "$ARTIFACTS"/Layout-*.xcresult; do
+      if [ -f "$result/Info.plist" ]; then
+        folder_name=$(basename "$result" .xcresult)
+        xcrun xcresulttool export attachments --path "$result" --output-path "$ARTIFACTS/screenshots/$folder_name"
+      fi
+    done
     ;;
   summary)
     python3 - "$ARTIFACTS" <<'PY'
@@ -71,6 +95,13 @@ for path in sorted((folder / 'logs').glob('*.log')):
 test_log = folder / 'logs' / 'tests.log'
 if not test_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in test_log.read_text(errors='replace'):
     errors.append('tests.log: Unit/UI execution did not finish successfully; inspect the job timeout and xcresult before accepting this build.')
+layout_config = folder / 'layout-simulators.json'
+if layout_config.exists():
+    import json
+    for device in json.loads(layout_config.read_text()):
+        path = folder / 'logs' / ('layout-' + device['name'].replace(' ', '') + '-tests.log')
+        if not path.exists() or '** TEST EXECUTE SUCCEEDED **' not in path.read_text(errors='replace'):
+            errors.append('Layout regression incomplete/failed: ' + device['name'])
 summary = '\n'.join(['## iOS build diagnostics', f'Build warnings: {len(warnings)}', f'Errors/failures: {len(errors)}',
                      *errors[:20], *warnings[:20], *tests[-12:]]) + '\n'
 print(summary)

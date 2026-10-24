@@ -58,22 +58,36 @@ with zipfile.ZipFile(ipa) as archive:
 verification = {'run': run['databaseId'], 'commit': run['headSha'], 'build': int(args.build), 'bytes': ipa.stat().st_size,
                 'sha256': digest, 'architecture': 'arm64', 'minimumIOS': info['MinimumOSVersion'], 'unsigned': True}
 args.output.mkdir(parents=True, exist_ok=True)
+layout_tests = []
+layout_config = args.input / 'results' / 'layout-simulators.json'
+if layout_config.exists():
+    for device in json.loads(layout_config.read_text(encoding='utf-8')):
+        log = logs / ('layout-' + device['name'].replace(' ', '') + '-tests.log')
+        value = log.read_text(encoding='utf-8', errors='replace') if log.exists() else ''
+        if '** TEST EXECUTE SUCCEEDED **' not in value:
+            raise SystemExit('Missing/failed layout run: ' + device['name'])
+        cases = set(re.findall(r"Test Case '-\[(TwilDiaryUITests\.LayoutScreensTests) ([^]]+)\]' passed", value))
+        if len(cases) != 2:
+            raise SystemExit('Expected both layout tests: ' + device['name'])
+        layout_tests.append({'device': device['name'], 'ui': len(cases), 'status': 'success'})
 manifest = []
-for record in json.loads((args.input / 'screenshots' / 'manifest.json').read_text(encoding='utf-8')):
-    for item in record['attachments']:
-        name = item['exportedFileName']
-        if not name.lower().endswith('.png') or item.get('isAssociatedWithFailure'):
-            continue
-        label = re.sub(r'_\d+_[0-9A-F-]+\.png$', '', item['suggestedHumanReadableName'], flags=re.I)
-        slug = re.sub(r'[^a-z0-9]+', '-', label.lower()).strip('-') + '.png'
-        if any(row['file'] == slug for row in manifest):
-            raise SystemExit('Duplicate screenshot label: ' + slug)
-        shutil.copy2(args.input / 'screenshots' / name, args.output / slug)
-        manifest.append({'file': slug, 'name': label, 'test': record['testIdentifier'], 'device': item['deviceName'], 'fixture': True})
+attachment_manifests = list((args.input / 'screenshots').rglob('manifest.json'))
+for attachment_manifest in attachment_manifests:
+    for record in json.loads(attachment_manifest.read_text(encoding='utf-8')):
+        for item in record['attachments']:
+            name = item['exportedFileName']
+            if not name.lower().endswith('.png') or item.get('isAssociatedWithFailure'):
+                continue
+            label = re.sub(r'_\d+_[0-9A-F-]+\.png$', '', item['suggestedHumanReadableName'], flags=re.I)
+            slug = re.sub(r'[^a-z0-9]+', '-', label.lower()).strip('-') + '.png'
+            if any(row['file'] == slug for row in manifest):
+                raise SystemExit('Duplicate screenshot label: ' + slug)
+            shutil.copy2(attachment_manifest.parent / name, args.output / slug)
+            manifest.append({'file': slug, 'name': label, 'test': record['testIdentifier'], 'device': item['deviceName'], 'fixture': True})
 if not manifest:
     raise SystemExit('No retained named screenshots were exported.')
 report = {'run': run['databaseId'], 'commit': run['headSha'], 'build': int(args.build), 'status': 'success',
-          'tests': {'core': int(core_count[1]), 'native_unit': unit, 'ui': ui}, 'warnings': 0,
+          'tests': {'core': int(core_count[1]), 'native_unit': unit, 'ui': ui}, 'layoutTests': layout_tests, 'warnings': 0,
           'reviewScope': 'Automated evidence verified. Visual comparison and real-device behavior require separate review.', 'screenshots': manifest}
 (args.output / 'manifest.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
 (args.output / 'ipa-verification.json').write_text(json.dumps(verification, indent=2) + '\n', encoding='utf-8')

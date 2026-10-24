@@ -77,6 +77,9 @@ jobs:
       - name: Run unit and UI tests
         timeout-minutes: 35
         run: bash ios/scripts/ci.sh test
+      - name: Run compact and large iPhone layout regression
+        timeout-minutes: 18
+        run: bash ios/scripts/ci.sh test-layouts
       - name: Export screenshots
         if: always()
         run: bash ios/scripts/ci.sh screenshots
@@ -92,6 +95,7 @@ jobs:
             ios/.artifacts/toolchain.txt
             ios/.artifacts/devices.json
             ios/.artifacts/simulator.json
+            ios/.artifacts/layout-simulators.json
           if-no-files-found: error
           retention-days: 14
       - name: Upload screenshots
