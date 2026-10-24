@@ -502,8 +502,6 @@ import UIKit
         start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 140, dy: 0)))
         wait(for: [expectation(for: NSPredicate(format: "label == '9'"), evaluatedWith: count)], timeout: 10)
         XCTAssertEqual(mark.frame.minY, originalY, accuracy: 1, "Release must not reflow the page")
-        XCTAssertTrue(app.buttons["tab-glance"].isSelected); XCTAssertTrue(count.isHittable)
-        capture("Glance swipe marked")
         app.buttons["Undo"].tap()
         wait(for: [expectation(for: NSPredicate(format: "label == '8'"), evaluatedWith: count)], timeout: 10)
         XCTAssertEqual(mark.frame.minY, originalY, accuracy: 1)
@@ -511,6 +509,7 @@ import UIKit
         wait(for: [expectation(for: NSPredicate(format: "label == '7'"), evaluatedWith: count)], timeout: 10)
         app.buttons["Undo"].tap()
         wait(for: [expectation(for: NSPredicate(format: "label == '8'"), evaluatedWith: count)], timeout: 10)
+        XCTAssertTrue(app.buttons["tab-glance"].isSelected); XCTAssertTrue(count.isHittable)
         capture("Glance Undo restored")
     }
     func testConfirmedWatchRefreshFailureRecoversWithoutAnotherWatchAndPreservesUndo() {
@@ -531,7 +530,6 @@ import UIKit
         wait(for: [expectation(for: NSPredicate(format: "value == '9 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
         XCTAssertFalse(app.staticTexts["confirmed-write-notice"].exists)
         XCTAssertTrue(mark.isEnabled); XCTAssertTrue(app.buttons["Undo"].isEnabled)
-        capture("Confirmed watch reconciled")
         app.buttons["Undo"].tap()
         wait(for: [expectation(for: NSPredicate(format: "value == '8 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
         capture("Confirmed watch recovery undone")
@@ -544,20 +542,18 @@ import UIKit
         if !mark.isHittable { app.swipeUp() }
         mark.tap()
         wait(for: [expectation(for: NSPredicate(format: "value == '9 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
-        capture("Title episode marked")
         app.buttons["Undo"].tap()
         wait(for: [expectation(for: NSPredicate(format: "value == '8 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
         let start = progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
         XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 10), "A range edit must produce a real Undo receipt, not only a draft value")
         wait(for: [expectation(for: NSPredicate(format: "value == '10 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
-        capture("Title range committed"); app.buttons["Undo"].tap()
+        app.buttons["Undo"].tap()
         wait(for: [expectation(for: NSPredicate(format: "value == '8 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
         app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["title-quiet-orbit"].tap()
         let movieMark = app.buttons["mark-title-watch"]
         XCTAssertTrue(movieMark.waitForExistence(timeout: 5)); movieMark.tap()
         XCTAssertTrue(app.buttons["Log a rewatch"].waitForExistence(timeout: 5))
-        capture("Movie watched")
         app.buttons["Undo"].tap()
         XCTAssertTrue(app.buttons["Log a watch"].waitForExistence(timeout: 5)); capture("Movie watch undone")
     }
@@ -816,6 +812,17 @@ import UIKit
         XCTAssertTrue(app.buttons["tab-home"].isSelected, "Releasing outside the bar must cancel the preview")
         app.buttons["tab-library"].tap(); XCTAssertTrue(app.buttons["tab-library"].isSelected)
         capture("Glass navigation cancelled and tap restored")
+    }
+    func testHoldingTheUndoToastPausesItsShortExpiryUntilTheTouchFinishes() {
+        let app = launch(mutations: true)
+        let count = app.staticTexts["watch-count-again"]
+        XCTAssertTrue(count.waitForExistence(timeout: 5))
+        app.buttons["Mark next watch for 18 Again"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "label == '9'"), evaluatedWith: count)], timeout: 10)
+        let undo = app.buttons["Undo"]
+        undo.press(forDuration: 3)
+        wait(for: [expectation(for: NSPredicate(format: "label == '8'"), evaluatedWith: count)], timeout: 10)
+        capture("Undo survives held touch")
     }
     private func sample(_ image: CGImage, at point: CGPoint, scale: CGFloat) -> [Int] {
         guard let pixel = image.cropping(to: CGRect(x: floor(point.x * scale), y: floor(point.y * scale), width: 1, height: 1)) else { XCTFail("Missing pixel sample"); return [0, 0, 0, 0] }

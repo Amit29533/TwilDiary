@@ -403,7 +403,7 @@ struct ProgressCard: View {
     }
     private var cardBusy: Bool { store.cardActions[title.id] != nil }
     @ViewBuilder private func actionIcon(_ action: DiaryStore.CardAction, symbol: String, size: CGFloat) -> some View {
-        if store.cardActions[title.id] == action { ProgressView().controlSize(.small).tint(theme.ink).frame(width: size, height: size).accessibilityLabel("Saving") }
+        if store.cardActions[title.id] == action { ProgressView().controlSize(.small).tint(action == .remove ? theme.accent : theme.ink).frame(width: size, height: size).accessibilityLabel("Saving") }
         else if reduceMotion { Image(systemName: symbol).font(.system(size: size)) }
         else { Image(systemName: symbol).font(.system(size: size)).symbolEffect(.bounce, value: watchFeedback) }
     }

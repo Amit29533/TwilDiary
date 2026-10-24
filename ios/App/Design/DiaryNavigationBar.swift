@@ -14,6 +14,7 @@ struct DiaryNavigationBar: View {
     }
     @GestureState private var scrub: Scrub?
     @State private var lastHovered: Int?
+    @State private var feedback = UISelectionFeedbackGenerator()
     private let inset: CGFloat = 4
     private let rowHeight: CGFloat = 57
     var body: some View {
@@ -51,8 +52,8 @@ struct DiaryNavigationBar: View {
                     .updating($scrub) { value, state, _ in state = Scrub(location: value.location, translation: value.translation) }
                     .onChanged { value in
                         if let next = NavigationScrub.index(x: Double(value.location.x), width: Double(width), count: AppTab.allCases.count), next != lastHovered {
-                            if lastHovered != nil || next != selected { UISelectionFeedbackGenerator().selectionChanged() }
-                            lastHovered = next
+                            if lastHovered != nil || next != selected { feedback.selectionChanged() }
+                            feedback.prepare(); lastHovered = next
                         }
                     }
                     .onEnded { value in
@@ -68,7 +69,7 @@ struct DiaryNavigationBar: View {
         }.frame(height: rowHeight + inset * 2)
     }
     private func activate(_ tab: AppTab) {
-        if router.selectedTab != tab { UISelectionFeedbackGenerator().selectionChanged() }
+        if router.selectedTab != tab { feedback.selectionChanged() }
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         router.select(tab)
     }

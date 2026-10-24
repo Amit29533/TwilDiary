@@ -7,10 +7,12 @@ struct UndoToast: View {
     @Environment(DiaryStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("theme") private var theme = DiaryTheme.twilight
+    @GestureState private var touching = false
     private struct Lifetime: Equatable {
         let notice: UUID
         let busy: Bool
         let recovering: Bool
+        let touching: Bool
     }
     var body: some View {
         HStack(spacing: 8) {
@@ -27,8 +29,9 @@ struct UndoToast: View {
             .glassEffect(in: RoundedRectangle(cornerRadius: 22))
             .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
             .accessibilityIdentifier("undo-toast")
-            .task(id: Lifetime(notice: store.undoNoticeID, busy: store.busy, recovering: store.needsMutationRefresh)) {
-                guard !store.busy, !store.needsMutationRefresh else { return }
+            .simultaneousGesture(DragGesture(minimumDistance: 0).updating($touching) { _, active, _ in active = true })
+            .task(id: Lifetime(notice: store.undoNoticeID, busy: store.busy, recovering: store.needsMutationRefresh, touching: touching)) {
+                guard !store.busy, !store.needsMutationRefresh, !touching else { return }
                 let notice = store.undoNoticeID
                 do { try await Task.sleep(for: .seconds(UIAccessibility.isVoiceOverRunning ? 8 : 4.5)) } catch { return }
                 guard !Task.isCancelled, notice == store.undoNoticeID else { return }
