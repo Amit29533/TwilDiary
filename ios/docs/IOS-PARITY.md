@@ -48,3 +48,8 @@ Explore now uses the system navigation bar with Back/search/Done instead of a hi
 ### Latest user-directed native changes, build29 pending
 
 The user explicitly requests collection list/grid toggles and native navigation/gesture behavior beyond the original PWA. Settings and form fields remain forms. Shared controls now cover History, Home recent/upcoming, Glance, Files folders/scanner, episodes, catalog/discovery/filmography/search, Stats backlog and Trakt review. Library already has its source grid/list controls. These additions are not accepted parity evidence until the new CI/UI/phone checks pass. The shared hero preserves the synopsis lead beside the cover and expands only its overflow below, per the latest reference. The old all-size assertion that moved the entire synopsis below the cover has been replaced with stricter lead-position and continuation-bound checks.
+
+
+## Explicit owner-requested design changes — prepared build35
+
+The25Oct title reference replaces the old beside-poster synopsis: lowered identity on a darker hero, full-width opening synopsis below, retained opening lines with overflow-only More, and compact native poster/name/Back/Share while scrolled. Native Back replaces redundant Done on pushed pages; real editing sheets retain Done. Liquid Glass adds a blurred dominant-artwork background behind panels/controls/navigation, while foreground art remains sharp and accessibility can restore solid/reduced-motion presentation. These are requested differences from b43454e, not accidental parity drift. Source is prepared; all-size screenshots and native runtime acceptance are pending. The community route remains an undeployed additive backend change.

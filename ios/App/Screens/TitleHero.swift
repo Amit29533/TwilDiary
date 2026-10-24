@@ -22,10 +22,14 @@ struct TitleHero<PersonalRating: View>: View {
     private var synopsisText: String { summary.isEmpty ? "Add your own thoughts in Notes." : summary }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 15) {
+            // Keep the identity down in the darkened lower artwork. Long names
+            // grow vertically; neither ratings nor synopsis compete for its width.
+            HStack(alignment: .bottom, spacing: 15) {
                 Artwork(path: poster, title: name, initialsOnly: false).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 12))
+                    .accessibilityIdentifier("title-hero-poster")
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(name).font(.system(size: 24, weight: .bold)).tracking(-1.08).fixedSize(horizontal: false, vertical: true)
+                    Text(name).font(.system(size: 24, weight: .bold)).tracking(-1.08).foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
+                        .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
                         .accessibilityIdentifier("title-hero-name")
                         .onGeometryChange(for: Bool.self) { $0.frame(in: .scrollView(axis: .vertical)).maxY < 0 } action: { onNameScrolled?($0) }
                     Text([year.map(String.init) ?? "—", category, runtime.map { series ? "\($0) min per episode" : "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 14.4)).lineSpacing(4.3).foregroundStyle(.secondary).frame(minHeight: 21.6, alignment: .top).padding(.top, 14)
@@ -33,12 +37,12 @@ struct TitleHero<PersonalRating: View>: View {
                         HStack(spacing: 5) { Image(systemName: "star.fill").font(.system(size: 20)).foregroundStyle(.yellow); Text(score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—").foregroundStyle(.yellow); Text("TMDb").font(.system(size: 14.4)).foregroundStyle(.secondary) }.frame(minHeight: 44)
                         personalRating
                     }.font(.system(size: 15.2)).padding(.top, 14)
-                    synopsisLead.padding(.top, 16)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
-                            synopsisWidth = width; measureSynopsis()
-                        }
-                }.padding(.top, 14)
+                }.frame(maxWidth: .infinity, minHeight: 171, alignment: .bottomLeading)
             }
+            synopsisLead
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+                    synopsisWidth = width; measureSynopsis()
+                }
             if expanded && !synopsisParts.continuation.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(synopsisParts.continuation.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -50,7 +54,7 @@ struct TitleHero<PersonalRating: View>: View {
                     .accessibilityElement(children: .contain).accessibilityIdentifier("title-synopsis-expanded")
                     .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 6)))
             }
-        }.padding(.top, 82).onChange(of: synopsisText) { _, _ in measureSynopsis() }
+        }.padding(.top, 142).onChange(of: synopsisText) { _, _ in measureSynopsis() }
     }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var synopsisLead: some View {
@@ -80,11 +84,20 @@ struct TitleArtworkBackdrop: View {
     let path: String?
     let name: String
     var topExtension: CGFloat = 0
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
     var body: some View {
         ZStack {
             LinearGradient(stops: [.init(color: Color(webHex: "#3c2c48"), location: 0), .init(color: Color(webHex: "#473c37"), location: 0.45), .init(color: Color(webHex: "#253b3b"), location: 1)], startPoint: .topLeading, endPoint: .bottomTrailing)
             if let path { Artwork(path: path, title: name) }
-        }.frame(height: 380 + topExtension)
-            .overlay(LinearGradient(stops: [.init(color: .clear, location: 0.2), .init(color: .black.opacity(1.0 / 15), location: 0.45), .init(color: .black.opacity(13.0 / 15), location: 0.75), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).offset(y: -topExtension).allowsHitTesting(false).accessibilityHidden(true)
+        }.frame(height: 440 + topExtension)
+            .overlay(LinearGradient(stops: [
+                .init(color: .black.opacity(0.08), location: 0),
+                .init(color: .black.opacity(0.18), location: 0.25),
+                .init(color: .black.opacity(0.62), location: 0.48),
+                .init(color: .black.opacity(0.94), location: 0.73),
+                .init(color: .black, location: 1)
+            ], startPoint: .top, endPoint: .bottom))
+            .mask { if theme == .glass { LinearGradient(stops: [.init(color: .white, location: 0.55), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom) } else { Color.white } }
+            .offset(y: -topExtension).allowsHitTesting(false).accessibilityHidden(true)
     }
 }

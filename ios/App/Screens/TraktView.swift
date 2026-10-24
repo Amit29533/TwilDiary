@@ -2,12 +2,10 @@ import SwiftUI
 import TwilDiaryCore
 
 @MainActor struct TraktView: View {
-    @Environment(\.diaryBack) private var back
     let store: DiaryStore
     @State private var controller: TraktController
     @State private var showSignIn = false
     @State private var clock = Date.now
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage("theme") private var theme = DiaryTheme.twilight
@@ -25,8 +23,7 @@ import TwilDiaryCore
                 }
                 if let error = controller.error { VStack(alignment: .leading, spacing: 8) { Text(error).font(.subheadline).foregroundStyle(.secondary); Button("Retry") { Task { await controller.refresh() } }.disabled(controller.busy) }.diaryPanel().accessibilityIdentifier("trakt-error") }
             }.padding(16).padding(.bottom, 100)
-        }.background(.black).navigationTitle("Trakt").navigationBarTitleDisplayMode(.inline).navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { if back?.perform() != true { dismiss() } }.accessibilityIdentifier("trakt-done") } }
+        }.diaryScreenBackground().navigationTitle("Trakt").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .task(id: controller.kind.rawValue + "\n" + controller.query) {
                 do { try await Task.sleep(for: .milliseconds(250)); try Task.checkCancellation(); await controller.refreshReview() } catch { }
             }

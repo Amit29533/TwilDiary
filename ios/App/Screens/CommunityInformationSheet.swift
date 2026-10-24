@@ -26,8 +26,8 @@ struct CommunityInformationSheet: View {
                             Text("What people are saying").font(.title2.bold())
                             if let sentiments = value.sentiments, value.sentimentsState == .available {
                                 VStack(alignment: .leading, spacing: 16) {
-                                    ForEach(Array(sentiments.good.enumerated()), id: \.offset) { _, text in opinion(text, positive: true) }
-                                    ForEach(Array(sentiments.bad.enumerated()), id: \.offset) { _, text in opinion(text, positive: false) }
+                                    ForEach(Array(sentiments.good.enumerated()), id: \.offset) { index, text in opinion(text, positive: true).accessibilityIdentifier("community-positive-\(index)") }
+                                    ForEach(Array(sentiments.bad.enumerated()), id: \.offset) { index, text in opinion(text, positive: false).accessibilityIdentifier("community-negative-\(index)") }
                                 }.frame(maxWidth: .infinity, alignment: .leading).diaryPanel()
                                 Text("Trakt’s community summary · \(sentiments.commentCount.formatted()) comments · Updated \(sentiments.analyzedAt.prefix(10))")
                                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

@@ -3,7 +3,6 @@ import TwilDiaryCore
 
 struct HistoryView: View {
     @Environment(DiaryStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     @AppStorage("historyGrid") private var grid = false
     @State private var filters: HistoryQuery
@@ -19,7 +18,6 @@ struct HistoryView: View {
     var body: some View {
         let entries = filters.entries(in: store.workspace)
         VStack(spacing: 0) {
-            PageHeader(name: "Recently watched", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "history-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
@@ -73,7 +71,7 @@ struct HistoryView: View {
                     HStack(alignment: .top, spacing: 6) { DiaryIcon(name: "clock-3", size: 13); Text("Unknown dates stay unknown. Dates are never guessed.").font(.system(size: 12)) }.foregroundStyle(.secondary)
                 }.padding(14).padding(.bottom, 100)
             }.refreshable { await store.refresh() }
-        }.navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
+        }.diaryScreenBackground().diaryPageNavigation("Recently watched", searchIdentifier: "search-history") { showSearch.toggle() }
             .onChange(of: filters) { _, _ in limit = 12 }
             .sheet(item: $dateSelection) { selection in
                 HistoryCalendarSheet(selection: selection) { day in

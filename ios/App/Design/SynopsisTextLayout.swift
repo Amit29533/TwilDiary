@@ -1,6 +1,6 @@
 import UIKit
 
-/// Keep the same two leading lines beside the cover when only the overflow expands.
+/// Keep the same two leading lines in place when only the overflow expands.
 /// TextKit measures actual glyphs, including scripts and composed characters.
 @MainActor enum SynopsisTextLayout {
     struct Parts: Equatable {

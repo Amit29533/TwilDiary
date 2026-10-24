@@ -44,7 +44,7 @@ struct LibraryView: View {
                 }
                 collectionContent
             }
-        }.background(theme == .glass ? .black : Color(webHex: "#0e0d13"))
+        }.background(theme == .glass ? .clear : Color(webHex: "#0e0d13")).diaryScreenBackground()
             .task(id: collection.map(\.id).sorted().joined(separator: ",") + ratingSource.rawValue) { await store.loadPublicRatings(collection, source: ratingSource) }
             .onChange(of: router.libraryRevision) { _, _ in applyShortcut() }
             .onAppear { applyShortcut() }
@@ -69,6 +69,7 @@ struct LibraryView: View {
     }
     private var filterBar: some View {
         ScrollView(.horizontal) {
+            GlassEffectContainer(spacing: 8) {
                 HStack(spacing: 8) {
                     Menu {
                         Picker("Status", selection: $status) {
@@ -89,7 +90,8 @@ struct LibraryView: View {
                     } label: { filterChip(driveLabel, selected: !drive.isEmpty) }.accessibilityIdentifier("library-disk")
                     NavigationLink(value: AppDestination.trash) { trashChip }.accessibilityLabel("Open Trash")
                 }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).padding(.horizontal, 14).padding(.vertical, 8)
-            }.scrollIndicators(.hidden)
+            }
+        }.scrollIndicators(.hidden)
     }
     private var orderingBar: some View {
         GeometryReader { geometry in

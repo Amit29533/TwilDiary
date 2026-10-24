@@ -3,7 +3,6 @@ import TwilDiaryCore
 
 struct ScannerReviewView: View {
     @Environment(DiaryStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
     @State private var showSearch = false
     @State private var items: [UnmatchedScan] = []
     @AppStorage("scannerGrid") private var grid = false
@@ -15,7 +14,6 @@ struct ScannerReviewView: View {
     @State private var message: String?
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Fix mismatches", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "scanner-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
@@ -29,7 +27,7 @@ struct ScannerReviewView: View {
                     if next != nil { Button("Show more") { Task { await load(more: true) } }.buttonStyle(.bordered).disabled(loading) }
                 }.padding(14)
             }.refreshable { await load() }
-        }.navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
+        }.diaryScreenBackground().diaryPageNavigation("Fix mismatches", searchIdentifier: "search-scanner") { showSearch.toggle() }
 
             .task { await load() }
             .task(id: message) { guard message != nil else { return }; do { try await Task.sleep(for: .seconds(2)); message = nil } catch { } }

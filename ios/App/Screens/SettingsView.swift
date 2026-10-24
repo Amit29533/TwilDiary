@@ -101,9 +101,7 @@ struct DiaryJSONDocument: FileDocument {
 }
 
 struct TMDBConnectionView: View {
-    @Environment(\.diaryBack) private var back
     @Environment(DiaryStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
     @State private var checking = false
     @State private var verified = false
     @State private var error: String?
@@ -114,19 +112,17 @@ struct TMDBConnectionView: View {
             Button(checking ? "Checking…" : "Check connection") { Task { await check() } }.buttonStyle(.bordered).disabled(checking)
             if let error { Text(error).font(.subheadline).foregroundStyle(.secondary) }
             Text("API credentials stay on your server. Use the PC app to configure or replace them.").font(.caption).foregroundStyle(.secondary)
-        }.diaryPanel().padding(16) }.background(.black).navigationTitle("TMDB").navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar).toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { if back?.perform() != true { dismiss() } }.accessibilityIdentifier("tmdb-done") } }.task { await check() }
+        }.diaryPanel().padding(16) }.diaryScreenBackground().navigationTitle("TMDB").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar).task { await check() }
     }
     private func check() async { checking = true; error = nil; defer { checking = false }; do { if !store.isPreview { let _: EmptyResponse = try await store.read("/api/metadata/status") }; verified = true } catch { verified = false; self.error = error.localizedDescription } }
 }
 
 struct AboutView: View {
-    @Environment(\.diaryBack) private var back
-    @Environment(\.dismiss) private var dismiss
     var body: some View {
         ScrollView { VStack(alignment: .leading, spacing: 24) {
             VStack(spacing: 12) { BrandMark().fill(.tint).frame(width: 54, height: 54); Text("TwilDiary").font(.title.bold()); Text("Your stories, at your pace.").foregroundStyle(.secondary); Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "2.0.0") · Build \(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "")").font(.caption) }.frame(maxWidth: .infinity).diaryPanel()
             VStack(alignment: .leading, spacing: 16) { Text("Attribution & licenses").font(.title2.bold()); Text("Movie & television data").font(.headline); Text("This product uses the TMDB API but is not endorsed or certified by TMDB.").font(.subheadline).foregroundStyle(.secondary); Link("The Movie Database ↗", destination: URL(string: "https://www.themoviedb.org")!); Text("Trakt").font(.headline); Text("Trakt connects your watch history, ratings and watchlist when you authorize it. Scanning prepares a review before changes are applied.").font(.subheadline).foregroundStyle(.secondary); Link("Trakt ↗", destination: URL(string: "https://trakt.tv")!); Text("Icons").font(.headline); Text("Lucide icons are provided under the ISC license.").font(.subheadline).foregroundStyle(.secondary) }.diaryPanel()
             if let url = Bundle.main.url(forResource: "Lucide-LICENSE", withExtension: "txt"), let license = try? String(contentsOf: url, encoding: .utf8) { DisclosureGroup("Lucide ISC license") { Text(license).font(.caption).textSelection(.enabled).padding(.top, 12) }.diaryPanel() }
-        }.padding(16) }.background(.black).navigationTitle("About").navigationBarBackButtonHidden().toolbar(.visible, for: .navigationBar).toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { if back?.perform() != true { dismiss() } }.accessibilityIdentifier("about-done") } }
+        }.padding(16) }.diaryScreenBackground().navigationTitle("About").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
     }
 }

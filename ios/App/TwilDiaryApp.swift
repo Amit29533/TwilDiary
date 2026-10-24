@@ -20,7 +20,7 @@ import TwilDiaryCore
         #endif
     }
     var body: some Scene {
-        WindowGroup { RootView().environment(store).environment(router).preferredColorScheme(.dark).tint(theme.accent) }
+        WindowGroup { RootView().environment(store).environment(router).preferredColorScheme(.dark).tint(theme.accent).buttonBorderShape(.capsule) }
     }
 }
 
@@ -130,6 +130,7 @@ struct RootView: View {
                     Tab("Stats", systemImage: "chart.bar", value: AppTab.stats) { diaryStack(.stats) { StatsView() } }
                     Tab("More", systemImage: "ellipsis", value: AppTab.more) { diaryStack(.more) { SettingsView() } }
                 }.toolbar(.hidden, for: .tabBar)
+                    .diaryScreenBackground()
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         if showNavigation { navigation.padding(.horizontal, 12).padding(.bottom, 10) }
                     }.overlay(alignment: .bottom) {
@@ -171,7 +172,7 @@ struct RootView: View {
     private var navigation: some View { DiaryNavigationBar() }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {
-            content().background(tab == .library && theme != .glass ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router)
+            content().background(tab == .library && theme != .glass ? Color(webHex: "#0e0d13") : .clear).diaryScreenBackground().toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router)
                 .navigationDestination(for: String.self) { TitleDetailView(id: $0).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
                 .navigationDestination(for: SavedTitleRoute.self) { TitleDetailView(id: $0.id, linkedSeason: $0.season, focusEpisodes: $0.focusEpisodes, focusNotes: $0.focusNotes).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
                 .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }

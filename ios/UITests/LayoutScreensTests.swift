@@ -59,10 +59,20 @@ import XCTest
             for _ in 0..<4 { if item.isHittable { break }; app.swipeDown() }
             XCTAssertTrue(item.isHittable); item.tap(); XCTAssertTrue(item.isSelected); capture("Theme " + theme, app: app)
         }
-        app.buttons["appearance-done"].tap(); app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
         let search = app.textFields["Search library and online"]
         XCTAssertTrue(search.waitForExistence(timeout: 5)); XCTAssertGreaterThanOrEqual(search.frame.minX, 14); XCTAssertLessThanOrEqual(search.frame.maxX, app.frame.width - 14)
         search.typeText("Frieren\n"); capture("Glass search", app: app)
+        app.buttons["search-library-frieren"].tap()
+        XCTAssertTrue(app.staticTexts["title-hero-name"].waitForExistence(timeout: 5))
+        capture("Glass lowered title artwork and identity", app: app)
+        let compact = app.descendants(matching: .any)["compact-title-navigation"]
+        for _ in 0..<8 { if compact.exists { break }; app.swipeUp() }
+        XCTAssertTrue(compact.exists); XCTAssertTrue(app.buttons["title-share"].isHittable)
+        XCTAssertGreaterThanOrEqual(compact.frame.minX, 0)
+        XCTAssertLessThanOrEqual(compact.frame.maxX, app.frame.width)
+        capture("Glass compact scrolled title header", app: app)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
         app.buttons["tab-more"].tap(); openThemes(app)
         let twilight = app.buttons["theme-twilight"]
         for _ in 0..<5 { if twilight.isHittable { break }; app.swipeDown() }
@@ -84,16 +94,17 @@ import XCTest
         XCTAssertEqual(summary.label, leadingText)
         XCTAssertEqual(summary.frame.height, leadingFrame.height, accuracy: 1)
         XCTAssertLessThanOrEqual(summary.frame.maxX, app.frame.width - 14)
-        // The cover/column spacing is fixed by the source design, not a third
-        // of each phone width. Text AX bounds describe glyph ink, not its column.
-        XCTAssertEqual(summary.frame.minX, app.staticTexts["title-hero-name"].frame.minX, accuracy: 1)
+        // Updated device feedback asks for a full-width synopsis below the
+        // lowered poster/identity, with only its overflow added on expansion.
+        XCTAssertEqual(summary.frame.minX, 14, accuracy: 1)
+        XCTAssertGreaterThan(summary.frame.minY, app.staticTexts["title-hero-name"].frame.maxY)
         let expandedRegion = app.descendants(matching: .any)["title-synopsis-expanded"]
         XCTAssertTrue(expandedRegion.exists)
         XCTAssertEqual(expandedRegion.frame.minX, 14, accuracy: 1)
         XCTAssertEqual(expandedRegion.frame.maxX, app.frame.width - 14, accuracy: 1)
         XCTAssertLessThan(continuation.frame.minX, 24)
         XCTAssertGreaterThan(continuation.frame.minY, summary.frame.maxY)
-        capture("Expanded synopsis keeps leading lines beside cover", app: app)
+        capture("Lowered title identity and full-width expanded synopsis", app: app)
         let watched = app.buttons["watch-date"]
         for _ in 0..<5 { if watched.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(watched.isHittable); watched.tap()

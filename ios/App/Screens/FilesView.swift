@@ -5,7 +5,6 @@ import TwilDiaryCore
 struct FilesView: View {
     @Environment(DiaryStore.self) private var store
     @Environment(AppRouter.self) private var router
-    @Environment(\.dismiss) private var dismiss
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     @State private var showSearch = false
     @State private var selected = "all"
@@ -13,7 +12,6 @@ struct FilesView: View {
     @State private var copied = ""
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Files & drives", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "files-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
@@ -29,7 +27,7 @@ struct FilesView: View {
                 // Keep the final action above the floating tab bar, matching the web shell's bottom clearance.
                 }.padding(14).padding(.bottom, 100)
             }.accessibilityIdentifier("files-content").refreshable { await store.refresh() }
-        }.navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
+        }.diaryScreenBackground().diaryPageNavigation("Files & drives", searchIdentifier: "search-files") { showSearch.toggle() }
 
     }
     private var activeLocations: [FileLocation] { let ids = Set(store.workspace.activeTitles.map(\.id)); return store.workspace.locations.filter { ids.contains($0.titleId) } }

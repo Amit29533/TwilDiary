@@ -3,13 +3,11 @@ import SwiftUI
 /// Layout and sample artwork follow ThemePicker.svelte, including the phone's two-column grid.
 struct AppearanceView: View {
     @AppStorage("theme") private var theme = DiaryTheme.twilight
-    @Environment(\.dismiss) private var dismiss
     @State private var showSearch = false
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 11, alignment: .top), count: 2)
 
     var body: some View {
         VStack(spacing: 0) {
-            PageHeader(name: "Appearance", onSearch: { showSearch.toggle() }, onDone: { dismiss() }, doneIdentifier: "appearance-done")
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
@@ -30,7 +28,7 @@ struct AppearanceView: View {
                     }.diaryPanel(padding: 19, radius: 22)
                 }.padding(.horizontal, 14).padding(.top, 2).padding(.bottom, 24)
             }
-        }.background(.black).navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
+        }.diaryScreenBackground().diaryPageNavigation("Appearance", searchIdentifier: "search-appearance") { showSearch.toggle() }
     }
 
     private var heading: some View {

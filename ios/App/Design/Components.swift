@@ -85,11 +85,8 @@ struct PageHeader: View {
     let name: String
     var count: String? = nil
     var onSearch: (() -> Void)? = nil
-    var onDone: (() -> Void)? = nil
-    var doneIdentifier = "page-done"
     var height: CGFloat = 56
     @Environment(AppRouter.self) private var router
-    @Environment(\.diaryBack) private var back
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var taps: [Double] = []
     @State private var angle = 0.0
@@ -115,8 +112,10 @@ struct PageHeader: View {
             if let count { Text(count).font(.system(size: 13)).foregroundStyle(Color(webHex: "#a09aa9")).lineLimit(1) }
             Spacer(minLength: 0)
             if let onSearch { Button(action: onSearch) { DiaryIcon(name: "search", size: 22).frame(width: 44, height: 44) }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel(name == "Library" ? "Search library" : "Search").accessibilityIdentifier("search-" + name.lowercased()) }
-            if let onDone { Button("Done") { if back?.perform() != true { onDone() } }.font(.system(size: 14, weight: .semibold)).frame(minWidth: 44, minHeight: 44).buttonStyle(DiaryPressStyle()).accessibilityIdentifier(doneIdentifier) }
-        }.frame(height: height).padding(.horizontal, 14).background(Color(webHex: theme == .glass ? "#000000" : ["Library", "Trash"].contains(name) ? "#0e0d13" : "#050507"))
+        }.frame(height: height).padding(.horizontal, 14).background {
+            if theme == .glass { Rectangle().fill(.ultraThinMaterial).overlay(.black.opacity(0.2)) }
+            else { Color(webHex: ["Library", "Trash"].contains(name) ? "#0e0d13" : "#050507") }
+        }
     }
 }
 

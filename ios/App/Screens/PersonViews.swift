@@ -39,7 +39,7 @@ struct PersonView: View {
                         }
                 } else if let failure { RetryNotice(message: failure) { Task { await load() } }.padding(14) }
                 else { ProgressView("Loading person…").frame(maxWidth: .infinity).padding(40) }
-            }.scrollClipDisabled().background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+            }.scrollClipDisabled().diaryScreenBackground().navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
                 .task(id: route.id) { if person == nil { await load() } }
         }
     }
@@ -156,7 +156,7 @@ struct PersonFilmographyView: View {
                     else { ProgressView("Loading filmography…").frame(maxWidth: .infinity).padding(24) }
                 }.padding(.horizontal, 14).padding(.bottom, 100)
             }
-        }.background(.black).navigationTitle("Explore").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+        }.diaryScreenBackground().navigationTitle("Explore").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showSearch.toggle() } label: { DiaryIcon(name: "search", size: 22) }.accessibilityLabel("Search").accessibilityIdentifier("search-person-filmography") } }
             .task(id: route) { await load() }.onChange(of: filters) { _, _ in shown = 40 }
     }

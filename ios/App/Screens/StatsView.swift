@@ -169,24 +169,26 @@ struct StatsView: View {
 }
 
 private extension View {
-    func statsPanel() -> some View { padding(20).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 22)).overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(.white.opacity(0.13))) }
+    func statsPanel() -> some View { diaryPanel(padding: 20, radius: 22) }
 }
 
 private struct StatsRangeSelector: View {
     @Binding var selection: Period
     @AppStorage("theme") private var theme = DiaryTheme.twilight
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let ranges: [Period] = [.week, .month, .ninetyDays, .year, .all]
     var body: some View {
         HStack(spacing: 3) { ForEach(ranges) { range in
-            Button { selection = range } label: { Text(label(range)).font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 38) }.buttonStyle(.plain).foregroundStyle(selection == range ? Color(webHex: "#21182e") : Color(webHex: "#c5c0cf")).accessibilityAddTraits(selection == range ? .isSelected : [])
+            Button { selection = range } label: { Text(label(range)).font(.system(size: 13, weight: .semibold)).frame(maxWidth: .infinity).frame(height: 38) }.buttonStyle(DiaryPressStyle()).foregroundStyle(selection == range ? theme.ink : Color(webHex: "#c5c0cf")).accessibilityAddTraits(selection == range ? .isSelected : [])
         } }.frame(height: 38).background(alignment: .leading) {
             GeometryReader { geometry in
                 if let index = ranges.firstIndex(of: selection) {
                     let width = max(0, (geometry.size.width - 12) / 5)
-                    RoundedRectangle(cornerRadius: 11).fill(theme.accent).frame(width: width, height: 38).offset(x: CGFloat(index) * (width + 3))
+                    Capsule().fill(theme.accent).frame(width: width, height: 38).offset(x: CGFloat(index) * (width + 3))
                 }
             }
-        }.padding(3).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 16)).overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(.white.opacity(0.13))).id(selection)
+        }.padding(3).background { DiaryControlSurface(shape: Capsule(), field: true) }
+            .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.86), value: selection)
     }
     private func label(_ value: Period) -> String { switch value { case .week: "7D"; case .month: "30D"; case .ninetyDays: "90D"; case .year: "1Y"; case .all: "All"; case .today: "Today" } }
 }

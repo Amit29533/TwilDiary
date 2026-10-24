@@ -43,3 +43,11 @@ Hosted mutation tests require the owner's explicit authorization. Simulator chec
 - Surprise backdrop tap stays open. Swipe up/down/left/right dismisses; a short drag springs back; Close and VoiceOver Escape work. VoiceOver must reach the heading, reroll and Open actions without reaching the dimmed app.
 - Test collection grid/list preferences, scroll and independent +/- actions in Glance. Confirm a layout change retains data and does not block unrelated cards. Review narrow-phone long paths and Trakt conflict actions in grid mode.
 - Assess spring motion, haptics and scroll responsiveness on the actual phone, including Reduce Motion/Reduce Transparency. CI screenshots do not establish physical smoothness.
+
+
+## Latest hero/native navigation/Glass checks — prepared build35
+
+- Latest feedback supersedes the earlier beside-cover opening synopsis check: inspect lowered name/ratings over darkened artwork and full-width synopsis beneath. More must keep the opening copy stationary, add only overflow, and never lose words/emoji.
+- Scroll saved and online long titles into compact poster/name/Back/Share and back; verify top art bleed, contrast over bright artwork, no title clipping/jump and native cancelled/completed Back.
+- Pushed History/Files/Appearance/Scanner/TMDB/Trakt/About and Explore use native Back/content swipe. Done is retained only for modal editing. Re-enter each and check query/scroll restoration and slider gesture protection.
+- In Glass, assess the blurred artwork/dominant backdrop through panels and the bottom navigation bar, all five hold/slide/release targets, Reduce Motion/Transparency and a large library. Screenshots cannot prove physical stutter, haptics or battery performance.
