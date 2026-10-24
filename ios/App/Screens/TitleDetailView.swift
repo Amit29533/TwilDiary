@@ -126,10 +126,10 @@ struct TitleDetailView: View {
                             }
                             .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
                             .onChange(of: store.sessionRevision) { _, _ in episodeDetails.reset(); revealedEpisodeIDs = []; expandedEpisodes = [] }
-                            .onChange(of: title) { _, saved in
+                            .onChange(of: title.version) { _, _ in
                                 guard initializedEditor else { return }
-                                notesField.observe(.init(value: saved.notes, version: saved.version))
-                                ratingField.observe(.init(value: saved.score, version: saved.version))
+                                notesField.observe(.init(value: title.notes, version: title.version))
+                                ratingField.observe(.init(value: title.score, version: title.version))
                             }
                             .confirmationDialog("Reset progress to 0? Logged watches will be removed, with Undo available.", isPresented: $resetConfirmation, titleVisibility: .visible) {
                                 Button("Reset to Planned", role: .destructive) { Task { await store.setStatus(title, status: "planned"); await loadCard(title) } }
