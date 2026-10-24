@@ -182,6 +182,81 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertEqual(store.workspace.titles.map(\.id), ids)
         XCTAssertNotNil(store.error)
     }
+    func testFailureInAnyWorkspaceSectionPreservesTheCompleteDiaryAndCachedCopy() async throws {
+        let workspace = PreviewData.workspace
+        for section in ["titles", "episodes", "events", "locations"] {
+            let storage = MemorySessionStorage(); storage.credential = credential
+            let cache = MemoryWorkspaceCache()
+            try cache.save(workspace, scope: credential.cacheScope, at: .now)
+            let store = DiaryStore(api: api(storage), cache: cache)
+            StubProtocol.state.reset { request in
+                let query = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems }
+                if query?.first(where: { $0.name == "section" })?.value == section {
+                    return .init(503, #"{"error":{"message":"Synthetic section outage"}}"#)
+                }
+                return .init(#"{"items":[],"next":null}"#)
+            }
+            await store.refresh()
+            let preserved = store.workspace
+            XCTAssertEqual(preserved.titles, workspace.titles, section)
+            XCTAssertEqual(preserved.episodes, workspace.episodes, section)
+            XCTAssertEqual(preserved.events, workspace.events, section)
+            XCTAssertEqual(preserved.locations, workspace.locations, section)
+            XCTAssertTrue(store.showingCachedSnapshot); XCTAssertTrue(store.hasLoadedWorkspace)
+            XCTAssertFalse(store.needsSignIn); XCTAssertFalse(store.loading)
+            XCTAssertEqual(store.error, "Synthetic section outage")
+            let cached = try XCTUnwrap(cache.load(scope: credential.cacheScope))
+            let encoder = JSONEncoder(); encoder.outputFormatting = .sortedKeys
+            XCTAssertEqual(try encoder.encode(cached.workspace), try encoder.encode(workspace), section)
+        }
+    }
+    func testWorkspacePaginationEscapesTheCursorAndKeepsTheSameAuthenticatedSection() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let cursor = "synthetic &section=events+after/next"
+        let envelope: [String: Any] = ["items": [Any](), "next": cursor]
+        let first = String(decoding: try JSONSerialization.data(withJSONObject: envelope), as: UTF8.self)
+        StubProtocol.state.reset { request in
+            let query = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems }
+            return .init(query?.contains(where: { $0.name == "after" }) == true ? #"{"items":[],"next":null}"# : first)
+        }
+        let items = try await api(storage).allPages("titles", as: MediaTitle.self)
+        XCTAssertTrue(items.isEmpty)
+        let requests = StubProtocol.state.recorded()
+        XCTAssertEqual(requests.count, 2)
+        for request in requests {
+            XCTAssertEqual(request.httpMethod, "GET")
+            XCTAssertEqual(request.url?.path, "/api/workspace")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Cookie"), "CF_Authorization=synthetic-test-session")
+            let query = URLComponents(url: try XCTUnwrap(request.url), resolvingAgainstBaseURL: false)?.queryItems ?? []
+            XCTAssertEqual(query.filter { $0.name == "section" }.map(\.value), ["titles"])
+        }
+        let lastQuery = URLComponents(url: try XCTUnwrap(requests.last?.url), resolvingAgainstBaseURL: false)?.queryItems
+        XCTAssertEqual(lastQuery?.first(where: { $0.name == "after" })?.value, cursor)
+    }
+    func testRepeatedWorkspaceCursorFailsWithoutPublishingOrContinuingForever() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { _ in .init(#"{"items":[],"next":"synthetic-loop"}"#) }
+        let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace; store.hasLoadedWorkspace = true
+        await store.refresh()
+        XCTAssertEqual(store.error, "The diary returned a repeated page. Please refresh.")
+        XCTAssertEqual(StubProtocol.state.recorded().count, 2)
+        XCTAssertEqual(store.workspace.titles.map(\.id), PreviewData.workspace.titles.map(\.id))
+        XCTAssertTrue(store.hasLoadedWorkspace); XCTAssertFalse(store.loading)
+    }
+    func testPrivateRequestsRejectForeignAndNonAPIPathsBeforeSendingCredentials() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { _ in .init("{}") }
+        let client = api(storage)
+        for path in ["https://example.test/api/session", "//example.test/api/session", "/preview/home", "api/session"] {
+            do {
+                let _: EmptyResponse = try await client.request(path)
+                XCTFail("Invalid private request was accepted: " + path)
+            } catch {
+                XCTAssertEqual(error.localizedDescription, "Invalid diary request.")
+            }
+        }
+        XCTAssertTrue(StubProtocol.state.recorded().isEmpty)
+    }
 
     func testAuthenticationRejectionDoesNotSaveCredential() async {
         StubProtocol.state.reset { _ in .init(401, "Access denied", contentType: "text/plain") }
