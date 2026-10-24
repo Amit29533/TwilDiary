@@ -86,7 +86,7 @@ import UIKit
         let name = app.staticTexts["random-picked-name"]
         XCTAssertTrue(name.waitForExistence(timeout: 5)); XCTAssertEqual(name.label, "A Quiet Orbit")
         let dialog = app.descendants(matching: .any)["random-pick-dialog"]
-        XCTAssertTrue(dialog.exists); XCTAssertLessThan(dialog.frame.height, app.frame.height * 0.75)
+        XCTAssertTrue(dialog.exists, app.debugDescription); XCTAssertLessThan(dialog.frame.height, app.frame.height * 0.75)
         XCTAssertGreaterThan(dialog.frame.minY, 70)
         XCTAssertFalse(app.buttons["random-pick-again"].isEnabled, "The planned fixture has only one eligible title")
         capture("Home planned random pick")

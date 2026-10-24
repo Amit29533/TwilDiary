@@ -1,6 +1,8 @@
 # Native parity status — work in progress
 
-Latest evidence: build 26 (40104599130 / 71ebe48) passes 54 Core tests, zero-warning simulator compilation and 5/8 early UI regressions, including full-bleed moving hero/Notes, Explore native Back, retained/scoped search and real watch/slider/Undo/movie behavior. It fails Files final-action clearance, manual movie Glance final-action hit testing and surprise accessibility bounds, so Release/full/all-phone tests are skipped and it is not accepted. Build 27 prepares bottom clearance and explicitly measured modal bounds; runtime acceptance is pending. Prior historical results below do not imply these new gates pass.
+Build27 update: Core54 and zero-warning simulator compile pass; earlyUI7/8 pass, now including complete Files/scanner and manual-movie Glance log/Undo. Only surprise modal accessibility bounds fail. No Release/IPA/full/all-phone execution or acceptance. Build28 adds a real bounded modal container and the documented duplicate/auth/reveal hardening; runtime acceptance is pending.
+
+Historical evidence: build 26 (40104599130 / 71ebe48) passes 54 Core tests, zero-warning simulator compilation and 5/8 early UI regressions, including full-bleed moving hero/Notes, Explore native Back, retained/scoped search and real watch/slider/Undo/movie behavior. It fails Files final-action clearance, manual movie Glance final-action hit testing and surprise accessibility bounds, so Release/full/all-phone tests are skipped and it is not accepted. Build 27 prepares bottom clearance and explicitly measured modal bounds; runtime acceptance is pending. Prior historical results below do not imply these new gates pass.
 
 Product source: the web /preview code at b43454e. Active native source: Amit29533/TwilDiary → ios-native → ios/. No hosted changes or deployments.
 

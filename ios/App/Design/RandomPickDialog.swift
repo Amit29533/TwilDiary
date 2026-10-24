@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import TwilDiaryCore
 
 struct RandomPickScope: Identifiable {
@@ -30,12 +31,13 @@ struct RandomPickDialog: View {
         GeometryReader { proxy in
             ZStack {
                 Color(webHex: "#020106bf").background(.ultraThinMaterial).ignoresSafeArea().onTapGesture { onClose() }.accessibilityHidden(true)
-                ViewThatFits(in: .vertical) {
-                    panel(compact: proxy.size.width < 359).fixedSize(horizontal: false, vertical: true)
-                    ScrollView { panel(compact: proxy.size.width < 359) }
+                RandomPickModalContainer {
+                    ViewThatFits(in: .vertical) {
+                        panel(compact: proxy.size.width < 359).fixedSize(horizontal: false, vertical: true)
+                        ScrollView { panel(compact: proxy.size.width < 359) }
+                    }.tint(theme.accent)
                 }.frame(width: min(480, max(0, proxy.size.width - 38)), height: min(panelHeight ?? max(0, proxy.size.height - 32), max(0, proxy.size.height - 32)))
                     .padding(.vertical, 16)
-                    .accessibilityElement(children: .contain).accessibilityLabel("Random pick").accessibilityAddTraits(.isModal).accessibilityIdentifier("random-pick-dialog")
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }.onAppear { choose() }
             .onChange(of: active.map(\.id)) { _, _ in if picked == nil { rolling = false; choose() } }
@@ -111,5 +113,26 @@ struct RandomPickDialog: View {
         #endif
         let next = RandomPick.choose(titles, previousID: selectedID, sample: sample)
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.5)) { selectedID = next?.id; sequence += 1; rolling = next != nil }
+    }
+}
+
+/// Give the modal a real, bounded container. SwiftUI otherwise promotes this fitting
+/// overlay's modal accessibility group to the full-screen presentation ancestor.
+private struct RandomPickModalContainer<Content: View>: UIViewControllerRepresentable {
+    let content: Content
+    init(@ViewBuilder content: () -> Content) { self.content = content() }
+    func makeUIViewController(context: Context) -> UIHostingController<Content> {
+        let controller = UIHostingController(rootView: content)
+        controller.view.backgroundColor = .clear
+        controller.view.isAccessibilityElement = false
+        controller.view.accessibilityContainerType = .semanticGroup
+        controller.view.shouldGroupAccessibilityChildren = true
+        controller.view.accessibilityViewIsModal = true
+        controller.view.accessibilityLabel = "Random pick"
+        controller.view.accessibilityIdentifier = "random-pick-dialog"
+        return controller
+    }
+    func updateUIViewController(_ controller: UIHostingController<Content>, context: Context) {
+        controller.rootView = content
     }
 }
