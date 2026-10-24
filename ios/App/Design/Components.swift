@@ -211,6 +211,8 @@ struct ProgressCard: View {
     @Environment(DiaryStore.self) private var store
     @State private var card: WatchCard?
     @State private var drag: CGFloat = 0
+    @State private var suppressNavigationUntil = Date.distantPast
+    @Environment(AppRouter.self) private var router
     var body: some View {
         ZStack(alignment: .leading) {
             if !compact { Label("Mark one watched", systemImage: "checkmark").font(.subheadline.bold()).foregroundStyle(.mint).padding(20) }
@@ -222,9 +224,9 @@ struct ProgressCard: View {
         }.background(.green.opacity(0.15), in: RoundedRectangle(cornerRadius: 14)).clipShape(RoundedRectangle(cornerRadius: 14))
             .simultaneousGesture(DragGesture(minimumDistance: 22).onChanged { value in
                 guard !compact, value.startLocation.x > 24, !store.busy, card?.next != nil || !title.isSeries else { return }
-                if value.translation.width > abs(value.translation.height) * 1.3 { drag = min(120, max(0, value.translation.width)) }
+                if value.translation.width > abs(value.translation.height) * 1.3 { drag = min(120, max(0, value.translation.width)); suppressNavigationUntil = .now.addingTimeInterval(0.35) }
             }.onEnded { _ in
-                let mark = drag > 80; withAnimation(.easeOut(duration: 0.18)) { drag = 0 }
+                let mark = drag > 80; if drag > 22 { suppressNavigationUntil = .now.addingTimeInterval(0.35) }; withAnimation(.easeOut(duration: 0.18)) { drag = 0 }
                 if mark { Task { await markWatch() } }
             })
             .task(id: store.workspace.events) { await loadCard() }
@@ -233,9 +235,9 @@ struct ProgressCard: View {
         VStack {
             Spacer(minLength: 0)
             HStack(alignment: .bottom, spacing: 10) {
-                NavigationLink(value: title.id) { Artwork(path: title.poster, title: title.name).frame(width: 42, height: 62).clipShape(RoundedRectangle(cornerRadius: 6)) }.buttonStyle(.plain)
+                Button { openTitle() } label: { Artwork(path: title.poster, title: title.name).frame(width: 42, height: 62).clipShape(RoundedRectangle(cornerRadius: 6)) }.buttonStyle(.plain)
                 VStack(alignment: .leading, spacing: 7) {
-                    NavigationLink(value: title.id) { Text(title.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white).lineLimit(1) }.buttonStyle(.plain)
+                    Button { openTitle() } label: { Text(title.name).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white).lineLimit(1) }.buttonStyle(.plain)
                     timeLine.font(.system(size: 12, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
                     GeometryReader { proxy in Capsule().fill(.white.opacity(0.15)).overlay(alignment: .leading) { Capsule().fill(.tint).frame(width: proxy.size.width * fraction) } }.frame(height: 4)
                 }.padding(.bottom, 4)
@@ -247,10 +249,10 @@ struct ProgressCard: View {
     private var glanceContent: some View {
         VStack(spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
-                NavigationLink(value: title.id) { Artwork(path: title.poster, title: title.name).frame(width: 94, height: 118).clipShape(RoundedRectangle(cornerRadius: 8)) }.buttonStyle(.plain)
+                Button { openTitle() } label: { Artwork(path: title.poster, title: title.name).frame(width: 94, height: 118).clipShape(RoundedRectangle(cornerRadius: 8)) }.buttonStyle(.plain)
                 VStack(alignment: .leading, spacing: 7) {
                     HStack(alignment: .top) {
-                        NavigationLink(value: title.id) { Text(title.name).font(.system(size: 18, weight: .semibold)).foregroundStyle(.white).lineLimit(2).multilineTextAlignment(.leading) }.buttonStyle(.plain).accessibilityIdentifier("progress-title-" + title.id)
+                        Button { openTitle() } label: { Text(title.name).font(.system(size: 18, weight: .semibold)).foregroundStyle(.white).lineLimit(2).multilineTextAlignment(.leading) }.buttonStyle(.plain).accessibilityIdentifier("progress-title-" + title.id)
                         Spacer(minLength: 0)
                         Menu { Button(title.queued == true ? "Remove from Queue" : "Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } } } label: { DiaryIcon(name: "ellipsis", size: 19).frame(width: 26, height: 30) }.foregroundStyle(Color(webHex: "#c5c0cf"))
                     }
@@ -288,5 +290,6 @@ struct ProgressCard: View {
         catch is CancellationError { }
         catch { if !Task.isCancelled { store.error = error.localizedDescription } }
     }
+    private func openTitle() { guard Date.now >= suppressNavigationUntil else { return }; router.openTitle(title.id, tab: router.selectedTab) }
     private func markWatch() async { await store.markNext(title, expectedEpisode: card?.next?.id); await loadCard() }
 }

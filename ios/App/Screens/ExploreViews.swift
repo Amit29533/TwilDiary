@@ -11,7 +11,7 @@ struct ExploreView: View {
                 VStack(alignment: .leading, spacing: 22) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     ExploreContent(store: store)
-                }.padding(.horizontal, 14).padding(.top, 2).padding(.bottom, 24)
+                }.padding(.horizontal, 14).padding(.top, 2).padding(.bottom, 100)
             }
         }.background(.black).toolbar(.hidden, for: .navigationBar)
     }
@@ -147,7 +147,7 @@ struct ExploreSectionView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     DiscoveryBrowser(section: route.section, service: service, store: store, initialFilters: route.filters)
-                }.padding(.horizontal, 14).padding(.top, 2).padding(.bottom, 24)
+                }.padding(.horizontal, 14).padding(.top, 2).padding(.bottom, 100)
             }
         }.background(.black).navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
     }

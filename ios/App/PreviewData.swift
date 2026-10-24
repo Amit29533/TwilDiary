@@ -6,6 +6,16 @@ enum PreviewData {
         let url = Bundle.main.url(forResource: "reference-workspace", withExtension: "json")!
         return try! JSONDecoder().decode(Workspace.self, from: Data(contentsOf: url))
     }
+    #if DEBUG
+    static var metadataWorkspace: Workspace {
+        let value = workspace
+        var object = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(value)) as! [String: Any]
+        var titles = object["titles"] as! [[String: Any]]
+        if let index = titles.firstIndex(where: { $0["id"] as? String == "again" }) { titles[index]["tmdbId"] = 900002 }
+        object["titles"] = titles
+        return try! JSONDecoder().decode(Workspace.self, from: JSONSerialization.data(withJSONObject: object))
+    }
+    #endif
     static func card(_ title: MediaTitle, workspace: Workspace, season: Int? = nil) -> WatchCard {
         let watched = Set(workspace.activeEvents.filter { $0.titleId == title.id }.compactMap(\.episodeId))
         let today = "2026-10-23"

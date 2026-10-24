@@ -3,11 +3,12 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
         if scanner { app.launchArguments.append("--ui-scanner") }
         if ratingsUnavailable { app.launchArguments.append("--ui-ratings-unavailable") }
+        if titleMetadata { app.launchArguments.append("--ui-title-metadata") }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
     }
@@ -115,8 +116,8 @@ import UIKit
         app.buttons["Reset filters"].tap()
         XCTAssertTrue(app.staticTexts["12 titles"].waitForExistence(timeout: 5))
         let loadMore = app.buttons["Load more"]
-        for _ in 0..<10 { if loadMore.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(loadMore.isHittable); loadMore.tap()
+        for _ in 0..<10 { if loadMore.isHittable && loadMore.frame.maxY < app.buttons["tab-home"].frame.minY { break }; app.swipeUp() }
+        XCTAssertTrue(loadMore.isHittable); XCTAssertLessThan(loadMore.frame.maxY, app.buttons["tab-home"].frame.minY); capture("Explore Load more reachable"); loadMore.tap()
         let lastResult = app.buttons["catalog-tv:900002"]
         for _ in 0..<8 { if lastResult.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(lastResult.isHittable, "The second page must publish its final unique result")
@@ -283,6 +284,7 @@ import UIKit
         start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 140, dy: 0)))
         wait(for: [expectation(for: NSPredicate(format: "label == '9'"), evaluatedWith: count)], timeout: 10)
         XCTAssertEqual(mark.frame.minY, originalY, accuracy: 1, "Release must not reflow the page")
+        XCTAssertTrue(app.buttons["tab-glance"].isSelected); XCTAssertTrue(count.isHittable)
         capture("Glance swipe marked")
         app.buttons["Undo"].tap()
         wait(for: [expectation(for: NSPredicate(format: "label == '8'"), evaluatedWith: count)], timeout: 10)
@@ -356,7 +358,7 @@ import UIKit
         XCTAssertEqual(app.sliders["episode-progress"].value as? String, "8 of 16 episodes watched")
     }
     func testNotesDraftSurvivesOpeningACastProfileAndReturning() {
-        let app = launch(mutations: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
+        let app = launch(mutations: true, titleMetadata: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
         let notes = app.buttons["Notes"]
         for _ in 0..<14 { if notes.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(notes.isHittable); notes.tap()

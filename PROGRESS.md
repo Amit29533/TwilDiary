@@ -4,7 +4,7 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native �
 
 ## Current request and exact next action
 
-**Current CI:** build 16, source edf6b80, run **40063279036**, is in progress. Pushed the complete watch/editor/session batch and the two diagnosed build-15 UI corrections. Last complete pass remains build 14 (66 tests, zero warnings). Do not distribute an incomplete run as accepted. Exact next action: inspect build 16 compilation/tests, fix any failure and download/review artifacts before acceptance.
+**Latest CI:** build 16, source edf6b80, run **40063279036**, failed UI regression: **33 Core + 49 native unit tests pass**, both targets compile with **zero warnings**, **9/13 UI pass**. Downloaded screenshots/recordings and full failed logs under .local/ios-app-build-40063279036. Scanner selection/return now passes. Last complete pass remains build 14 (66 tests, zero warnings). Build 16 is diagnostic only. Exact next action: commit the diagnosed build-16 repairs below with the reviewed build-17 batch, push, then inspect CI/artifacts again.
 
 **Local next batch, build 17 (not pushed/compiled):** source-matched public-score session cache: deduplicated 24-ID requests, 24-hour rated/unrated expiry, 60-second unavailable expiry, cancellation/session reset guards, and unavailable-score feedback local to Library. The Library task prepares the complete collection, so score-sort changes cannot cancel its own inflight batch. Added six controller/two URLProtocol/two UI regressions and two isolated web references (80/80 primary records pass). The debug provider fixture returns the actual ratings envelope and distinct public 7.7 versus personal 7.5 for 18 Again; no production/provider requests are made by fixtures. Planned next counts: 36 core + 63 native unit + 17 UI, pending CI discovery. Wait for build 16 before pushing this batch.
 
@@ -17,6 +17,8 @@ Build 17 also ports Person to the actual profile/facts/server/Known-for/shows/mo
 A Trakt paging review found that an old failed/cancelled page could publish an error after a newer filter had loaded. Build 17 guards error publication with the same request/filter generation as successful pages and ignores cancellation. Three new controller tests cover stale-page failure, cancelled-page retention and automatic pause on unchanged scan progress. Secondary 402×778 Person/four filmography references are also captured; they are comparison inputs, not native acceptance.
 
 Added collect-build.py to verify completed-success CI status, individual passed unit/UI records, both target compilation summaries, zero warnings and IPA checksum/build/arm64/unsigned payload before preparing named screenshot evidence. It refuses failed/incomplete runs and explicitly leaves visual/device acceptance separate. It has not yet been used to accept build 16.
+
+**Build-16 failure diagnosis and build-17 fixes:** Glance swipe actually logged exactly one event but its simultaneous NavigationLink also opened the title; ProgressCard now routes title taps through a short swipe-only navigation guard. Episode range dragging activated iOS 26’s full-content Back recognizer and popped the title; EdgeSwipeBackOnly disables that public recognizer on title/person screens while preserving leading-edge Back and the Back button (Apple UIKit documentation confirms the gesture’s whole-content behavior). Explore Load more was under the capsule; section/filmography content gets sufficient bottom clearance and regression requires the full button above navigation before tapping. The Notes test sought cast on a manual fixture with no TMDB ID; an explicit DEBUG-only metadata-linked variant now exercises the actual cast-child return instead of inventing cast for all manual titles. None of the four assertions is removed or converted into a fake success.
 
 Earlier run notes below are chronological evidence; current truth is the paragraph above.
 
@@ -67,6 +69,7 @@ The current web code wins over earlier mockups: Glance has category/search and s
 | 40035195084 | a0e171c | Both builds zero warnings; 25 core + 32 native unit tests pass; 7/9 UI pass. Files Done/tab overlap and Trakt conflict accessibility prevent acceptance. |
 | 40056346004 | 9c4b527 | Full pass: 25 core + 32 native unit + 9 UI; zero warnings. 29 screenshots/arm64 IPA downloaded and verified. Visual review found Trakt sticky Apply overlap; source flow corrected in build 15. |
 | 40059536963 | a7a186b | Both targets compile, zero warnings; 31 core + 40 native unit pass; 8/10 UI pass. Search row hit shape/scanner selection and offscreen Explore paging assertion corrected for build 16. |
+| 40063279036 | edf6b80 | Both targets compile, zero warnings; 33 Core + 49 native unit pass; 9/13 UI pass. Scanner repaired; paging clearance, swipe/tap conflict, iOS content-pop versus slider and manual-title cast test setup repaired for build 17. |
 
 Latest fully green artifacts: .local/ios-app-build-40056346004; 29 scoped screenshots under ios/docs/screenshots/step-9/build-14, with verified IPA at D:/Downloads/TwilDiary-native-build14.ipa. Build-15 artifacts are diagnostic only.
 

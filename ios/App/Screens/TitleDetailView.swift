@@ -55,7 +55,7 @@ struct TitleDetailView: View {
                     }.padding(.horizontal, 14).padding(.bottom, 32)
                 }.scrollDismissesKeyboard(.interactively).background(alignment: .top) {
                     Artwork(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, title: title.name).frame(height: 380).overlay(LinearGradient(stops: [.init(color: .clear, location: 0.2), .init(color: .black.opacity(1.0 / 15), location: 0.45), .init(color: .black.opacity(13.0 / 15), location: 0.75), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
-                }.background(.black)
+                }.background(.black).background(EdgeSwipeBackOnly())
                     .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItemGroup(placement: .topBarTrailing) {

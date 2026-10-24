@@ -34,7 +34,7 @@ struct PersonView: View {
                 }.padding(.bottom, 28)
             } else if let failure { RetryNotice(message: failure) { Task { await load() } }.padding(14) }
             else { ProgressView("Loading person…").frame(maxWidth: .infinity).padding(40) }
-        }.background(.black).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
+        }.background(.black).background(EdgeSwipeBackOnly()).navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .task(id: route.id) { if person == nil { await load() } }
     }
     private func header(_ person: PersonDetails) -> some View {
@@ -147,7 +147,7 @@ struct PersonFilmographyView: View {
                         }
                     } else if let failure { RetryNotice(message: failure) { Task { await load() } } }
                     else { ProgressView("Loading filmography…").frame(maxWidth: .infinity).padding(24) }
-                }.padding(.horizontal, 14).padding(.bottom, 24)
+                }.padding(.horizontal, 14).padding(.bottom, 100)
             }
         }.background(.black).navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar).task(id: route) { await load() }.onChange(of: filters) { _, _ in shown = 40 }
     }

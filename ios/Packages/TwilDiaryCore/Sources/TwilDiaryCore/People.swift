@@ -31,7 +31,7 @@ public struct PersonSections: Sendable {
             if first != second { return first > second }
             if (a.element.votes ?? 0) != (b.element.votes ?? 0) { return (a.element.votes ?? 0) > (b.element.votes ?? 0) }
             return a.offset < b.offset
-        }.prefix(12).map(\.element))
+        }.prefix(12).map { $0.element })
     }
     public func items(_ section: PersonSection, onServer: Bool) -> [CatalogItem]? {
         switch section { case .shows: onServer ? localShows : shows; case .movies: onServer ? localMovies : movies; case .knownFor: knownFor; case .credits: onServer ? localShows + localMovies : nil }
