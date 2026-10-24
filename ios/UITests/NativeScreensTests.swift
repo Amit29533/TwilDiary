@@ -318,6 +318,20 @@ import UIKit
         app.buttons["Undo"].tap()
         XCTAssertTrue(app.buttons["Log a watch"].waitForExistence(timeout: 5)); capture("Movie watch undone")
     }
+    func testTitleRatingEditsInlineWithoutChangingItsWatchCount() {
+        let app = launch(mutations: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
+        let personal = app.buttons["title-personal-rating"]
+        XCTAssertTrue(personal.waitForExistence(timeout: 5)); XCTAssertEqual(personal.value as? String, "7.5"); personal.tap()
+        let clear = app.buttons["Clear your rating"]
+        for _ in 0..<6 { if clear.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(clear.isHittable); capture("Title inline rating"); clear.tap()
+        let rate = app.buttons["Rate 7.0"]
+        XCTAssertTrue(rate.waitForExistence(timeout: 5)); rate.tap()
+        XCTAssertTrue(clear.waitForExistence(timeout: 5)); capture("Title rating saved")
+        for _ in 0..<6 { if personal.isHittable { break }; app.swipeDown() }
+        XCTAssertEqual(personal.value as? String, "7.0")
+        XCTAssertEqual(app.sliders["episode-progress"].value as? String, "8 of 16 episodes watched")
+    }
     func testNotesDraftSurvivesOpeningACastProfileAndReturning() {
         let app = launch(mutations: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
         let notes = app.buttons["Notes"]

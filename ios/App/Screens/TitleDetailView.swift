@@ -18,6 +18,7 @@ struct TitleDetailView: View {
     @State private var ratingVersion: Int?
     @State private var rating = 7.0
     @State private var showRating = false
+    @State private var ratingEditing = false
     @State private var resetConfirmation = false
     @State private var card: WatchCard?
     @State private var cardRequest = UUID()
@@ -33,9 +34,9 @@ struct TitleDetailView: View {
         Group {
             if let title = store.title(id) {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 28) {
                         header(title)
-                        progressPanel(title)
+                        progressPanel(title).padding(.top, -8)
                         if title.isSeries { episodeSection(title) }
                         else { movieHistory(title) }
                         if let tmdbId = title.tmdbId { CastAndRelated(route: CatalogRoute(kind: title.isSeries ? .tv : .movie, id: tmdbId)) }
@@ -52,9 +53,9 @@ struct TitleDetailView: View {
                                 VStack(alignment: .leading, spacing: 7) { Text(location.evidence == "present" ? "Available · \(location.deviceName)" : location.evidence.capitalized).font(.subheadline.bold()); Text(location.path).font(.caption.monospaced()).textSelection(.enabled); Text("\(location.fileCount) files").font(.caption).foregroundStyle(.secondary) }.frame(maxWidth: .infinity, alignment: .leading).padding(.top, 12)
                             } } label: { Text(serverLabel).font(.subheadline.weight(.semibold)) }
                         }.diaryPanel()
-                    }.padding(.horizontal, 16).padding(.bottom, 32)
+                    }.padding(.horizontal, 14).padding(.bottom, 32)
                 }.scrollDismissesKeyboard(.interactively).background(alignment: .top) {
-                    Artwork(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, title: title.name).frame(height: 310).overlay(LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
+                    Artwork(path: ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster, title: title.name).frame(height: 380).overlay(LinearGradient(stops: [.init(color: .clear, location: 0.2), .init(color: .black.opacity(1.0 / 15), location: 0.45), .init(color: .black.opacity(13.0 / 15), location: 0.75), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).ignoresSafeArea(edges: .top)
                 }.background(.black)
                     .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
                     .toolbar {
@@ -75,7 +76,6 @@ struct TitleDetailView: View {
                     }
                     .task(id: cardRevision(title)) { await loadCard(title) }
                     .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
-                    .sheet(isPresented: $showRating) { ratingSheet(title) }
                     .confirmationDialog("Reset progress to 0? Logged watches will be removed, with Undo available.", isPresented: $resetConfirmation, titleVisibility: .visible) {
                         Button("Reset to Planned", role: .destructive) { Task { await store.setStatus(title, status: "planned"); await loadCard(title) } }
                     }
@@ -83,42 +83,52 @@ struct TitleDetailView: View {
         }
     }
     private func header(_ title: MediaTitle) -> some View {
-        HStack(alignment: .top, spacing: 14) {
-            Artwork(path: title.poster, title: title.name).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 14))
-            VStack(alignment: .leading, spacing: 12) {
-                Text(title.name).font(.system(size: 24, weight: .bold)).tracking(-0.7).fixedSize(horizontal: false, vertical: true)
-                Text([title.year.map(String.init), title.categoryName, title.runtimeMinutes.map { title.isSeries ? "\($0) min per episode" : "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.caption).foregroundStyle(.secondary)
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 10) { communityRating(title); personalRating(title) }
-                    VStack(alignment: .leading, spacing: 6) { communityRating(title); personalRating(title) }
-                }.font(.system(size: 13))
+        HStack(alignment: .top, spacing: 15) {
+            Artwork(path: title.poster, title: title.name).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 12))
+            VStack(alignment: .leading, spacing: 0) {
+                Text(title.name).font(.system(size: 24, weight: .bold)).tracking(-1.08).fixedSize(horizontal: false, vertical: true)
+                Text([title.year.map(String.init) ?? "—", title.categoryName, title.runtimeMinutes.map { title.isSeries ? "\($0) min per episode" : "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 14.4)).foregroundStyle(.secondary).padding(.top, 14)
+                InlineFlowLayout {
+                    communityRating(title).frame(minHeight: 44)
+                    personalRating(title).frame(minHeight: 44)
+                }.font(.system(size: 15.2)).padding(.top, 14)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title.overview.isEmpty ? "Add your own thoughts in Notes." : title.overview).font(.system(size: 14)).lineSpacing(4).foregroundStyle(Color(webHex: "#c5c0cf")).lineLimit(showOverview ? nil : 2)
-                    if title.overview.count > 100 { Button(showOverview ? "Less" : "More") { showOverview.toggle() }.font(.system(size: 13, weight: .semibold)) }
-                }
+                    Text(title.overview.isEmpty ? "Add your own thoughts in Notes." : title.overview).font(.system(size: 15.04)).lineSpacing(6).foregroundStyle(Color(webHex: "#c5c0cf")).lineLimit(showOverview ? nil : 2)
+                    if title.overview.count > 100 { Button(showOverview ? "Less" : "More") { showOverview.toggle() }.font(.system(size: 14, weight: .semibold)) }
+                }.padding(.top, 16)
             }.padding(.top, 14)
         }.padding(.top, 82)
     }
-    private func communityRating(_ title: MediaTitle) -> some View { HStack(spacing: 4) { Image(systemName: "star.fill").foregroundStyle(.yellow); Text(title.communityScore.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—").foregroundStyle(.yellow); Text("TMDb").foregroundStyle(.secondary) } }
-    private func personalRating(_ title: MediaTitle) -> some View { Button { openRating(title) } label: { HStack(spacing: 4) { Image(systemName: "star"); Text("Your rating").foregroundStyle(.secondary); Text(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—") } }.buttonStyle(.plain) }
+    private func communityRating(_ title: MediaTitle) -> some View { HStack(spacing: 5) { Image(systemName: "star.fill").font(.system(size: 20)).foregroundStyle(.yellow); Text(title.communityScore.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—").foregroundStyle(.yellow); Text("TMDb").font(.system(size: 14.4)).foregroundStyle(.secondary) } }
+    private func personalRating(_ title: MediaTitle) -> some View { Button { openRating(title) } label: { HStack(spacing: 7) { DiaryIcon(name: "star", size: 21); Text("Your rating").foregroundStyle(.secondary); Text(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—") } }.buttonStyle(.plain).accessibilityIdentifier("title-personal-rating").accessibilityLabel("Your rating").accessibilityValue(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "Not rated") }
     private func progressPanel(_ title: MediaTitle) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                Menu { ForEach(["planned", "watching", "completed", "dropped"], id: \.self) { status in
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                Menu {
+                    Button(title.queued == true ? "Remove from Queue" : "Queue") { Task { await store.patch(title, values: ["queued": title.queued != true]) } }
+                    ForEach(["planned", "watching", "completed", "dropped"], id: \.self) { status in
                     Button(status.capitalized) {
                         if status == "planned" && title.status != "planned" { resetConfirmation = true }
                         else { Task { await store.setStatus(title, status: status, watchedAt: watchInstant); await loadCard(title) } }
                     }
-                } } label: { Label(title.status.capitalized, systemImage: "play.fill").font(.subheadline.bold()) }.buttonStyle(.bordered)
+                } } label: {
+                    HStack(spacing: 8) {
+                        if title.status == "watching" { Image(systemName: "play.fill").font(.system(size: 12)) }
+                        else { Circle().fill(title.status == "completed" ? Color.mint : Color.secondary).frame(width: 8, height: 8) }
+                        Text(title.status.capitalized).font(.system(size: 14.4, weight: .semibold))
+                        DiaryIcon(name: "chevron-down", size: 15)
+                    }.padding(.horizontal, 14).frame(minHeight: 46).background(theme.accent.opacity(0.13), in: Capsule()).overlay(Capsule().strokeBorder(theme.accent))
+                }.buttonStyle(.plain).disabled(store.busy).accessibilityIdentifier("title-watch-status")
                 Spacer(minLength: 0)
-                if let minutes = remaining(title) { Text("\(DiaryDate.duration(minutes)) left").font(.caption).foregroundStyle(Color(white: 0.75)).shadow(color: .black, radius: 3) }
-            }
+                Text(title.isSeries ? remaining(title).map { "\(DiaryDate.duration($0)) left" } ?? "Time unknown" : movieViewings.isEmpty ? title.runtimeMinutes.map { "\(DiaryDate.duration($0)) left" } ?? "Movie" : "Movie")
+                    .font(.system(size: 12.8)).foregroundStyle(Color(white: 0.75)).multilineTextAlignment(.trailing).shadow(color: .black, radius: 3)
+            }.padding(.bottom, 22)
             if let card {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(title.isSeries ? "Episode \(displayedWatched)" : "\(movieViewings.count)").font(.system(size: 20, weight: .bold))
                     Text(title.isSeries ? "of \(card.progress.total)" : movieViewings.count == 1 ? "view logged" : "views logged").font(.system(size: 15)).foregroundStyle(.secondary)
                     Spacer(minLength: 0); Text("\(displayedPercent)%").foregroundStyle(.tint).font(.system(size: 20, weight: .bold))
-                }
+                }.frame(minHeight: 29).padding(.bottom, 14)
                 if title.isSeries {
                     episodeSlider(title, card: card)
                 } else {
@@ -135,25 +145,29 @@ struct TitleDetailView: View {
                             }), in: 0...100, step: 100).opacity(0.02).disabled(store.busy || !store.canMutate).accessibilityLabel("Movie watched")
                         }
                 }
-                if let next = card.next, let episode = episodes.first(where: { $0.id == next.id }) { nextPreview(title, episode: episode) }
-                else if title.isSeries { Text(seasonCanEdit(title) ? "You’re caught up with available episodes." : "Load the season to see what’s next.").font(.subheadline).foregroundStyle(.secondary) }
+                if let next = card.next, let episode = episodes.first(where: { $0.id == next.id }) { nextPreview(title, episode: episode).padding(.top, 8).padding(.bottom, 12) }
+                else if title.isSeries { Text(seasonCanEdit(title) ? "You’re caught up with available episodes." : "Load the season to see what’s next.").font(.subheadline).foregroundStyle(.secondary).padding(.vertical, 12) }
                 Button { Task {
                     if title.isSeries, let next = card.next, let episode = episodes.first(where: { $0.id == next.id }) { await store.recordViewing(title, episode: episode, watchedAt: watchInstant) }
                     else if !title.isSeries { await store.recordViewing(title, rewatch: !movieViewings.isEmpty, watchedAt: watchInstant) }
                     await loadCard(title)
                 } } label: {
                     Label(title.isSeries ? card.next.map { "Mark E\($0.number) watched" } ?? "Season caught up" : movieViewings.isEmpty ? "Log a watch" : "Log a rewatch", systemImage: !title.isSeries && !movieViewings.isEmpty ? "arrow.counterclockwise" : "checkmark")
-                        .font(.system(size: 16, weight: .semibold)).frame(maxWidth: .infinity).frame(minHeight: 50)
-                        .foregroundStyle(Color(webHex: "#21182e")).background(theme.accent, in: RoundedRectangle(cornerRadius: 14))
+                        .font(.system(size: 15.2, weight: .semibold)).frame(maxWidth: .infinity).frame(minHeight: 52)
+                        .foregroundStyle(Color(webHex: "#21182e")).background(theme.accent, in: RoundedRectangle(cornerRadius: 17))
                 }.buttonStyle(.plain).disabled(store.busy || (title.isSeries && card.next == nil)).accessibilityIdentifier("mark-title-watch")
-                HStack {
-                    Button { showDate.toggle() } label: { Label(DiaryDate.day(watchDate) == DiaryDate.day(store.now) ? "Watched today" : DiaryDate.day(watchDate), systemImage: "calendar") }.font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("watch-date")
-                    Spacer(minLength: 6); Button(title.isSeries ? "Rate show" : "Rate movie") { openRating(title) }.font(.caption.bold())
-                }.frame(minHeight: 32)
+                HStack(spacing: 8) {
+                    Button { showDate.toggle() } label: {
+                        HStack(spacing: 7) { DiaryIcon(name: "calendar-days", size: 16).foregroundStyle(theme.accent); Text(DiaryDate.day(watchDate) == DiaryDate.day(store.now) ? "Watched today" : DiaryDate.day(watchDate)) }.frame(maxWidth: .infinity, minHeight: 44)
+                    }.accessibilityIdentifier("watch-date")
+                    Button { openRating(title) } label: {
+                        HStack(spacing: 7) { DiaryIcon(name: "star", size: 16).foregroundStyle(theme.accent); Text(title.isSeries ? "Rate show" : "Rate movie") }.frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                }.font(.system(size: 14)).foregroundStyle(Color(webHex: "#c5c0cf")).buttonStyle(.plain).padding(.top, 6)
                 if showDate { DatePicker("Watch date", selection: $watchDate, in: ...store.now, displayedComponents: .date).datePickerStyle(.compact).font(.subheadline).frame(maxWidth: .infinity).clipped().disabled(store.busy); Text("Used for your next watch or progress update.").font(.caption).foregroundStyle(.secondary) }
-                if let reviewed = card.previous { Button("Remove latest watch") { Task { await store.removeLatest(title, season: title.isSeries ? season : nil, expected: reviewed); await loadCard(title) } }.font(.caption).disabled(store.busy) }
+                if showRating { ratingPanel(title).padding(.top, 10) }
             } else { ProgressView("Loading progress…") }
-        }.diaryPanel()
+        }.padding(15).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 24)).overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(theme.accent.opacity(0.2)))
     }
     private func episodeSlider(_ title: MediaTitle, card: WatchCard) -> some View {
         let states = sliderDraft.map { draft in (0..<max(0, card.progress.total)).map { $0 < Int(draft) ? EpisodeSegment.watched : .unwatched } }
@@ -176,7 +190,7 @@ struct TitleDetailView: View {
                 episodeArtwork(episode).frame(width: 104, height: 58).clipShape(RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 4) { Text("UP NEXT").font(.system(size: 10, weight: .bold)).foregroundStyle(theme.accent); Text("\(episode.number) · \(episodeName(episode))").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).multilineTextAlignment(.leading) }
                 Spacer(minLength: 0); if let runtime = title.runtimeMinutes { Text("\(runtime) min").font(.caption).foregroundStyle(.secondary) }
-            }.padding(12).background(.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 16))
+            }.padding(.vertical, 12).padding(.horizontal, 10).background(.white.opacity(5.0 / 255), in: RoundedRectangle(cornerRadius: 17))
         }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) details")
     }
     private func episodeSection(_ title: MediaTitle) -> some View {
@@ -253,25 +267,34 @@ struct TitleDetailView: View {
     private var displayedWatched: Int { sliderDraft.map(Int.init) ?? card?.progress.watched ?? 0 }
     private var watchInstant: Date { let calendar = DiaryDate.calendar(); return calendar.isDate(watchDate, inSameDayAs: store.now) ? store.now : calendar.date(bySettingHour: 12, minute: 0, second: 0, of: watchDate) ?? watchDate }
     private var displayedPercent: Int { guard let total = card?.progress.total, total > 0 else { return 0 }; return Int((Double(displayedWatched) / Double(total) * 100).rounded()) }
-    private func ratingSheet(_ title: MediaTitle) -> some View {
-        NavigationStack {
-            Form {
-                Section("Your rating") {
-                    Stepper(value: $rating, in: 1...10, step: 0.5) {
-                        Text(rating, format: .number.precision(.fractionLength(1)))
-                    }
-                    Button("Save rating") {
-                        Task { if await store.patch(title, values: ["score": rating], expectedVersion: ratingVersion) { showRating = false } }
-                    }
-                    Button("Clear rating") {
-                        Task { if await store.patch(title, values: ["score": NSNull()], expectedVersion: ratingVersion) { showRating = false } }
-                    }
-                }
-            }
-                .navigationTitle(title.isSeries ? "Rate show" : "Rate movie").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { showRating = false } } }
-        }.presentationDetents([.medium])
+    private func ratingPanel(_ title: MediaTitle) -> some View {
+        VStack(spacing: 12) {
+            Divider()
+            HStack(spacing: 12) {
+                HStack(spacing: 7) { DiaryIcon(name: "star", size: 16); Text("Your rating") }.foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                Text(title.score != nil || ratingEditing ? rating.formatted(.number.precision(.fractionLength(1))) : "Not rated").monospacedDigit()
+                if title.score != nil { Button("Clear") { Task { await saveRating(title, value: nil) } }.accessibilityLabel("Clear your rating") }
+                else { Button("Rate " + rating.formatted(.number.precision(.fractionLength(1)))) { Task { await saveRating(title, value: rating) } } }
+            }.font(.system(size: 14)).frame(minHeight: 32)
+            HStack(spacing: 10) {
+                Text("1").foregroundStyle(.secondary)
+                Slider(value: Binding(get: { rating }, set: { rating = $0; ratingEditing = true }), in: 1...10, step: 0.5) { editing in
+                    if !editing { Task { await saveRating(title, value: rating) } }
+                }.accessibilityLabel("Your rating out of 10").accessibilityIdentifier("title-rating-slider")
+                Text("10").foregroundStyle(.secondary)
+            }.font(.system(size: 12))
+        }.disabled(store.busy || !store.canMutate).accessibilityElement(children: .contain).accessibilityIdentifier("title-rating-panel")
     }
-    private func openRating(_ title: MediaTitle) { rating = title.score ?? 7; ratingVersion = title.version; showRating = true }
+    private func saveRating(_ title: MediaTitle, value: Double?) async {
+        let rounded = value.map { ($0 * 2).rounded() / 2 }
+        if await store.patch(title, values: ["score": rounded as Any? ?? NSNull()], expectedVersion: ratingVersion) { ratingVersion = store.title(id)?.version }
+        rating = ((store.title(id)?.score ?? 7) * 2).rounded() / 2; ratingEditing = false
+    }
+    private func openRating(_ title: MediaTitle) {
+        if !showRating { rating = ((title.score ?? 7) * 2).rounded() / 2; ratingVersion = title.version; ratingEditing = false }
+        showRating.toggle()
+    }
     private struct CardRevision: Hashable {
         let season: Int
         let events: [WatchEvent]
