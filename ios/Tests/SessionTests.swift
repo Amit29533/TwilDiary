@@ -128,7 +128,7 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         StubProtocol.state.reset { _ in var reply = StubProtocol.Reply(#"{"title":{"id":"tmdb-tv-900001"}}"#); reply.delay = 0.15; return reply }
         let store = DiaryStore(api: api(storage)), details = PreviewCatalog.browse(CatalogRoute(kind: .tv, id: 900001)).details
         let task = Task { await store.importTitle(details, category: details.suggestedCategory) }
-        while StubProtocol.state.recorded().isEmpty { await Task.yield() }
+        guard await waitForRegressionCondition({ !StubProtocol.state.recorded().isEmpty }) else { task.cancel(); XCTFail("The import request did not start"); return }
         store.signOut(); let result = await task.value
         XCTAssertNil(result); XCTAssertNil(store.error); XCTAssertTrue(store.needsSignIn); XCTAssertFalse(store.busy)
         XCTAssertTrue(store.workspace.titles.isEmpty)

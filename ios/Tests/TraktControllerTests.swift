@@ -9,6 +9,7 @@ import TwilDiaryCore
     var stagnate = false
     func status() async throws -> TraktStatus { try await fixture.status() }
     func review(kind: TraktKind, query: String, after: String?) async throws -> TraktSync {
+        try Task.checkCancellation()
         if after != nil { return try await withCheckedThrowingContinuation { delayed = $0 } }
         var result = try await fixture.review(kind: kind, query: query, after: nil); result.next = "synthetic-next-page"; return result
     }
@@ -75,7 +76,7 @@ import TwilDiaryCore
         let service = TraktRegressionService(), controller = TraktController(service: service)
         await controller.refresh(); await controller.loadMore()
         let page = Task { await controller.loadMore() }
-        while service.delayed == nil { await Task.yield() }
+        guard await waitForRegressionCondition({ service.delayed != nil }) else { page.cancel(); XCTFail("The delayed Trakt page did not start"); return }
         controller.kind = .rating; await controller.refresh()
         service.delayed?.resume(throwing: APIError.message("Old page failed")); await page.value
         XCTAssertTrue(controller.visibleItems.allSatisfy { $0.kind == "rating" })
@@ -86,7 +87,7 @@ import TwilDiaryCore
         await controller.refresh(); await controller.loadMore()
         let confirmed = controller.sync?.items.map(\.id)
         let page = Task { await controller.loadMore() }
-        while service.delayed == nil { await Task.yield() }
+        guard await waitForRegressionCondition({ service.delayed != nil }) else { page.cancel(); XCTFail("The delayed Trakt page did not start"); return }
         page.cancel(); service.delayed?.resume(throwing: CancellationError()); await page.value
         XCTAssertNil(controller.error); XCTAssertFalse(controller.busy)
         XCTAssertEqual(controller.sync?.items.map(\.id), confirmed)

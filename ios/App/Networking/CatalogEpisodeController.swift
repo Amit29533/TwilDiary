@@ -13,6 +13,7 @@ import TwilDiaryCore
     private(set) var error: String?
     init(fetch: @escaping (Int, Bool) async throws -> CatalogEpisodesPage) { self.fetch = fetch }
     func load(_ number: Int, reveal: Bool = false, force: Bool = false) async {
+        guard !Task.isCancelled else { return }
         let request = UUID(); generation = request; season = number; error = nil
         if let saved = cache[number] { items = saved.items; revealed = saved.revealed }
         else { items = []; revealed = false }

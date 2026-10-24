@@ -31,7 +31,7 @@ import TwilDiaryCore
             return self.page(season)
         }
         let first = Task { await controller.load(1) }
-        while pending == nil { await Task.yield() }
+        guard await waitForRegressionCondition({ pending != nil }) else { first.cancel(); XCTFail("The delayed season request did not start"); return }
         await controller.load(2); pending?.resume(returning: page(1)); await first.value
         XCTAssertEqual(controller.season, 2); XCTAssertEqual(controller.items.first?.number, 2); XCTAssertFalse(controller.loading)
     }
@@ -53,7 +53,7 @@ import TwilDiaryCore
             return self.page(1)
         }
         let task = Task { await controller.load(1, reveal: true) }
-        while pending == nil { await Task.yield() }
+        guard await waitForRegressionCondition({ pending != nil }) else { task.cancel(); XCTFail("The delayed season request did not start"); return }
         task.cancel(); pending?.resume(returning: page(1)); await task.value
         XCTAssertFalse(controller.revealed); XCTAssertFalse(controller.loading); XCTAssertNil(controller.error)
         await controller.load(1); XCTAssertEqual(controller.items.count, 1)

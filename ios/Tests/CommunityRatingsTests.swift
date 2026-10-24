@@ -42,7 +42,7 @@ import TwilDiaryCore
         let ratings = CommunityRatingsController()
         var suspended: CheckedContinuation<[String: PublicRating], any Error>?
         let first = Task { await ratings.prepare(["shared"]) { _ in try await withCheckedThrowingContinuation { suspended = $0 } } }
-        while suspended == nil { await Task.yield() }
+        guard await waitForRegressionCondition({ suspended != nil }) else { first.cancel(); XCTFail("The suspended ratings request did not start"); return }
         XCTAssertTrue(ratings.loading)
         var secondIDs: [String] = []
         await ratings.prepare(["shared", "other"]) { ids in secondIDs = ids; return [:] }
@@ -70,7 +70,7 @@ import TwilDiaryCore
         let ratings = CommunityRatingsController()
         var suspended: CheckedContinuation<[String: PublicRating], any Error>?
         let first = Task { await ratings.prepare(["one"]) { _ in try await withCheckedThrowingContinuation { suspended = $0 } } }
-        while suspended == nil { await Task.yield() }
+        guard await waitForRegressionCondition({ suspended != nil }) else { first.cancel(); XCTFail("The suspended ratings request did not start"); return }
         ratings.reset()
         await ratings.prepare(["one"]) { _ in ["one": PublicRating(score: 6.4, state: "rated")] }
         suspended?.resume(returning: ["one": PublicRating(score: 9.9, state: "rated")])
@@ -82,7 +82,7 @@ import TwilDiaryCore
         let ratings = CommunityRatingsController()
         var suspended: CheckedContinuation<[String: PublicRating], any Error>?
         let first = Task { await ratings.prepare(["one"]) { _ in try await withCheckedThrowingContinuation { suspended = $0 } } }
-        while suspended == nil { await Task.yield() }
+        guard await waitForRegressionCondition({ suspended != nil }) else { first.cancel(); XCTFail("The suspended ratings request did not start"); return }
         first.cancel(); suspended?.resume(throwing: CancellationError()); await first.value
         XCTAssertTrue(ratings.entries.isEmpty); XCTAssertFalse(ratings.loading)
         await ratings.prepare(["one"]) { _ in ["one": PublicRating(score: 8.1, state: "rated")] }
