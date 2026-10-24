@@ -65,6 +65,7 @@ Build-12 implementation includes normalized query/shelves, reviewed selection an
 
 - [ ] Category tabs, grid/list, genre rows, search, status/genre/disk filters and sorting.
 - [ ] Public TMDB/Trakt rating badges and preference; distinct watch status and availability.
+  - Build 17 pending: source cache TTL/batching/deduplication, scoped outage feedback, cancellation/sign-out and preference/public-versus-personal regressions; two additional web states captured.
 - [ ] Selection/long press, bulk status, favorites, Queue, Trash/restore and explicit permanent-delete test fixtures.
 - [ ] Filter composition, reviewed versions, pagination, empty/error/overflow/state restoration tests.
 

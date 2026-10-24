@@ -30,14 +30,21 @@ struct LibraryView: View {
             filterBar
             orderingBar
             if category != .all || status != "all" || !genre.isEmpty || !drive.isEmpty || !search.isEmpty { Button("Clear filters") { category = .all; status = "all"; genre = ""; drive = ""; search = "" }.font(.caption).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.bottom, 8) }
+            if ratingSource == .trakt {
+                if store.communityRatings.loading { ratingStatus("Loading Trakt community ratings…") }
+                else if store.communityRatings.unavailable { ratingStatus("Some Trakt ratings are unavailable. Try again later or select TMDB in Settings.") }
+            }
             collectionContent
-        }.task(id: filtered.map(\.id).joined(separator: ",") + ratingSource.rawValue) { await store.loadPublicRatings(filtered, source: ratingSource) }
+        }.task(id: collection.map(\.id).sorted().joined(separator: ",") + ratingSource.rawValue) { await store.loadPublicRatings(collection, source: ratingSource) }
             .onChange(of: router.libraryRevision) { _, _ in applyShortcut() }
             .onAppear { applyShortcut() }
             .onChange(of: filterScope) { _, _ in selecting = false; selected = [] }
             .onChange(of: filtered.map(\.id)) { _, ids in selected.formIntersection(ids) }
             .sheet(item: $review) { value in CollectionReviewView(review: value) { selecting = false; selected = [] } }
             .confirmationDialog("Empty Trash?", isPresented: $confirmEmptyTrash, titleVisibility: .visible) { Button("Empty Trash", role: .destructive) { Task { await store.emptyTrash() } } } message: { Text("This permanently removes every title in Trash and its diary history. Files on your disks stay untouched.") }
+    }
+    private func ratingStatus(_ message: String) -> some View {
+        Text(message).font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 14).padding(.bottom, 10)
     }
     private var filterBar: some View {
         ScrollView(.horizontal) {

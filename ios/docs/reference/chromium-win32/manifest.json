@@ -164,6 +164,180 @@
     "passed": true
   },
   {
+    "id": "library-trakt-ratings",
+    "path": "/preview/library",
+    "scenario": "default",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 844,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "All",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Movies",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Shows",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Anime",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Watch status filter",
+        "value": "all"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Genre filter",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Disk filter",
+        "value": "all"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Sort library",
+        "value": "library"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "List view",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Browse by genre",
+        "value": ""
+      }
+    ],
+    "file": "library-trakt-ratings.png",
+    "sha256": "075cdc1af658c48d267efded61238fc73a09cf61fe7ba2010f6a11fcf7aef4ba",
+    "passed": true
+  },
+  {
+    "id": "library-ratings-unavailable",
+    "path": "/preview/library",
+    "scenario": "ratings-unavailable",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 844,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "All",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Movies",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Shows",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Anime",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Watch status filter",
+        "value": "all"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Genre filter",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Disk filter",
+        "value": "all"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Sort library",
+        "value": "library"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "List view",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Browse by genre",
+        "value": ""
+      }
+    ],
+    "file": "library-ratings-unavailable.png",
+    "sha256": "365fa7d08e967aa9b5ff7d112528710cb8f94c250a802ef6def452f35e9ea3dc",
+    "passed": true
+  },
+  {
     "id": "glance",
     "path": "/preview",
     "scenario": "default",

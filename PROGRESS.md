@@ -4,6 +4,12 @@ Updated: 24 October 2026. Active source: **Amit29533/TwilDiary → ios-native �
 
 ## Current request and exact next action
 
+**Current CI:** build 16, source edf6b80, run **40063279036**, is in progress. Pushed the complete watch/editor/session batch and the two diagnosed build-15 UI corrections. Last complete pass remains build 14 (66 tests, zero warnings). Do not distribute an incomplete run as accepted. Exact next action: inspect build 16 compilation/tests, fix any failure and download/review artifacts before acceptance.
+
+**Local next batch, build 17 (not pushed/compiled):** source-matched public-score session cache: deduplicated 24-ID requests, 24-hour rated/unrated expiry, 60-second unavailable expiry, cancellation/session reset guards, and unavailable-score feedback local to Library. The Library task prepares the complete collection, so score-sort changes cannot cancel its own inflight batch. Added six controller/two URLProtocol/two UI regressions and two isolated web references (80/80 primary records pass). The debug provider fixture returns the actual ratings envelope and distinct public 7.7 versus personal 7.5 for 18 Again; no production/provider requests are made by fixtures. Planned next counts: 33 core + 57 native unit + 15 UI, pending CI discovery. Wait for build 16 before pushing this batch.
+
+Earlier run notes below are chronological evidence; current truth is the paragraph above.
+
 Build 8, source a15b103, run **40020975007**, passed: 13 core + 8 endpoint/session + 5 UI tests, zero warnings. Downloaded/verified 16 screenshots and the unsigned arm64 IPA. Visually reviewed the contact sheet, episode pieces, continuous movie track and Stats selection. Full layout parity remains unfinished (see the committed web/native title comparison). The passed-build title screenshot has been shared in chat; IPA is copied to D:/Downloads/TwilDiary-native-build8.ipa with SHA-256 sidecar.
 
 Latest run **40035195084**, source **a0e171c**, compiled simulator and unsigned arm64 Release builds with zero warnings. All **25 core tests (including 17 web Stats golden scenarios)** and **32 native unit tests** passed. **7/9 UI tests passed**; full workflow failed. Downloaded results/screenshots/videos under .local/ios-app-build-40035195084. Failure review: Files/Scanner bottom Done was obscured by the global capsule and tapping it selected Glance. Trakt conflict actions rendered visibly but ViewThatFits retained competing accessibility candidates. These are not accepted artifacts; build 8 remains the last full pass.
@@ -18,7 +24,7 @@ Prepared **build 15** ports the actual Explore daily recommendation, four named 
 
 Combined search now uses the existing /api/search endpoint, preserving identified library matches and provider errors independently. NFKC/IMDb URL normalization and 2–200 UTF-16 bounds match the web. Complete local snapshots support additional library matches without truncating at eight; online paging and cancel/stale-response guards are present. Stats/More/Files/History/scanner/Explore section headers gain the existing inline global search. Library and Glance retain their scoped search. All product views remain native.
 
-Pending build-15 checks: **31 core + 40 native unit + 10 UI tests planned**, not yet executed. Added 20 web discovery golden scenarios/five deterministic daily picks; controller tests for late filters/paging/retry/partial recommendations; URLProtocol tests for unified search/cache authentication; UI coverage for Explore filters/second page and shared inline search. Windows local-reference Vite now handles canonical and 8.3 paths without weakening deny rules. Provider fixtures now honor filters/paging and the combined-search schema. Refreshed five affected primary captures and added eight states: **78/78 primary records pass**; secondary Explore/title/Home/Library/Glance/Stats inputs are captured. Native comparison acceptance is still pending.
+Build-15 scope: **31 core + 40 native unit + 10 UI tests executed**; full outcome is recorded below. Added 20 web discovery golden scenarios/five deterministic daily picks; controller tests for late filters/paging/retry/partial recommendations; URLProtocol tests for unified search/cache authentication; UI coverage for Explore filters/second page and shared inline search. Windows local-reference Vite now handles canonical and 8.3 paths without weakening deny rules. Provider fixtures now honor filters/paging and the combined-search schema. Refreshed five affected primary captures and added eight states: **78/78 primary records pass**; secondary Explore/title/Home/Library/Glance/Stats inputs are captured. Native comparison acceptance is still pending.
 
 Build 15 is pushed at **a7a186b**, run **40059536963**. Core **31** and native unit **40** tests pass; both iPhone targets compile. Native UI **8/10** pass, so the full run fails (not an accepted artifact). Downloaded logs/screenshots/videos under .local/ios-app-build-40059536963. Failures: new search-row Button had transparent non-hittable middle space, so scanner selection did not fire; Explore paging test searched for its count header while scrolled below it. Build 16 gives both search-row labels a full rectangular hit shape and verifies the second-page last identity before scrolling back to the 16-title count. Trakt in-list Apply/complete-button bounds and the three new global-search entry points pass.
 
@@ -67,11 +73,11 @@ Historical build-8 artifacts are downloaded under .local/ios-app-build-400209750
 - Stats shared period/menu selection, 90-day boundary, basic daily charts, streak heatmap, backlog counts and watched-title genre denominator.
 - Complete-snapshot paginated reload preserves in-memory data on read failure; uncertain mutations retain operation identities and server version/Undo receipts.
 
-Debug --ui-testing uses isolated synthetic data; only the additional --ui-mutations opt-in enables in-memory collection/scanner writes. Release builds cannot select either fixture path. Other unsupported fixture requests fail explicitly. The local contract probe passed 18 requests on the isolated loopback backend, including watch/idempotency, patch/conflict, revoke/restore and Trash/restore; it cleaned only its fresh synthetic UUID and left pre-existing fixture versions unchanged. Hosted requests: zero. Report: ios/docs/LOCAL-API-CONTRACTS.json.
+Debug --ui-testing uses isolated synthetic data; only the additional --ui-mutations opt-in enables in-memory collection/scanner writes. Release builds cannot select either fixture path. Other unsupported fixture requests fail explicitly. The local contract probe passed 30 requests on the isolated loopback backend, including watch/idempotency, patch/conflict, revoke/restore and Trash/restore; it cleaned only its fresh synthetic UUID and left pre-existing fixture versions unchanged. Hosted requests: zero. Report: ios/docs/LOCAL-API-CONTRACTS.json.
 
 ## References and comparison
 
-- Primary Playwright references: ios/docs/reference/chromium-win32 — 70/70 enumerated states captured at 390×844.
+- Primary Playwright references: ios/docs/reference/chromium-win32 — 80/80 enumerated states captured at 390×844 (including the public-rating states).
 - Secondary: ios/docs/reference/chromium-win32-402x778 — matches iPhone 17 Pro content after documented 62pt top/34pt bottom OS insets. Added the show reference for the episode-track comparison.
 - Native screenshots are synthetic simulator evidence, not live owner data. Windows Chromium font metrics differ from iOS; screenshot capture alone is not a parity pass.
 - Source inventory, tokens/icons and comparison scripts are under ios/docs and ios/tools. Roadmap remains the 10-step parity checklist; the user subsequently asked to prioritize actual app work over procedural gates. No entire step is claimed complete without evidence.
@@ -80,10 +86,10 @@ Debug --ui-testing uses isolated synthetic data; only the additional --ui-mutati
 
 - Fix the two current UI failures through a full green run; collect and compare all new screens.
 - Home/Glance watch and Undo, title episodes/date/rewatch/slider transactions, and broad error/loading/empty/rapid-tap UI coverage remain incomplete, despite pure/API tests.
-- Complete Explore shelves/filters/surprise picks, global search from all fixed headers, and composed Library filter controls.
-- Library bulk Queue/Trash/restore/purge now passes an isolated write-flow UI test. Scanner resolve passes unit tests and reaches the resolved UI, but return navigation failed in the latest run.
+- Explore/source filters/paging and global search are implemented; latest screenshot/regression acceptance and composed Library filter controls remain.
+- Library bulk Queue/Trash/restore/purge now passes an isolated write-flow UI test. Scanner resolve passes unit tests and reaches the resolved UI, and header return passed build 14; build 15 exposed the search-row hit shape corrected in build 16.
 - Stats golden calculations, period collision/calendar navigation, zero-day drilldown and undated history passed. Remaining full layout/all-size comparison is not accepted.
-- Protected cache/session generation and reviewed Trakt controller/transport unit tests pass; per-conflict UI completion still fails. No real provider/account mutation is tested by these fixtures.
+- Protected cache/session generation and reviewed Trakt controller/transport unit tests pass; per-conflict UI completion passes build 14/15; remaining sync error/retry/multi-size states need coverage. No real provider/account mutation is tested by these fixtures.
 - Real-device Access/Trakt authentication, haptics, scroll smoothness, gesture timing, accessibility and LiveContainer behavior require device checks. See DEVICE-CHECKS.md.
 
 No credential is currently required for this fixture-backed work. Provider redirect registration or real-device behavior may require user input later; never fake successful sync or writes.

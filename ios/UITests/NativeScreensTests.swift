@@ -3,10 +3,11 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false, scanner: Bool = false) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
         if scanner { app.launchArguments.append("--ui-scanner") }
+        if ratingsUnavailable { app.launchArguments.append("--ui-ratings-unavailable") }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
     }
@@ -52,6 +53,36 @@ import UIKit
         XCTAssertEqual(search.value as? String, "Frieren")
         app.buttons["Clear search"].tap(); app.buttons["List layout"].tap(); capture("Library list")
         app.buttons["Genre sections"].tap(); capture("Library genres")
+    }
+    func testLibraryCommunityRatingPreferenceNeverDisplaysPersonalScores() {
+        let app = launch()
+        app.buttons["tab-more"].tap()
+        let picker = app.buttons["settings-rating-source"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5)); picker.tap(); app.buttons["Trakt"].tap()
+        app.buttons["tab-library"].tap()
+        let title = app.buttons["title-again"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertTrue((title.value as? String)?.contains("Rating 7.7") == true)
+        XCTAssertFalse((title.value as? String)?.contains("Rating 7.5") == true)
+        capture("Library Trakt community ratings")
+        app.buttons["tab-more"].tap(); picker.tap(); app.buttons["TMDB"].tap()
+        app.buttons["tab-library"].tap()
+        XCTAssertFalse((title.value as? String)?.contains("Rating") == true, "This fixture has no TMDB score; its personal rating must not substitute")
+        capture("Library TMDB missing scores")
+    }
+    func testUnavailableCommunityScoresKeepLibraryUsableAndCanSwitchBack() {
+        let app = launch(ratingsUnavailable: true)
+        app.buttons["tab-more"].tap()
+        let picker = app.buttons["settings-rating-source"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5)); picker.tap(); app.buttons["Trakt"].tap()
+        app.buttons["tab-library"].tap()
+        let message = app.staticTexts["Some Trakt ratings are unavailable. Try again later or select TMDB in Settings."]
+        XCTAssertTrue(message.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["title-again"].isHittable)
+        XCTAssertFalse((app.buttons["title-again"].value as? String)?.contains("Rating") == true)
+        capture("Library community ratings unavailable")
+        app.buttons["tab-more"].tap(); picker.tap(); app.buttons["TMDB"].tap()
+        app.buttons["tab-library"].tap(); XCTAssertFalse(message.exists)
     }
     func testCatalogSearchReviewAndCastProfile() {
         let app = launch(); app.buttons["tab-home"].tap()

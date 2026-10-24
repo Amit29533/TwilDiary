@@ -19,6 +19,7 @@ for (const state of states) {
   const errors=[]; page.on('pageerror',error=>errors.push(error.message));
   try {
     if (state.theme) await context.addInitScript(theme=>localStorage.setItem('twildiary.theme.v1',theme),state.theme);
+    if (state.ratingSource) await context.addInitScript(value=>localStorage.setItem('twildiary.community-rating-source.v1',value),state.ratingSource);
     await page.goto(origin+state.path,{waitUntil:'domcontentloaded'});
     if (!state.loading) await settle(page);
     else await page.getByRole('status',{name:'Loading TwilDiary',exact:true}).waitFor();

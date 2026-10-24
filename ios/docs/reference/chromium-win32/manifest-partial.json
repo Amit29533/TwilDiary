@@ -1,7 +1,7 @@
 [
   {
-    "id": "explore-daily",
-    "path": "/preview/explore/daily",
+    "id": "library-trakt-ratings",
+    "path": "/preview/library",
     "scenario": "default",
     "theme": "twilight",
     "engine": "chromium",
@@ -23,304 +23,12 @@
       },
       {
         "tag": "BUTTON",
-        "label": "Search",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Section filters",
-        "value": ""
-      }
-    ],
-    "file": "explore-daily.png",
-    "sha256": "6a34a740c3a723944a86b29b5376947a433742a1e644a5484935b4ee5af52743",
-    "passed": true
-  },
-  {
-    "id": "explore-recommended",
-    "path": "/preview/explore/recommended",
-    "scenario": "default",
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 844,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
         "label": "Spin TwilDiary logo",
         "value": ""
       },
       {
         "tag": "BUTTON",
         "label": "Search",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Section filters",
-        "value": ""
-      }
-    ],
-    "file": "explore-recommended.png",
-    "sha256": "90fe8c9f8a9851d60a97ba991053fd30f37db2ab6f6c2fb3f37eb23967fc0ae9",
-    "passed": true
-  },
-  {
-    "id": "explore-genre-results",
-    "path": "/preview/explore/genres?type=movie&genre=Drama&minimum=7",
-    "scenario": "default",
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 864,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Search",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Section filters",
-        "value": ""
-      }
-    ],
-    "file": "explore-genre-results.png",
-    "sha256": "082cce83c4e0755463758d2e6901e6d6ff4b9f4b1a24523bb68fb7827532dd7c",
-    "passed": true
-  },
-  {
-    "id": "explore-filter-empty",
-    "path": "/preview/explore/rated-shows?minimum=9",
-    "scenario": "default",
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 844,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Search",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Section filters",
-        "value": ""
-      }
-    ],
-    "file": "explore-filter-empty.png",
-    "sha256": "36d8e062bfab6c1bee201fa6421dfff1e6978b2aa7c601af03ff41031a2340d5",
-    "passed": true
-  },
-  {
-    "id": "explore-second-page",
-    "path": "/preview/explore/rated-shows",
-    "scenario": "default",
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 1581,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Search",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Section filters",
-        "value": ""
-      }
-    ],
-    "file": "explore-second-page.png",
-    "sha256": "fa261a848a7d974f49de6cf6fd14e721e96a5f38632d7fb398bc8acb8ca5bc40",
-    "passed": true
-  },
-  {
-    "id": "more-search",
-    "path": "/preview/more",
-    "scenario": "default",
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 2133,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Hide search",
-        "value": ""
-      },
-      {
-        "tag": "INPUT",
-        "label": "Search library and online",
-        "value": "Frieren"
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Close search",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Add manually",
-        "value": ""
-      },
-      {
-        "tag": "SELECT",
-        "label": "TMDBTrakt",
-        "value": "tmdb"
-      },
-      {
-        "tag": "INPUT",
-        "label": "Hide episode spoilers",
-        "value": "on"
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Export diaryTitles, progress, notes and file mappings",
-        "value": ""
-      }
-    ],
-    "file": "more-search.png",
-    "sha256": "1932f06338cd277854b60599c2986262b8cfdc58a644a59d76d82acd4abbf88d",
-    "passed": true
-  },
-  {
-    "id": "stats-search",
-    "path": "/preview/activity",
-    "scenario": "default",
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 2628,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Hide search",
-        "value": ""
-      },
-      {
-        "tag": "INPUT",
-        "label": "Search library and online",
-        "value": "Frieren"
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Close search",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Add manually",
-        "value": ""
-      },
-      {
-        "tag": "SELECT",
-        "label": "Watch time period",
-        "value": "today"
-      },
-      {
-        "tag": "BUTTON",
-        "label": "7D",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "30D",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "90D",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "1Y",
         "value": ""
       },
       {
@@ -330,23 +38,58 @@
       },
       {
         "tag": "BUTTON",
-        "label": "23 Oct 2026: 50m, 1 watches",
+        "label": "Movies",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "All other genres25% · 1 titles",
+        "label": "Shows",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Anime",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Watch status filter",
+        "value": "all"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Genre filter",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Disk filter",
+        "value": "all"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Sort library",
+        "value": "library"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "List view",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Browse by genre",
         "value": ""
       }
     ],
-    "file": "stats-search.png",
-    "sha256": "d17e4677cff5fd0f5bfd5e59bc950ee161503df7d9e1e9a70b4a8459289f49e0",
+    "file": "library-trakt-ratings.png",
+    "sha256": "075cdc1af658c48d267efded61238fc73a09cf61fe7ba2010f6a11fcf7aef4ba",
     "passed": true
   },
   {
-    "id": "files-search",
-    "path": "/preview/files",
-    "scenario": "default",
+    "id": "library-ratings-unavailable",
+    "path": "/preview/library",
+    "scenario": "ratings-unavailable",
     "theme": "twilight",
     "engine": "chromium",
     "browserVersion": "156.0.8078.4",
@@ -355,7 +98,7 @@
       "width": 390,
       "height": 844,
       "documentWidth": 390,
-      "documentHeight": 1392,
+      "documentHeight": 844,
       "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
     },
     "errors": [],
@@ -372,52 +115,62 @@
       },
       {
         "tag": "BUTTON",
-        "label": "Hide search",
-        "value": ""
-      },
-      {
-        "tag": "INPUT",
-        "label": "Search library and online",
-        "value": "Frieren"
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Close search",
+        "label": "Search",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Add manually",
+        "label": "All",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "E: · Windows PC2 mapped folders · 2 titles2 confirmed folders",
+        "label": "Movies",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "F: · Windows PC1 mapped folders · 1 titlesDisconnected · mappings kept",
+        "label": "Shows",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Copy path for Frieren: Beyond Journey’s End",
+        "label": "Anime",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Watch status filter",
+        "value": "all"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Genre filter",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "Disk filter",
+        "value": "all"
+      },
+      {
+        "tag": "SELECT",
+        "label": "Sort library",
+        "value": "library"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "List view",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Copy path for Call of the Night",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Copy path for Severance",
+        "label": "Browse by genre",
         "value": ""
       }
     ],
-    "file": "files-search.png",
-    "sha256": "12a3fcff78da3fc43e8c77e5f8479d2ee12668fdd03363361a770e101ec8eeca",
+    "file": "library-ratings-unavailable.png",
+    "sha256": "365fa7d08e967aa9b5ff7d112528710cb8f94c250a802ef6def452f35e9ea3dc",
     "passed": true
   }
 ]

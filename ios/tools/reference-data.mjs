@@ -52,7 +52,7 @@ export function providerResponse(url, scenario = 'default') {
     return {body:path==='/api/metadata/title'?details:{details,libraryTitle:null}};
   }
   if (path === '/api/metadata/season') return {body: {items:Array.from({length:12},(_,i)=>({number:i+1,tmdbId:100+i,name:url.searchParams.get('reveal')==='1'?`Chapter ${i+1}`:'',overview:'Reference episode summary.',airedOn:'2024-01-01',stillPath:url.searchParams.get('reveal')==='1'?'/reference_backdrop.jpg':null,communityScore:8.1}))}};
-  if (path === '/api/library/ratings') return {body: {source:'trakt',items:{}}};
+  if (path === '/api/library/ratings') return {body: {source:'trakt',ratings:scenario==='ratings-unavailable'?{}:Object.fromEntries((url.searchParams.get('ids')??'').split(',').filter(Boolean).map(id=>[id,{score:id==='again'?7.7:null,state:id==='again'?'rated':'unrated'}]))}};
   if (path === '/api/search') {
     const query=(url.searchParams.get('q')??'').normalize('NFKC').toLowerCase(),page=Number(url.searchParams.get('page')??1);
     const items=catalog.filter(t=>t.name.toLowerCase().includes(query));

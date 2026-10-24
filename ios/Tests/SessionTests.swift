@@ -439,6 +439,35 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         let cancelled = await pending.value
         XCTAssertTrue(cancelled); XCTAssertTrue(store.needsSignIn); XCTAssertNil(store.error)
     }
+    func testPublicRatingsUseExistingEndpointAndKeepProviderFailureOutOfTheGlobalError() async throws {
+        StubProtocol.state.reset { _ in .init(503, #"{"error":{"message":"Synthetic provider unavailable"}}"#) }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)), title = try XCTUnwrap(PreviewData.workspace.activeTitles.first)
+        await store.loadPublicRatings([title, title], source: .tmdb)
+        XCTAssertTrue(StubProtocol.state.recorded().isEmpty)
+        await store.loadPublicRatings([title, title], source: .trakt)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+        XCTAssertEqual(StubProtocol.state.recorded().first?.url?.path, "/api/library/ratings")
+        XCTAssertEqual(store.communityRatings.entries[title.id]?.state, "unavailable")
+        XCTAssertNil(store.error); XCTAssertFalse(store.needsSignIn)
+        await store.loadPublicRatings([title], source: .trakt)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+    }
+    func testSignOutClearsPublicScoresAndIgnoresLateProviderResponse() async throws {
+        StubProtocol.state.reset { _ in
+            var reply = StubProtocol.Reply(#"{"source":"trakt","ratings":{"again":{"score":7.7,"state":"rated"}}}"#)
+            reply.delay = 0.15; return reply
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)), title = try XCTUnwrap(PreviewData.workspace.activeTitles.first { $0.id == "again" })
+        let pending = Task { await store.loadPublicRatings([title], source: .trakt) }
+        for _ in 0..<100 { if !StubProtocol.state.recorded().isEmpty { break }; try await Task.sleep(for: .milliseconds(5)) }
+        store.signOut(); await pending.value
+        XCTAssertTrue(store.communityRatings.entries.isEmpty); XCTAssertFalse(store.communityRatings.loading)
+        XCTAssertNil(store.error)
+        await store.loadPublicRatings([title], source: .trakt)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+    }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
                                        "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),

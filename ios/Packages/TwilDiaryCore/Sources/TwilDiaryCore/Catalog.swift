@@ -123,6 +123,7 @@ public enum PublicRatingSource: String, CaseIterable, Identifiable, Sendable {
 public struct PublicRating: Decodable, Sendable {
     public let score: Double?
     public let state: String
+    public init(score: Double?, state: String) { self.score = score; self.state = state }
 }
 public enum CommunityScore {
     public static func value(tmdb: Double?, trakt: PublicRating?, source: PublicRatingSource) -> Double? {

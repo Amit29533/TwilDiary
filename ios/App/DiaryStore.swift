@@ -68,7 +68,7 @@ import TwilDiaryCore
         fixture = nil
         #endif
         sessionGeneration = UUID(); snapshotGeneration = UUID()
-        api.signOut(); workspace = Workspace(); publicRatings = [:]; hasLoadedWorkspace = false; error = nil
+        api.signOut(); workspace = Workspace(); communityRatings.reset(); hasLoadedWorkspace = false; error = nil
         showingCachedSnapshot = false; lastRefreshedAt = nil; loading = false; busy = false
         do { try cache.removeAll(); cacheWarning = nil }
         catch { cacheWarning = "The saved diary could not be removed. It remains encrypted on this device." }
@@ -142,19 +142,23 @@ import TwilDiaryCore
             let _: TitleReceipt = try await self.read("/api/titles/\(title.id)/restore", method: "POST", body: ["expectedVersion": title.version ?? 1])
         }
     }
-    private(set) var publicRatings: [String: PublicRating] = [:]
+    let communityRatings = CommunityRatingsController()
     func publicScore(_ title: MediaTitle, source: PublicRatingSource) -> Double? {
-        CommunityScore.value(tmdb: title.communityScore, trakt: publicRatings[title.id], source: source)
+        CommunityScore.value(tmdb: title.communityScore, trakt: communityRatings.entries[title.id], source: source)
     }
     func loadPublicRatings(_ titles: [MediaTitle], source: PublicRatingSource) async {
-        guard source == .trakt, !isPreview else { return }
-        let ids = titles.map(\.id).filter { publicRatings[$0] == nil }
-        for offset in stride(from: 0, to: ids.count, by: 24) {
-            if Task.isCancelled { return }
-            do {
-                let page: PublicRatingsPage = try await read(CatalogTools.apiPath("/api/library/ratings", query: ["ids": ids[offset..<min(offset + 24, ids.count)].joined(separator: ",")]))
-                publicRatings.merge(page.ratings) { _, new in new }
-            } catch { if Task.isCancelled { return }; self.error = error.localizedDescription; return }
+        guard source == .trakt, !needsSignIn else { return }
+        await communityRatings.prepare(titles.map(\.id)) { ids in
+            #if DEBUG
+            if self.isPreview {
+                if ProcessInfo.processInfo.arguments.contains("--ui-ratings-unavailable") { return [:] }
+                return Dictionary(uniqueKeysWithValues: ids.map { id in
+                    (id, PublicRating(score: id == "again" ? 7.7 : nil, state: id == "again" ? "rated" : "unrated"))
+                })
+            }
+            #endif
+            let page: PublicRatingsPage = try await self.read(CatalogTools.apiPath("/api/library/ratings", query: ["ids": ids.joined(separator: ",")]))
+            return page.ratings
         }
     }
     func card(_ title: MediaTitle, season: Int? = nil) async throws -> WatchCard {

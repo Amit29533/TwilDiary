@@ -7,6 +7,8 @@ const search = async (page,name,value)=>{
 export const referenceStates = [
   screen('home','/preview/home'),
   screen('library','/preview/library'),
+  screen('library-trakt-ratings','/preview/library',{ratingSource:'trakt'}),
+  screen('library-ratings-unavailable','/preview/library',{ratingSource:'trakt',scenario:'ratings-unavailable'}),
   screen('glance','/preview'),
   screen('stats-today','/preview/activity'),
   screen('history','/preview/recently-watched'),
