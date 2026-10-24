@@ -23,6 +23,13 @@ export function upcomingReferenceWorkspace() {
   return value;
 }
 
+export function manualMovieReferenceWorkspace() {
+  const value=JSON.parse(readFileSync(new URL('../Fixtures/reference-workspace.json',import.meta.url),'utf8'));
+  value.skippedEpisodeIds=value.episodes.filter(item=>item.skipped).map(item=>item.id);
+  value.titles.push({...value.titles.find(title=>title.id==='quiet-orbit'),id:'manual-reference',name:'Manual reference movie',year:1800,status:'watching',poster:null,backdrop:null,communityScore:null,tmdbId:null,runtimeMinutes:null,genres:[],tags:[],notes:'',overview:'',score:7.5,favorite:false,queued:false,version:1});
+  return value;
+}
+
 export const catalog = Array.from({length: 24}, (_, index) => ({
   id: 900001 + index, mediaType: index % 3 === 0 ? 'movie' : 'tv',
   name: ['The Clockmaker', 'A Quiet Journey', 'Midnight Stories', 'Beyond the Stars', 'The Last Summer', 'Letters Home'][index % 6] + (index > 5 ? ` ${index + 1}` : ''),

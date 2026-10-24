@@ -315,7 +315,7 @@ struct ProgressCard: View {
                 .offset(x: drag)
         }.background(.green.opacity(0.15), in: RoundedRectangle(cornerRadius: 14)).clipShape(RoundedRectangle(cornerRadius: 14))
             .simultaneousGesture(DragGesture(minimumDistance: 22).onChanged { value in
-                guard !compact, value.startLocation.x > 24, !store.writesBlocked, card?.next != nil || !title.isSeries else { return }
+                guard !compact, value.startLocation.x > 24, canMark else { return }
                 if value.translation.width > abs(value.translation.height) * 1.3 { drag = min(120, max(0, value.translation.width)); suppressNavigationUntil = .now.addingTimeInterval(0.35) }
             }.onEnded { _ in
                 let mark = drag > 80; if drag > 22 { suppressNavigationUntil = .now.addingTimeInterval(0.35) }; withAnimation(.easeOut(duration: 0.18)) { drag = 0 }
@@ -333,8 +333,8 @@ struct ProgressCard: View {
                     timeLine.font(.system(size: 12, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
                     GeometryReader { proxy in Capsule().fill(.white.opacity(0.15)).overlay(alignment: .leading) { Capsule().fill(.tint).frame(width: proxy.size.width * fraction) } }.frame(height: 4)
                 }.padding(.bottom, 4)
-                Button { Task { await markWatch() } } label: { Image(systemName: "plus").font(.system(size: 24, weight: .regular)).frame(width: 36, height: 36) }
-                    .buttonStyle(.plain).foregroundStyle(theme.ink).background(.tint, in: RoundedRectangle(cornerRadius: 10)).disabled(store.writesBlocked || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
+                Button { Task { await markWatch() } } label: { Image(systemName: title.isSeries ? "plus" : "checkmark").font(.system(size: 24, weight: .regular)).frame(width: 36, height: 36) }
+                    .buttonStyle(.plain).foregroundStyle(theme.ink).background(.tint, in: RoundedRectangle(cornerRadius: 10)).disabled(!canMark).accessibilityLabel("Mark next watch for \(title.name)")
             }
         }.padding(12).frame(height: 142)
     }
@@ -355,19 +355,31 @@ struct ProgressCard: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
                     GeometryReader { proxy in Capsule().fill(.white.opacity(0.16)).overlay(alignment: .leading) { Capsule().fill(.tint).frame(width: proxy.size.width * fraction) } }.frame(height: 6)
-                    Text("\(Int((fraction * 100).rounded()))% complete").font(.system(size: 13)).foregroundStyle(Color(webHex: "#c5c0cf"))
+                    Text(title.isSeries ? "\(Int((fraction * 100).rounded()))% complete" : fraction > 0 ? "Watched" : "Not watched yet").font(.system(size: 13)).foregroundStyle(Color(webHex: "#c5c0cf"))
                 }
-                Button { let reviewed = card?.previous; Task { await store.removeLatest(title, expected: reviewed); await loadCard() } } label: { Image(systemName: "minus").font(.system(size: 18)).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))) }.buttonStyle(.plain).disabled(store.writesBlocked || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
-                Text("\(card?.progress.watched ?? 0)").font(.system(size: 17, weight: .semibold)).monospacedDigit().accessibilityIdentifier("watch-count-" + title.id)
-                Button { Task { await markWatch() } } label: { Image(systemName: "plus").font(.system(size: 20)).foregroundStyle(theme.ink).frame(width: 34, height: 34).background(.tint, in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(.plain).disabled(store.writesBlocked || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
+                if title.isSeries {
+                    Button { let reviewed = card?.previous; Task { await store.removeLatest(title, expected: reviewed); await loadCard() } } label: { Image(systemName: "minus").font(.system(size: 18)).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))) }.buttonStyle(.plain).disabled(store.writesBlocked || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
+                    Text("\(card?.progress.watched ?? 0)").font(.system(size: 17, weight: .semibold)).monospacedDigit().accessibilityIdentifier("watch-count-" + title.id)
+                    Button { Task { await markWatch() } } label: { Image(systemName: "plus").font(.system(size: 20)).foregroundStyle(theme.ink).frame(width: 34, height: 34).background(.tint, in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(.plain).disabled(!canMark).accessibilityLabel("Mark next watch for \(title.name)")
+                } else {
+                    Button { Task { await markWatch() } } label: {
+                        HStack(spacing: 8) { DiaryIcon(name: "check", size: 17); Text(fraction > 0 ? "Watched" : "Log watch") }
+                            .font(.system(size: 13, weight: .semibold)).frame(width: 124, height: 44)
+                            .foregroundStyle(theme.ink).background(theme.accent, in: RoundedRectangle(cornerRadius: 12))
+                    }.buttonStyle(.plain).disabled(!canMark).accessibilityLabel((fraction > 0 ? "Watched " : "Log watch for ") + title.name)
+                }
             }
         }.padding(10)
     }
     private var timeLine: some View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {
-            Text(card?.season.map { "S\($0.number) · E\(card?.progress.watched ?? 0) of \(card?.progress.total ?? 0)" } ?? title.categoryName).foregroundStyle(Color(webHex: "#c5c0cf"))
+            Text(card?.season.map { "S\($0.number) · E\(card?.progress.watched ?? 0) of \(card?.progress.total ?? 0)" } ?? (title.isSeries ? title.categoryName : "Movie")).foregroundStyle(Color(webHex: "#c5c0cf"))
             Text(remaining.map { "· \(DiaryDate.duration($0)) left" } ?? "· Time unknown").foregroundStyle(Color(white: 0.75)).shadow(color: .black.opacity(0.8), radius: 2, y: 1)
         }
+    }
+    private var canMark: Bool {
+        guard !store.writesBlocked, let card else { return false }
+        return title.isSeries ? card.next != nil : card.progress.watched == 0
     }
     private var fraction: Double { guard let card, card.progress.total > 0 else { return 0 }; return min(1, Double(card.progress.watched) / Double(card.progress.total)) }
     private var cardBackdrop: String? { ["again", "night", "severance"].contains(title.id) ? "scene:" + title.id : title.backdrop ?? title.poster }

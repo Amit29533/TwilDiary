@@ -17,6 +17,7 @@ export const referenceStates = [
   screen('library-trakt-ratings','/preview/library',{ratingSource:'trakt'}),
   screen('library-ratings-unavailable','/preview/library',{ratingSource:'trakt',scenario:'ratings-unavailable'}),
   screen('glance','/preview'),
+  screen('glance-movie-watching','/preview',{scenario:'manual-movie-watching',action:async page=>{await page.getByRole('button',{name:'Log watch',exact:true}).scrollIntoViewIfNeeded();}}),
   screen('stats-today','/preview/activity'),
   screen('history','/preview/recently-watched'),
   screen('history-normalized-search','/preview/recently-watched',{action:async page=>page.getByRole('searchbox',{name:'Search watch history',exact:true}).fill('Ｆｒｉｅｒｅｎ')}),

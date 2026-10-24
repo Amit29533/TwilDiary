@@ -37,6 +37,8 @@ Local validation for build 23: unchanged web unit suite passes 346/346 (log .loc
 
 IOS-PARITY.md is reconciled with the completed build-21 per-case log (rather than stale build-15/17 pending descriptions). It still does not claim any entire screen/step finished: expanded all-size and visual gates, carousel auto-rotation, some Library routes, full sync/error/retry matrix and physical authentication/performance remain open. Build 22 source/unit/extra-device evidence must be read when the run completes.
 
+Glance movie follow-up (build 23, native CI pending): current GlanceCard has separate movie Log watch/Watched controls, not an episode stepper. Native now follows that branch, including movie progress copy, a check on the Home action, and a single canMark guard that rejects already-watched movies or unloaded/caught-up cards for both taps/swipes. The existing manual-movie Watching UI case now logs through Glance, undoes it, and checks the title's real movie input is Not watched while its rating remains unchanged. Series +/- and existing watch/drag regressions remain intact. A matching source-browser manual movie state expands the reference inventory to 99; native acceptance remains pending.
+
 ## Evidence and pending acceptance
 
 - Latest completed build 20 / 40078903285 / cb16e882980466fefb5df0f7694184ca3f68310e was cancelled by its time limit. Simulator and arm64 Release compiled with zero warnings; 42 Core + 76 native unit tests and 16 UI cases passed before interruption during Person. Remaining UI, including range drag, and both extra-device runs remain unverified. Partial xcresult lacks Info.plist; only final-screen.png exported. Artifacts under .local/ios-app-build-40078903285 are diagnostic only.

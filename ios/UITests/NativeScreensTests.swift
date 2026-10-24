@@ -259,6 +259,21 @@ import UIKit
         XCTAssertTrue(save.isHittable); save.tap()
         XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 10)); XCTAssertEqual(app.buttons["title-personal-rating"].value as? String, "7.5")
         XCTAssertTrue(app.buttons["title-watch-status"].exists); capture("Manual title saved")
+        app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["tab-glance"].tap()
+        let quick = app.buttons["Log watch for Manual reference movie"]
+        for _ in 0..<10 { if quick.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(quick.isHittable)
+        wait(for: [expectation(for: NSPredicate(format: "enabled == true"), evaluatedWith: quick)], timeout: 5)
+        capture("Glance movie log action"); quick.tap()
+        wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: quick)], timeout: 5)
+        XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 5)); app.buttons["Undo"].tap()
+        app.buttons["tab-library"].tap()
+        let created = app.buttons.matching(NSPredicate(format: "label == 'Manual reference movie'")).firstMatch
+        for _ in 0..<8 { if created.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(created.isHittable); created.tap()
+        let movieInput = app.sliders["movie-watch-input"]
+        XCTAssertTrue(movieInput.waitForExistence(timeout: 5)); XCTAssertEqual(movieInput.value as? String, "Not watched")
+        XCTAssertEqual(app.buttons["title-personal-rating"].value as? String, "7.5"); capture("Glance movie Undo restored")
     }
 
     func testCatalogSeriesSeasonsSpoilersAndImport() {

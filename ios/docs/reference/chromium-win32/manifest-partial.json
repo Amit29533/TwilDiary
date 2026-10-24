@@ -1,9 +1,8 @@
 [
   {
-    "id": "home-random-pick",
-    "path": "/preview/home",
-    "scenario": "default",
-    "randomSample": 0.45,
+    "id": "glance-movie-watching",
+    "path": "/preview",
+    "scenario": "manual-movie-watching",
     "theme": "twilight",
     "engine": "chromium",
     "browserVersion": "156.0.8078.4",
@@ -12,7 +11,7 @@
       "width": 390,
       "height": 844,
       "documentWidth": 390,
-      "documentHeight": 1750,
+      "documentHeight": 1151,
       "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
     },
     "errors": [],
@@ -34,100 +33,41 @@
       },
       {
         "tag": "BUTTON",
-        "label": "Mark episode 9 watched for 18 Again",
+        "label": "All",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Mark episode 13 watched for Frieren: Beyond Journey’s End",
+        "label": "Movies",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Mark episode 6 watched for Call of the Night",
+        "label": "Shows",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Mark episode 4 watched for Severance",
+        "label": "Anime",
+        "value": ""
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "More options for 18 Again"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Queue",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Previous continue watching title",
+        "label": "Move to Trash",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Next continue watching title",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Start automatic carousel",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Pick for meChoose from 1 unwatched planned titles",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Close random pick",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Pick again",
-        "value": ""
-      }
-    ],
-    "file": "home-random-pick.png",
-    "sha256": "8e6e0ef67fdedec704472818e2cd31724f862e3e153d26a98c73fb232bd31156",
-    "passed": true
-  },
-  {
-    "id": "collection-random-pick",
-    "path": "/preview/home",
-    "scenario": "default",
-    "randomSample": 0.45,
-    "theme": "twilight",
-    "engine": "chromium",
-    "browserVersion": "156.0.8078.4",
-    "referenceTime": "2026-10-23T12:00:00.000Z",
-    "geometry": {
-      "width": 390,
-      "height": 844,
-      "documentWidth": 390,
-      "documentHeight": 1750,
-      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
-    },
-    "errors": [],
-    "controls": [
-      {
-        "tag": "BUTTON",
-        "label": "Close random pick",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Pick again",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Spin TwilDiary logo",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Search",
+        "label": "Mark episode 8 unwatched for 18 Again",
         "value": ""
       },
       {
@@ -136,8 +76,46 @@
         "value": ""
       },
       {
+        "tag": "SUMMARY",
+        "label": "More options for Frieren: Beyond Journey’s End"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Queue",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Move to Trash",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 12 unwatched for Frieren: Beyond Journey’s End",
+        "value": ""
+      },
+      {
         "tag": "BUTTON",
         "label": "Mark episode 13 watched for Frieren: Beyond Journey’s End",
+        "value": ""
+      },
+      {
+        "tag": "SUMMARY",
+        "label": "More options for Call of the Night"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Queue",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Move to Trash",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 5 unwatched for Call of the Night",
         "value": ""
       },
       {
@@ -146,33 +124,51 @@
         "value": ""
       },
       {
+        "tag": "SUMMARY",
+        "label": "More options for Severance"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Queue",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Move to Trash",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Mark episode 3 unwatched for Severance",
+        "value": ""
+      },
+      {
         "tag": "BUTTON",
         "label": "Mark episode 4 watched for Severance",
         "value": ""
       },
       {
+        "tag": "SUMMARY",
+        "label": "More options for Manual reference movie"
+      },
+      {
         "tag": "BUTTON",
-        "label": "Previous continue watching title",
+        "label": "Queue",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Next continue watching title",
+        "label": "Move to Trash",
         "value": ""
       },
       {
         "tag": "BUTTON",
-        "label": "Start automatic carousel",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Pick for meChoose from 1 unwatched planned titles",
+        "label": "Log watch",
         "value": ""
       }
     ],
-    "file": "collection-random-pick.png",
-    "sha256": "209d0686d5adefdbb1b94d8bffacd612dff58f59a3aeb71800561352a42ab7c7",
+    "file": "glance-movie-watching.png",
+    "sha256": "4468a11837434a95a35394eb30b1686e234689887633067d584ffb3a4050676a",
     "passed": true
   }
 ]
