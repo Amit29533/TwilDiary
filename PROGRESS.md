@@ -10,6 +10,19 @@ New24Oct device references f7536327 /4e7a07b4 /7100f25e /cc8340c4 queue these ch
 - Audit rounded corners and theme colors for all actionable controls; use native Liquid Glass where it fits, with a blurred artwork/dominant-color backdrop in Glass theme, respecting contrast and reduced transparency/motion.
 - Reduce repeated Trakt recommendation loading through a session-scoped cache, background refresh and generation guards; preserve truthful loading/outage/connection states.
 
+User clarified the scope must not be shortened, and calls the bottom control the **navigation bar**. Full acceptance checklist for the follow-on:
+1. Dedicated Trash destination with its own presentation; retain its existing Library button and all restore/delete safeguards.
+2. Right-side title information icon expands a sheet/panel containing real Trakt watchers, plays, collectors, comments, lists and positive/negative community sentiment where the API supplies them (reference f7536327). Never substitute personal ratings or invented copy. Cover every saved show and relevant catalog show, plus genuine unavailable/no-data states.
+3. Glance menu removes Open title; displays Mark complete while still completing only the current season.
+4. Fix bottom navigation-bar stutter during taps and hold/slide selection. Preserve smooth release/cancellation, liquid lens motion and reduced-motion behavior; validate with recordings and a phone check.
+5. Audit every actionable control for rounded geometry, consistent accent/foreground/disabled colors and contrast. Prefer appropriate native Glass components; keep controls accessible and actions intact.
+6. Trakt recommendations load quickly in every location through shared owner/session-scoped cached results, coalesced/background refresh and no cross-account leakage. Retry/outage/disconnected states must remain truthful.
+7. Remove redundant Explore Done actions at root/section/cast browsing levels where native navigation supplies Back; native completed/cancelled back gestures work throughout, preserving query/scroll state and excluding deliberate horizontal controls.
+8. Scrolled title/episode navigation adopts reference7100f25e: compact cover thumbnail and title in the top bar, appropriate back/share controls, readable material behind it, and a smooth transition without moving content.
+9. Glass theme applies to the app's visible surfaces **and navigation bar**, using a blurred artwork/dominant-color backdrop like cc8340c4, with coordinated theme accents. Include polished liquid/spring feedback, safe layering, Reduce Transparency/Motion and performance checks throughout.
+
+The references are C:/Users/AMITSI~1/AppData/Local/Temp/codex-clipboard-f7536327-3261-4d49-9923-eb7ba3949cba.png, codex-clipboard-4e7a07b4-e458-45e1-bf32-bf1467c4fe99.png, codex-clipboard-7100f25e-c3ad-44cf-b188-fdbf25aa3f83.png and codex-clipboard-cc8340c4-b5ec-4b5e-8808-f9ea4411c713.png in the same folder. Each item needs functional coverage, reviewed screenshots and documented device-only limits.
+
 Do not start implementation of this follow-on while the previous requested fixes remain unverified. First finish active run40113092136 and all repairs, then work through this new batch with functional tests, screenshots and phone checks.
 
 ## Current continuation — build 29 pushed and awaiting CI
