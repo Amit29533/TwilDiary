@@ -16,3 +16,5 @@ After each passed build, install the unsigned IPA using LiveContainer or your si
 Hosted mutation tests require the owner's explicit authorization. Simulator checks use synthetic fixtures.
 
 - Random pick: three logo taps within 850ms open one dialog; ordinary spaced taps only spin the logo. Check the 650ms reroll guard, reduced-motion behavior, VoiceOver modal focus/escape and keyboard dismissal. CI screenshots cannot establish those physical timings.
+
+- Confirmed save with a subsequent read outage: after the write receipt, disconnect networking before refresh completes. The Saved/Refresh notice must preserve the old complete diary and Undo, disable repeated writes, then clear after reconnect/Refresh shows exactly one added viewing. Check app interruption/relaunch separately; recovery markers are currently session memory, not a persisted write outbox.
