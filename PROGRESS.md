@@ -1,5 +1,11 @@
 # Native TwilDiary progress
 
+## Live checkpoint — 25 October local time
+
+Build31/source d8a8476/run40120123169 passes Core, simulator compilation, native unit stage and all ten early UI cases. Physical Release compilation/unsigned IPA packaging succeeds. Full43 primary UI is running; compact/large layouts and final zero-warning summary are still pending. IPA downloaded privately to .local/ios-app-build-40120123169/ipa, verified ZIP/build31/unsigned payload and SHA2567e7afb63637e6b853e02f44df76c362e3aee110a0e7426f0e67c276d8512e11e; verification-pending.json explicitly refuses full acceptance. Do not cancel31 by pushing ios/** work.
+
+Prepared locally after its early gate passed: VersionedField keeps drafts, recognizes unrelated version changes, blocks same-field conflicts until Use saved/Keep my draft, and prevents a confirmed write with failed refresh from replaying or reverting the draft. Eight Core cases cover rebasing, explicit conflict resolution, clear-rating/nil semantics, stale observations, typing during save and confirmed-refresh failure. Saved-title Notes/rating use the helper and retain failed drafts; the existing Notes/cast UI case now also changes Favorite before saving. Changed Swift syntax/diff review is local only, not native compilation. These files are not in31 and must not be described as passed. Next after31 finishes: download/review every actual UI failure/layout/screenshot, combine any required repairs with this audited editor batch, bump the next build and validate all gates. Follow-on feature implementation remains pending the preceding fixes.
+
 ## Current continuation — build 30 reviewed, build 31 prepared
 
 Run40115623427 attempt2/source548afbf completed failure: Core56/56, native unit119/119, simulator/test bundles compile with zero warnings; early UI8/10. All six Settings Done destinations now return correctly. Late-metadata Glance Notes/save/reopen and bounded Surprise tap/swipe/reroll/Open pass. Two remaining failures are content Back tests. Downloaded exact attempt2 screenshot/result artifacts12569678521/12569543206 (ZIP CRC checked) under .local/ios-app-build-40115623427-attempt2, avoiding same-name attempt1 artifacts. Frame-by-frame Explore recording shows a genuine interactive native pop that cancels; saved-title swipe does not return. No new IPA, full43 UI or extra-phone acceptance.

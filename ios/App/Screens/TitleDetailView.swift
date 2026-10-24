@@ -23,12 +23,9 @@ struct TitleDetailView: View {
     @State private var showNotes = false
     @State private var showLocation = false
     @State private var copiedLocation: String?
-    @State private var notes = ""
-    @State private var notesVersion: Int?
-    @State private var ratingVersion: Int?
-    @State private var rating = 7.0
+    @State private var notesField = VersionedField(value: "", version: nil)
+    @State private var ratingField = VersionedField<Double?>(value: nil, version: nil)
     @State private var showRating = false
-    @State private var ratingEditing = false
     @State private var resetConfirmation = false
     @State private var card: WatchCard?
     @State private var cardRequest = UUID()
@@ -57,9 +54,12 @@ struct TitleDetailView: View {
                                 VStack(spacing: 20) {
                                     DisclosureGroup("Notes", isExpanded: $showNotes) {
                                         VStack(alignment: .leading, spacing: 12) {
-                                            TextEditor(text: $notes).frame(minHeight: 110).scrollContentBackground(.hidden).focused($notesFocused).accessibilityIdentifier("title-notes").accessibilityLabel("Title notes").id("notes-editor")
-                                            if notes.utf16.count > 20_000 { Text("Keep notes within 20,000 characters.").font(.caption).foregroundStyle(.orange) }
-                                            Button("Save notes") { Task { if await store.patch(title, values: ["notes": notes], expectedVersion: notesVersion) { notesVersion = store.title(id)?.version } } }.disabled(store.writesBlocked || notes == title.notes || notes.utf16.count > 20_000)
+                                            TextEditor(text: $notesField.draft).frame(minHeight: 110).scrollContentBackground(.hidden).focused($notesFocused).accessibilityIdentifier("title-notes").accessibilityLabel("Title notes").id("notes-editor")
+                                            if notesField.draft.utf16.count > 20_000 { Text("Keep notes within 20,000 characters.").font(.caption).foregroundStyle(.orange) }
+                                            if notesField.conflict != nil {
+                                                fieldConflict("Notes changed elsewhere.", useSaved: { notesField.useSaved() }, keepDraft: { notesField.keepDraft() })
+                                            }
+                                            Button("Save notes") { Task { await saveNotes() } }.disabled(store.writesBlocked || !notesField.isDirty || notesField.submission == nil || notesField.draft.utf16.count > 20_000)
                                         }.padding(.top, 12)
                                     }.id("notes")
                                     Divider()
@@ -98,7 +98,7 @@ struct TitleDetailView: View {
                                 }
                             }
                             .toolbar { ToolbarItemGroup(placement: .keyboard) { if notesFocused { Spacer(); Button("Done") { notesFocused = false }.accessibilityIdentifier("notes-keyboard-done") } } }
-                            .task { if !initializedEditor { initializedEditor = true; watchDate = store.now; notes = title.notes; notesVersion = title.version; rating = title.score ?? 7 } }
+                            .task { if !initializedEditor { initializedEditor = true; watchDate = store.now; notesField = VersionedField(value: title.notes, version: title.version); ratingField = VersionedField(value: title.score, version: title.version) } }
                             .task(id: season) {
                                 if configuredSeason != season { configuredSeason = season; sliderDraft = nil; showAllEpisodes = false }
                                 await prepareSeason(title)
@@ -126,9 +126,10 @@ struct TitleDetailView: View {
                             }
                             .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
                             .onChange(of: store.sessionRevision) { _, _ in episodeDetails.reset(); revealedEpisodeIDs = []; expandedEpisodes = [] }
-                            .onChange(of: title.version) { _, version in
-                                // A confirmed notes save may be followed by delayed snapshot reconciliation.
-                                if notes == title.notes { notesVersion = version }
+                            .onChange(of: title) { _, saved in
+                                guard initializedEditor else { return }
+                                notesField.observe(.init(value: saved.notes, version: saved.version))
+                                ratingField.observe(.init(value: saved.score, version: saved.version))
                             }
                             .confirmationDialog("Reset progress to 0? Logged watches will be removed, with Undo available.", isPresented: $resetConfirmation, titleVisibility: .visible) {
                                 Button("Reset to Planned", role: .destructive) { Task { await store.setStatus(title, status: "planned"); await loadCard(title) } }
@@ -363,27 +364,58 @@ struct TitleDetailView: View {
             HStack(spacing: 12) {
                 HStack(spacing: 7) { DiaryIcon(name: "star", size: 16); Text("Your rating") }.foregroundStyle(.secondary)
                 Spacer(minLength: 0)
-                Text(title.score != nil || ratingEditing ? rating.formatted(.number.precision(.fractionLength(1))) : "Not rated").monospacedDigit()
-                if title.score != nil { Button("Clear") { Task { await saveRating(title, value: nil) } }.accessibilityLabel("Clear your rating") }
-                else { Button("Rate " + rating.formatted(.number.precision(.fractionLength(1)))) { Task { await saveRating(title, value: rating) } } }
+                Text(ratingField.draft.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "Not rated").monospacedDigit()
+                if ratingField.draft != nil { Button("Clear") { Task { await saveRating(value: nil) } }.accessibilityLabel("Clear your rating") }
+                else { Button("Rate 7.0") { Task { await saveRating(value: 7) } } }
             }.font(.system(size: 14)).frame(minHeight: 32)
             HStack(spacing: 10) {
                 Text("1").foregroundStyle(.secondary)
-                Slider(value: Binding(get: { rating }, set: { rating = $0; ratingEditing = true }), in: 1...10, step: 0.5) { editing in
-                    if !editing { Task { await saveRating(title, value: rating) } }
+                Slider(value: Binding(get: { ratingField.draft ?? 7 }, set: { ratingField.draft = $0 }), in: 1...10, step: 0.5) { editing in
+                    if !editing { Task { await saveRating(value: ratingField.draft) } }
                 }.accessibilityLabel("Your rating out of 10").accessibilityIdentifier("title-rating-slider")
                 Text("10").foregroundStyle(.secondary)
             }.font(.system(size: 12))
+            if ratingField.conflict != nil {
+                fieldConflict("Your rating changed elsewhere.", useSaved: { ratingField.useSaved() }, keepDraft: { ratingField.keepDraft() })
+            }
+            if ratingField.isDirty && ratingField.submission != nil {
+                Button("Save rating") { Task { await saveRating(value: ratingField.draft) } }
+            }
         }.disabled(store.writesBlocked || !store.canMutate).accessibilityElement(children: .contain).accessibilityIdentifier("title-rating-panel")
     }
-    private func saveRating(_ title: MediaTitle, value: Double?) async {
-        let rounded = value.map { ($0 * 2).rounded() / 2 }
-        if await store.patch(title, values: ["score": rounded as Any? ?? NSNull()], expectedVersion: ratingVersion) { ratingVersion = store.title(id)?.version }
-        rating = ((store.title(id)?.score ?? 7) * 2).rounded() / 2; ratingEditing = false
+    private func saveRating(value: Double?) async {
+        ratingField.draft = value.map { ($0 * 2).rounded() / 2 }
+        guard let current = store.title(id) else { return }
+        ratingField.observe(.init(value: current.score, version: current.version))
+        guard let submitted = ratingField.submission else { return }
+        let acknowledged = await store.patch(current, values: ["score": submitted.value as Any? ?? NSNull()], expectedVersion: submitted.version)
+        guard let saved = store.title(id) else { return }
+        let snapshot = VersionedField<Double?>.Snapshot(value: saved.score, version: saved.version)
+        if acknowledged { ratingField.acknowledge(submitted, latest: snapshot) }
+        else { ratingField.observe(snapshot) }
     }
     private func openRating(_ title: MediaTitle) {
-        if !showRating { rating = ((title.score ?? 7) * 2).rounded() / 2; ratingVersion = title.version; ratingEditing = false }
+        ratingField.observe(.init(value: title.score, version: title.version))
         showRating.toggle()
+    }
+    private func saveNotes() async {
+        guard let current = store.title(id), notesField.draft.utf16.count <= 20_000 else { return }
+        notesField.observe(.init(value: current.notes, version: current.version))
+        guard let submitted = notesField.submission else { return }
+        let acknowledged = await store.patch(current, values: ["notes": submitted.value], expectedVersion: submitted.version)
+        guard let saved = store.title(id) else { return }
+        let snapshot = VersionedField<String>.Snapshot(value: saved.notes, version: saved.version)
+        if acknowledged { notesField.acknowledge(submitted, latest: snapshot) }
+        else { notesField.observe(snapshot) }
+    }
+    private func fieldConflict(_ message: String, useSaved: @escaping () -> Void, keepDraft: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(message + " Your draft is kept. Choose which version to use before saving.").font(.footnote).foregroundStyle(.secondary)
+            ViewThatFits(in: .horizontal) {
+                HStack { Button("Use saved", action: useSaved); Button("Keep my draft", action: keepDraft) }
+                VStack(alignment: .leading) { Button("Use saved", action: useSaved); Button("Keep my draft", action: keepDraft) }
+            }.buttonStyle(.bordered).buttonBorderShape(.capsule)
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
     private struct CardRevision: Hashable {
         let season: Int

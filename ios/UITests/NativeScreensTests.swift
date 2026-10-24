@@ -662,6 +662,10 @@ import UIKit
         for _ in 0..<10 { if editor.isHittable { break }; app.swipeUp() }
         XCTAssertTrue((editor.value as? String)?.contains("Native draft survives cast navigation") == true)
         capture("Notes draft retained")
+        // Favorite changes the title version, but must not conflict with an unchanged
+        // saved Notes field or discard this still-unsaved local draft.
+        app.buttons["Favorite"].tap()
+        XCTAssertTrue((editor.value as? String)?.contains("Native draft survives cast navigation") == true)
         app.buttons["Save notes"].tap()
         wait(for: [expectation(for: NSPredicate(format: "enabled == false"), evaluatedWith: app.buttons["Save notes"])], timeout: 10)
     }
