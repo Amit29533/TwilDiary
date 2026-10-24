@@ -157,8 +157,7 @@ import TwilDiaryCore
         if isPreview { return PreviewData.card(title, workspace: workspace, season: season) }
         var query = "?day=\(DiaryDate.day())"
         if let season { query += "&season=\(season)" }
-        do { return try await api.request("/api/glance/\(title.id)" + query) }
-        catch { fail(error); throw error }
+        return try await read("/api/glance/\(title.id)" + query)
     }
     func loadSeason(_ title: MediaTitle, number: Int) async {
         await perform {
@@ -172,7 +171,7 @@ import TwilDiaryCore
                 let card = try await self.card(title, season: season)
                 if let expectedEpisode, card.next?.id != expectedEpisode { throw APIError.message("Progress changed. Refresh this title before marking another episode.") }
                 if title.isSeries && card.next == nil { throw APIError.message("No aired episode is ready to mark. Load this season’s episodes or choose another season.") }
-                self.pendingWatches[key] = ["operationId": UUID().uuidString, "episodeId": card.next?.id as Any? ?? NSNull(), "watchedAt": Date.now.ISO8601Format(), "rewatch": false]
+                self.pendingWatches[key] = ["operationId": UUID().uuidString, "episodeId": card.next?.id as Any? ?? NSNull(), "watchedAt": self.now.ISO8601Format(), "rewatch": false]
             }
             let operation = self.pendingWatches[key]!
             let result: WatchReceipt

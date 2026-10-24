@@ -282,6 +282,10 @@ struct ProgressCard: View {
         if !title.isSeries { return title.runtimeMinutes.map { card.progress.watched == 0 ? $0 : 0 } }
         return SeasonProgress.calculate(title: title, workspace: store.workspace, season: card.season?.number ?? 1).remainingMinutes
     }
-    private func loadCard() async { do { card = try await store.card(title) } catch { store.error = error.localizedDescription } }
+    private func loadCard() async {
+        do { let result = try await store.card(title); guard !Task.isCancelled else { return }; card = result }
+        catch is CancellationError { }
+        catch { if !Task.isCancelled { store.error = error.localizedDescription } }
+    }
     private func markWatch() async { await store.markNext(title, expectedEpisode: card?.next?.id); await loadCard() }
 }

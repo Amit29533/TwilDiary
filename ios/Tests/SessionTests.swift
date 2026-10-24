@@ -399,6 +399,26 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         catch { XCTAssertTrue(store.needsSignIn) }
         XCTAssertEqual(StubProtocol.state.recorded().count, 2)
     }
+    func testSignOutDiscardsLateProgressCardWithoutPublishingAnError() async throws {
+        StubProtocol.state.reset { _ in
+            var reply = StubProtocol.Reply(#"{"progress":{"watched":1,"total":16},"season":null,"next":null,"previous":null}"#)
+            reply.delay = 0.15; return reply
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)), title = try XCTUnwrap(PreviewData.workspace.activeTitles.first)
+        let pending = Task { () -> Bool in
+            do { _ = try await store.card(title); return true }
+            catch is CancellationError { return false }
+            catch { XCTFail("Expected session cancellation, received \(error)"); return false }
+        }
+        for _ in 0..<100 {
+            if !StubProtocol.state.recorded().isEmpty { break }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        store.signOut()
+        let accepted = await pending.value
+        XCTAssertFalse(accepted); XCTAssertTrue(store.needsSignIn); XCTAssertNil(store.error)
+    }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
                                        "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),
