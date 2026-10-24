@@ -102,7 +102,7 @@ struct LibraryView: View {
                 } else {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), alignment: .leading, spacing: 20) { ForEach(filtered) { poster($0) } }.padding(.horizontal, 14)
                 }
-                if filtered.isEmpty { ContentUnavailableView(archived ? "Trash is clear" : "No matching titles", systemImage: archived ? "trash" : "books.vertical", description: Text(archived ? "Removed titles will appear here. Try clearing filters if a title is missing." : "Change your filters or search.")) }
+                if filtered.isEmpty { DiaryEmptyState(title: archived ? "Trash is clear" : "Nothing here just yet", description: archived ? "Removed titles will appear here. Try clearing filters if a title is missing." : "Try a different search or clear a filter to find your stories.").padding(.horizontal, 14).padding(.top, 20) }
             }.refreshable { await store.refresh(); await store.loadPublicRatings(collection, source: ratingSource) }
     }
     private func applyShortcut() {
@@ -174,7 +174,7 @@ struct GlanceView: View {
             CategoryPicker(selection: $category)
             ScrollView {
                 LazyVStack(spacing: 8) { ForEach(titles) { ProgressCard(title: $0) } }.padding(.horizontal, 8).padding(.top, 12).padding(.bottom, 16)
-                if titles.isEmpty { ContentUnavailableView("A clear little corner", systemImage: "eye", description: Text("No current watches match these filters. Try another category or clear your search.")) }
+                if titles.isEmpty { DiaryEmptyState(title: "A clear little corner", description: "No current watches match these filters. Try another category or clear your search.").padding(.horizontal, 14).padding(.top, 20) }
             }.refreshable { await store.refresh() }
         }
     }

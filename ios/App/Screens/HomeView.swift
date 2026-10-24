@@ -14,21 +14,21 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
-                    VStack(spacing: 10) {
+                    if !watching.isEmpty { VStack(spacing: 10) {
                         SectionHeading(name: "Pick up where you left off") { Button("Glance →") { router.selectedTab = .glance } }
-                        if watching.isEmpty { Text("Your next watch starts in Library.").foregroundStyle(.secondary).padding(.vertical, 20) }
-                        else {
+                        Group {
                             ScrollView(.horizontal) {
                                 LazyHStack(spacing: 12) { ForEach(watching) { ProgressCard(title: $0, compact: true).containerRelativeFrame(.horizontal, count: 1, spacing: 12) } }.scrollTargetLayout()
                             }.scrollTargetBehavior(.viewAligned).scrollIndicators(.hidden)
                         }
-                    }
+                    } }
                     ScrollView(.horizontal) {
                         HStack(spacing: 8) {
                             NavigationLink(value: AppDestination.explore) { shortcut("Explore", "compass") }.accessibilityIdentifier("explore-shortcut")
                             Button { router.library("queue") } label: { shortcut("Queue", "download") }.accessibilityIdentifier("queue-shortcut")
                             Button { router.library("disk") } label: { shortcut("Disk Map", "hard-drive") }
                             Button { router.files() } label: { shortcut("Locations", "folder") }
+                            NavigationLink { ScannerReviewView() } label: { shortcut("Fix mismatches", "scan-search") }.accessibilityIdentifier("scanner-shortcut")
                         }.buttonStyle(.plain)
                     }.scrollIndicators(.hidden)
                     VStack(spacing: 10) {
@@ -64,12 +64,12 @@ struct HomeView: View {
                         if overview.upcoming.count > upcomingLimit { Button("Show more episodes") { upcomingLimit += 5 } }
                         Text("Based on your saved episode dates. Air dates may change.").font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    VStack(spacing: 10) {
+                    if !store.workspace.activeEvents.isEmpty { VStack(spacing: 10) {
                         SectionHeading(name: "Recently watched") { NavigationLink("All history →", value: AppDestination.history) }
                         ForEach(sortedHistory(store.workspace.activeEvents).prefix(4)) { event in
                             if let title = store.title(event.titleId) { NavigationLink(value: title.id) { historyRow(event, title: title, workspace: store.workspace) }.buttonStyle(.plain) }
                         }
-                    }
+                    } }
                 }.padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 24)
             }.refreshable { await store.refresh() }
         }.sheet(item: $pick) { title in

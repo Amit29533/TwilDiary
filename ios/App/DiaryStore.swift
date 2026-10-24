@@ -48,6 +48,7 @@ import TwilDiaryCore
         if isPreview {
             workspace = PreviewData.workspace; needsSignIn = false; hasLoadedWorkspace = true
             #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--ui-empty") { workspace = Workspace() }
             if ProcessInfo.processInfo.arguments.contains("--ui-title-metadata") { workspace = PreviewData.metadataWorkspace }
             #endif
             #if DEBUG

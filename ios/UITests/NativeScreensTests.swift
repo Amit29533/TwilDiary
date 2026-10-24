@@ -3,12 +3,13 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
         if scanner { app.launchArguments.append("--ui-scanner") }
         if ratingsUnavailable { app.launchArguments.append("--ui-ratings-unavailable") }
         if titleMetadata { app.launchArguments.append("--ui-title-metadata") }
+        if empty { app.launchArguments.append("--ui-empty") }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
     }
@@ -43,6 +44,20 @@ import UIKit
         app.buttons["tab-more"].tap()
         XCTAssertTrue(app.staticTexts["Appearance & region"].waitForExistence(timeout: 5)); capture("More")
     }
+    func testEmptyDiaryScreensRetainNavigationAndSourceEmptyStates() {
+        let app = launch(empty: true)
+        XCTAssertTrue(app.staticTexts["A clear little corner"].waitForExistence(timeout: 5)); capture("Empty Glance")
+        app.buttons["tab-home"].tap()
+        XCTAssertTrue(app.staticTexts["This week"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["Pick up where you left off"].exists); XCTAssertFalse(app.staticTexts["Recently watched"].exists)
+        XCTAssertTrue(app.staticTexts["0m"].exists); capture("Empty Home")
+        app.buttons["tab-library"].tap()
+        XCTAssertTrue(app.staticTexts["Nothing here just yet"].waitForExistence(timeout: 5)); capture("Empty Library")
+        app.buttons["tab-stats"].tap()
+        XCTAssertTrue(app.staticTexts["Log a movie or episode to start your stats."].waitForExistence(timeout: 5)); capture("Empty Stats")
+        XCTAssertTrue(app.buttons["stats-calendar"].isHittable)
+    }
+
     func testLibrarySearchAndSelectionPersistAcrossTabs() {
         let app = launch()
         app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
