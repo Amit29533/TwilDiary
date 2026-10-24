@@ -1,5 +1,9 @@
 # Verification of the second native review
 
+## Current scoped evidence — build36
+
+Codemagic34/source6d4c21c passes Core64/native135;36/source7f166a7 passes Core64/native139 and9/10 early UI cases. Both overall runs fail and are not accepted releases. The eight VersionedField Core scenarios now execute successfully, and the actual Notes/Favorite/save/reopen UI regression passes36; editor field-conflict handling is no longer merely local source. Shared owner/account-scoped discovery cache, coalescing, stale refresh, status revalidation and concurrent recommendation tests pass34 (seven cache/two controller cases). Four dominant-artwork/URL safety tests pass36. Actual36 hero/header screenshots are in ios/docs/screenshots/step-10/build-36-diagnostic with honest scope. These results supersede the earlier prepared-only notes below. Access-browser recovery, active-slider external updates, broader derived/JSON/encrypted-cache performance, existing-item Keychain policy and release fixture hygiene remain open; source test passes do not erase those findings or establish physical smoothness.
+
 ## Runtime reconciliation — build 30, 24 October
 
 The table below records the original build25 findings; it must not be read as the current fix status. Source548afbf, run40115623427 attempt2, passes Core56/56 and native unit119/119 with zero simulator/test-bundle build warnings. Exact attempt2 logs/results are saved locally under .local/ios-app-build-40115623427-attempt2/results. The overall run still fails two navigation UI cases, so this is scoped logic evidence, not release acceptance.

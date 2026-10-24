@@ -138,7 +138,17 @@ import UIKit
             // sits beneath the floating navigation bar. Reveal the whole action.
             for _ in 0..<8 {
                 if planned.isHittable && planned.frame.minY > 120 && planned.frame.maxY < app.buttons["tab-home"].frame.minY - 8 { break }
-                if planned.exists && planned.frame.minY < 120 { app.swipeDown() } else { app.swipeUp() }
+                guard planned.exists else { app.swipeUp(); continue }
+                // A full-screen flick overshoots this nearby row and bounces
+                // between above/below the viewport. Stop a short, real scroll
+                // before release so momentum cannot move the target away.
+                let navigationTop = app.buttons["tab-home"].frame.minY
+                let down = planned.frame.minY < 120
+                let distance = min(CGFloat(150), max(CGFloat(45), down ? 144 - planned.frame.minY : planned.frame.maxY - navigationTop + 32))
+                let startY = down ? CGFloat(160) : navigationTop - 40
+                let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: app.frame.width - 8, dy: startY))
+                let end = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: app.frame.width - 8, dy: startY + (down ? distance : -distance)))
+                start.press(forDuration: 0.1, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.15)
             }
             XCTAssertTrue(planned.isHittable)
             XCTAssertLessThan(planned.frame.maxY, app.buttons["tab-home"].frame.minY - 8)
