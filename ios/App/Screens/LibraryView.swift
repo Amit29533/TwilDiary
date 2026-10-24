@@ -135,9 +135,9 @@ struct LibraryView: View {
     private func prepareReview(_ change: CollectionChange) { let titles = filtered.filter { selected.contains($0.id) }; if !titles.isEmpty { review = CollectionReview(titles: titles, change: change) } }
     private var filterScope: String { [category.rawValue, status, genre, drive, search, sort].joined(separator: "\n") }
     private var collection: [MediaTitle] { store.workspace.titles.filter { ($0.deletedAt != nil) == archived } }
-    private var trashChip: some View { HStack(spacing: 6) { DiaryIcon(name: "trash-2", size: 16); Text("Trash") }.font(.system(size: 13, weight: .semibold)).padding(.horizontal, 15).frame(height: 38).background(archived ? theme.accent.opacity(0.16) : Color(webHex: "#111115"), in: Capsule()).overlay(Capsule().strokeBorder(archived ? theme.accent.opacity(0.7) : .white.opacity(0.14))) }
+    private var trashChip: some View { HStack(spacing: 6) { DiaryIcon(name: "trash-2", size: 16); Text("Trash") }.font(.system(size: 13, weight: .semibold)).padding(.horizontal, 15).frame(height: 38).background { DiaryControlSurface(shape: Capsule(), selected: archived) } }
     private func filterChip(_ label: String, selected: Bool) -> some View {
-        HStack(spacing: 7) { Text(label).lineLimit(1); DiaryIcon(name: "chevron-down", size: 13) }.font(.system(size: 13, weight: .semibold)).padding(.horizontal, 15).frame(height: 38).background(selected ? theme.accent.opacity(0.16) : Color(webHex: "#111115"), in: Capsule()).overlay(Capsule().strokeBorder(selected ? theme.accent.opacity(0.7) : .white.opacity(0.14)))
+        HStack(spacing: 7) { Text(label).lineLimit(1); DiaryIcon(name: "chevron-down", size: 13) }.font(.system(size: 13, weight: .semibold)).padding(.horizontal, 15).frame(height: 38).background { DiaryControlSurface(shape: Capsule(), selected: selected) }
     }
     private func layoutIcon(_ name: String, selected: Bool) -> some View { DiaryIcon(name: name, size: 18).frame(width: 32, height: 38).background(selected ? Color(webHex: "#211c30") : .clear, in: RoundedRectangle(cornerRadius: 11)) }
     private var genres: [String] { LibraryShelf.make(collection).map(\.genre).filter { $0 != "Without a genre" } }

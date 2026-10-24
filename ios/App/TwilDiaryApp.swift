@@ -117,7 +117,7 @@ struct RootView: View {
     }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {
-            content().background(tab == .library ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
+            content().background(tab == .library && theme != .glass ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
                 .navigationDestination(for: String.self) { TitleDetailView(id: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
                 .navigationDestination(for: ExploreSectionRoute.self) { ExploreSectionView(route: $0, store: store).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) } }

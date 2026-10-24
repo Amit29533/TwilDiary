@@ -6,6 +6,9 @@ enum DiaryTheme: String, CaseIterable, Identifiable {
     case twilight, ocean, jade, rose, amber, glass
     var id: Self { self }
     var name: String { self == .glass ? "Liquid Glass" : rawValue.capitalized }
+    var ink: Color {
+        switch self { case .twilight: Color(webHex: "#21182e"); case .ocean: Color(webHex: "#102039"); case .jade: Color(webHex: "#102820"); case .rose: Color(webHex: "#321622"); case .amber: Color(webHex: "#2c2010"); case .glass: Color(webHex: "#132332") }
+    }
     var accent: Color {
         switch self {
         case .twilight: Color(webHex: "#b795f6")
@@ -28,9 +31,8 @@ extension Color {
 }
 
 extension View {
-    func diaryPanel() -> some View {
-        padding(16).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 22))
-            .overlay(RoundedRectangle(cornerRadius: 22).strokeBorder(.white.opacity(0.13)))
+    func diaryPanel(padding: CGFloat = 16, radius: CGFloat = 22, accentBorder: Bool = false) -> some View {
+        modifier(DiaryPanelModifier(padding: padding, radius: radius, accentBorder: accentBorder))
     }
 }
 
@@ -78,7 +80,7 @@ struct PageHeader: View {
             Spacer(minLength: 0)
             if let onSearch { Button(action: onSearch) { DiaryIcon(name: "search", size: 22).frame(width: 44, height: 44) }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel(name == "Library" ? "Search library" : "Search").accessibilityIdentifier("search-" + name.lowercased()) }
             if let onDone { Button("Done", action: onDone).font(.system(size: 14, weight: .semibold)).frame(minWidth: 44, minHeight: 44).accessibilityIdentifier(doneIdentifier) }
-        }.frame(height: 56).padding(.horizontal, 14).background(Color(webHex: "#050507"))
+        }.frame(height: 56).padding(.horizontal, 14).background(Color(webHex: theme == .glass ? "#000000" : name == "Library" ? "#0e0d13" : "#050507"))
     }
 }
 
@@ -95,8 +97,8 @@ struct SearchField: View {
             DiaryIcon(name: "search", size: 19).foregroundStyle(Color(webHex: "#a09aa9"))
             TextField(placeholder, text: $text).font(.system(size: 16)).textInputAutocapitalization(.never).autocorrectionDisabled().submitLabel(.search).focused($focused).onSubmit { focused = false }.accessibilityLabel(label)
             if !text.isEmpty { Button { text = "" } label: { DiaryIcon(name: "x", size: 16).frame(width: 26, height: 32) }.buttonStyle(.plain).accessibilityLabel("Clear search") }
-        }.padding(.horizontal, 14).frame(minHeight: 48).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(focused ? theme.accent.opacity(0.65) : .white.opacity(0.13)))
+        }.padding(.horizontal, 14).frame(minHeight: 48).background { DiaryControlSurface(shape: RoundedRectangle(cornerRadius: 12), field: true) }
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(focused ? theme.accent.opacity(0.65) : .clear))
             .task { if autoFocus && !didAutoFocus { didAutoFocus = true; focused = true } }
     }
 }
@@ -206,6 +208,7 @@ struct SectionHeading<Trailing: View>: View {
 }
 
 struct ProgressCard: View {
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
     let title: MediaTitle
     var compact = false
     @Environment(DiaryStore.self) private var store
@@ -242,7 +245,7 @@ struct ProgressCard: View {
                     GeometryReader { proxy in Capsule().fill(.white.opacity(0.15)).overlay(alignment: .leading) { Capsule().fill(.tint).frame(width: proxy.size.width * fraction) } }.frame(height: 4)
                 }.padding(.bottom, 4)
                 Button { Task { await markWatch() } } label: { Image(systemName: "plus").font(.system(size: 24, weight: .regular)).frame(width: 36, height: 36) }
-                    .buttonStyle(.plain).foregroundStyle(Color(webHex: "#21182e")).background(.tint, in: RoundedRectangle(cornerRadius: 10)).disabled(store.busy || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
+                    .buttonStyle(.plain).foregroundStyle(theme.ink).background(.tint, in: RoundedRectangle(cornerRadius: 10)).disabled(store.busy || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
             }
         }.padding(12).frame(height: 142)
     }
@@ -267,7 +270,7 @@ struct ProgressCard: View {
                 }
                 Button { let reviewed = card?.previous; Task { await store.removeLatest(title, expected: reviewed); await loadCard() } } label: { Image(systemName: "minus").font(.system(size: 18)).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))) }.buttonStyle(.plain).disabled(store.busy || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
                 Text("\(card?.progress.watched ?? 0)").font(.system(size: 17, weight: .semibold)).monospacedDigit().accessibilityIdentifier("watch-count-" + title.id)
-                Button { Task { await markWatch() } } label: { Image(systemName: "plus").font(.system(size: 20)).foregroundStyle(Color(webHex: "#21182e")).frame(width: 34, height: 34).background(.tint, in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(.plain).disabled(store.busy || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
+                Button { Task { await markWatch() } } label: { Image(systemName: "plus").font(.system(size: 20)).foregroundStyle(theme.ink).frame(width: 34, height: 34).background(.tint, in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(.plain).disabled(store.busy || (title.isSeries && card?.next == nil)).accessibilityLabel("Mark next watch for \(title.name)")
             }
         }.padding(10)
     }

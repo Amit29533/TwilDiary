@@ -126,7 +126,7 @@ struct TitleDetailView: View {
                         else { Circle().fill(title.status == "completed" ? Color.mint : Color.secondary).frame(width: 8, height: 8) }
                         Text(title.status.capitalized).font(.system(size: 14.4, weight: .semibold))
                         DiaryIcon(name: "chevron-down", size: 15)
-                    }.padding(.horizontal, 14).frame(minHeight: 46).background(theme.accent.opacity(0.13), in: Capsule()).overlay(Capsule().strokeBorder(theme.accent))
+                    }.padding(.horizontal, 14).frame(minHeight: 46).background { DiaryControlSurface(shape: Capsule(), selected: true) }.overlay(Capsule().strokeBorder(theme == .glass ? .clear : theme.accent))
                 }.buttonStyle(.plain).disabled(store.busy).accessibilityIdentifier("title-watch-status")
                 Spacer(minLength: 0)
                 Text(title.isSeries ? remaining(title).map { "\(DiaryDate.duration($0)) left" } ?? "Time unknown" : movieViewings.isEmpty ? title.runtimeMinutes.map { "\(DiaryDate.duration($0)) left" } ?? "Movie" : "Movie")
@@ -163,7 +163,7 @@ struct TitleDetailView: View {
                 } } label: {
                     Label(title.isSeries ? card.next.map { "Mark E\($0.number) watched" } ?? "Season caught up" : movieViewings.isEmpty ? "Log a watch" : "Log a rewatch", systemImage: !title.isSeries && !movieViewings.isEmpty ? "arrow.counterclockwise" : "checkmark")
                         .font(.system(size: 15.2, weight: .semibold)).frame(maxWidth: .infinity).frame(minHeight: 52)
-                        .foregroundStyle(Color(webHex: "#21182e")).background(theme.accent, in: RoundedRectangle(cornerRadius: 17))
+                        .foregroundStyle(theme.ink).background(theme.accent, in: RoundedRectangle(cornerRadius: 17))
                 }.buttonStyle(.plain).disabled(store.busy || (title.isSeries && card.next == nil)).accessibilityIdentifier("mark-title-watch")
                 HStack(spacing: 8) {
                     Button { showDate.toggle() } label: {
@@ -176,7 +176,7 @@ struct TitleDetailView: View {
                 if showDate { DatePicker("Watch date", selection: $watchDate, in: ...store.now, displayedComponents: .date).datePickerStyle(.compact).font(.subheadline).frame(maxWidth: .infinity).clipped().disabled(store.busy); Text("Used for your next watch or progress update.").font(.caption).foregroundStyle(.secondary) }
                 if showRating { ratingPanel(title).padding(.top, 10) }
             } else { ProgressView("Loading progress…") }
-        }.padding(15).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 24)).overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(theme.accent.opacity(0.2)))
+        }.diaryPanel(padding: 15, radius: 24, accentBorder: true)
     }
     private func episodeSlider(_ title: MediaTitle, card: WatchCard) -> some View {
         let states = sliderDraft.map { draft in (0..<max(0, card.progress.total)).map { $0 < Int(draft) ? EpisodeSegment.watched : .unwatched } }
