@@ -97,10 +97,7 @@ public struct PersonDetails: Decodable, Sendable {
     public let department: String
     public let profilePath: String?
     public let credits: [CatalogItem]
-    public func filmography(_ kind: MediaKind, query: String = "", year: Int? = nil) -> [CatalogItem] {
-        credits.filter { $0.mediaType == kind && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)) && (year == nil || $0.year == year) }
-            .sorted { ($0.year ?? 0) == ($1.year ?? 0) ? $0.name.localizedStandardCompare($1.name) == .orderedAscending : ($0.year ?? 0) > ($1.year ?? 0) }
-    }
+
 }
 
 public enum CatalogTools {

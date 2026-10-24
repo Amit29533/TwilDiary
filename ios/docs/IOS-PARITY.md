@@ -2,7 +2,7 @@
 
 Product source: the web /preview code at b43454e. Active native source: Amit29533/TwilDiary → ios-native → ios/. No hosted changes or deployments.
 
-Run 40056346004 (build 14) compiled both targets with zero warnings: 25 core, 32 native unit and all 9 UI tests passed. Downloaded 29 screenshots and verified the arm64 IPA; evidence is in screenshots/step-9/build-14. Files dismissal/conflict accessibility fixes pass. Visual review found Trakt Apply overlaps the capsule; build 15 adopts the actual source's in-list action and strengthens the geometric assertion. Full pixel parity remains unfinished.
+Run 40056346004 (build 14) compiled both targets with zero warnings: 25 core, 32 native unit and all 9 UI tests passed. Downloaded 29 screenshots and verified the arm64 IPA; evidence is in screenshots/step-9/build-14. Files dismissal/conflict accessibility fixes pass. Visual review found Trakt Apply overlaps the capsule; build 15 adopts the actual source's in-list action and strengthens the geometric assertion. Build 15 compiled both targets with zero warnings, with 31 Core/40 native unit checks passing and 8/10 UI checks passing; search hit bounds and an offscreen paging assertion prevent acceptance. Build 16 run 40063279036 has passed Core and both target compilations; UI regression is in progress. Local build 17 adds source public-rating cache/outage states, measured title layout/inline rating, account-transition isolation and full Person shelves/filmography; all await CI and screenshot acceptance. Full pixel parity remains unfinished.
 
 | Screen / area | Native work present | Remaining parity / validation |
 | --- | --- | --- |
@@ -12,7 +12,7 @@ Run 40056346004 (build 14) compiled both targets with zero warnings: 25 core, 32
 | Title movie/show/anime | Art/ratings/status; episode pieces versus continuous movie; aired prefix slider plans; dates/rewatches; versioned Undo; spoiler reveal; notes/locations collapsed | End-to-end transaction tests and complete header/panel spacing/typography comparisons |
 | Catalog | Combined search with IMDb identity normalization/local matches/paging (build 15 awaiting CI), review/import, identity/category handling, cast | Season preview, fixture-backed import/retry/conflict UI coverage |
 | Explore | Build 15 (awaiting CI): source daily pick/four shelves/section grids, unwatched list, Trakt recommendations, genre/year/rating/sort, paging/retry | Full native screenshot/all-size/interaction acceptance; provider connection/failure visual coverage |
-| Cast/person | Biography, searchable movie/TV filmography | Filters/shelves, loading/error/empty states and visual alignment |
+| Cast/person | Build 17 pending: biography/facts/source-role return, server/Known-for/media shelves, full filtered filmography, 40 web golden scenarios and bounded shared metadata cache | CI/visual acceptance, loading/error/all-size/long-name matrix and physical return-scroll review |
 | Glance | Source-order watching cards; category/search; remaining time; quick +/- and swipe | Watch/Undo and scroll-retention regression, real-device gesture checks. Current source has no waiting section or sort control. |
 | Stats | 17 web golden scenarios pass; average/comparison; zero/day/aggregate/year-month buckets; streaks/84-day heatmap; backlog runtime/stale titles; genre shares; accessible bucket drilldown | Full visual/all-size review. Calendar collision, Home→Today, empty bucket and undated history UI tests pass. Current source has no hourly chart. |
 | History | Search, presets/range/undated, title navigation, chronological ordering | Full source grouping/filter edge cases and transaction entry-point review |
@@ -24,4 +24,4 @@ Run 40056346004 (build 14) compiled both targets with zero warnings: 25 core, 32
 
 PC-only boundary: scanning/ingestion and provider credential editing remain on the existing Windows/server side, as on mobile web. Native presents saved mappings, scanner evidence and reviewed resolution. No arbitrary Windows-volume scanning from the phone, bundled service token or fake provider success.
 
-Primary references: reference/chromium-win32 (70 states, 390×844). Secondary: reference/chromium-win32-402x778 (matching iPhone 17 Pro content excluding documented 62pt top/34pt bottom system insets). DEVICE-CHECKS.md records what CI cannot establish.
+Primary references: reference/chromium-win32 (80 states, 390×844). Secondary: reference/chromium-win32-402x778 (matching iPhone 17 Pro content excluding documented 62pt top/34pt bottom system insets). DEVICE-CHECKS.md records what CI cannot establish.
