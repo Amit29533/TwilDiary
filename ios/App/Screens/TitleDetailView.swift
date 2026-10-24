@@ -86,17 +86,27 @@ struct TitleDetailView: View {
             Artwork(path: title.poster, title: title.name).frame(width: 114, height: 171).clipShape(RoundedRectangle(cornerRadius: 12))
             VStack(alignment: .leading, spacing: 0) {
                 Text(title.name).font(.system(size: 24, weight: .bold)).tracking(-1.08).fixedSize(horizontal: false, vertical: true)
-                Text([title.year.map(String.init) ?? "—", title.categoryName, title.runtimeMinutes.map { title.isSeries ? "\($0) min per episode" : "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 14.4)).foregroundStyle(.secondary).padding(.top, 14)
+                Text([title.year.map(String.init) ?? "—", title.categoryName, title.runtimeMinutes.map { title.isSeries ? "\($0) min per episode" : "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 14.4)).lineSpacing(4.3).foregroundStyle(.secondary).frame(minHeight: 21.6, alignment: .top).padding(.top, 14)
                 InlineFlowLayout {
                     communityRating(title).frame(minHeight: 44)
                     personalRating(title).frame(minHeight: 44)
                 }.font(.system(size: 15.2)).padding(.top, 14)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title.overview.isEmpty ? "Add your own thoughts in Notes." : title.overview).font(.system(size: 15.04)).lineSpacing(6).foregroundStyle(Color(webHex: "#c5c0cf")).lineLimit(showOverview ? nil : 2)
-                    if title.overview.count > 100 { Button(showOverview ? "Less" : "More") { showOverview.toggle() }.font(.system(size: 14, weight: .semibold)) }
-                }.padding(.top, 16)
+                overview(title).padding(.top, 16)
             }.padding(.top, 14)
         }.padding(.top, 82)
+    }
+    private func overview(_ title: MediaTitle) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title.overview.isEmpty ? "Add your own thoughts in Notes." : title.overview)
+                .font(.system(size: 15.04)).lineSpacing(6).foregroundStyle(Color(webHex: "#c5c0cf")).lineLimit(showOverview ? nil : 2)
+                .padding(.trailing, !showOverview && title.overview.count > 100 ? 36 : 0)
+                .overlay(alignment: .bottomTrailing) {
+                    if !showOverview && title.overview.count > 100 {
+                        Button("More") { showOverview = true }.font(.system(size: 14, weight: .semibold)).frame(width: 44, height: 44).offset(y: 8)
+                    }
+                }
+            if showOverview { Button("Less") { showOverview = false }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 36) }
+        }
     }
     private func communityRating(_ title: MediaTitle) -> some View { HStack(spacing: 5) { Image(systemName: "star.fill").font(.system(size: 20)).foregroundStyle(.yellow); Text(title.communityScore.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—").foregroundStyle(.yellow); Text("TMDb").font(.system(size: 14.4)).foregroundStyle(.secondary) } }
     private func personalRating(_ title: MediaTitle) -> some View { Button { openRating(title) } label: { HStack(spacing: 7) { DiaryIcon(name: "star", size: 21); Text("Your rating").foregroundStyle(.secondary); Text(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—") } }.buttonStyle(.plain).accessibilityIdentifier("title-personal-rating").accessibilityLabel("Your rating").accessibilityValue(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "Not rated") }
