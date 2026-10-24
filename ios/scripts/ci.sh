@@ -53,6 +53,13 @@ PY
   boot)
     xcrun simctl bootstatus "$SIMULATOR_ID" -b 2>&1 | tee "$ARTIFACTS/logs/simulator-boot.log"
     ;;
+  test-progress)
+    xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
+      -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 360 \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testTitleWatchAndUndoUpdateTheEpisodePiecesAndMovieHistory \
+      -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/ProgressGate.xcresult" \
+      2>&1 | tee "$ARTIFACTS/logs/progress-tests.log"
+    ;;
   test)
     xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 360 -derivedDataPath "$PWD/ios/.derived/simulator" \
@@ -76,6 +83,9 @@ PY
     if [ -f "$ARTIFACTS/Tests.xcresult/Info.plist" ]; then
       xcrun xcresulttool export attachments --path "$ARTIFACTS/Tests.xcresult" --output-path "$ARTIFACTS/screenshots"
     fi
+    if [ -f "$ARTIFACTS/ProgressGate.xcresult/Info.plist" ]; then
+      xcrun xcresulttool export attachments --path "$ARTIFACTS/ProgressGate.xcresult" --output-path "$ARTIFACTS/screenshots/ProgressGate"
+    fi
     for result in "$ARTIFACTS"/Layout-*.xcresult; do
       if [ -f "$result/Info.plist" ]; then
         folder_name=$(basename "$result" .xcresult)
@@ -92,6 +102,9 @@ for path in sorted((folder / 'logs').glob('*.log')):
         if re.search(r'\b(?:error:|Test Case .* failed)', line): errors.append(f'{path.name}: {line}')
         if ('build' in path.name or path.name == 'core-tests.log') and re.search(r'\bwarning:', line, re.I): warnings.append(f'{path.name}: {line}')
         if re.search(r'Executed \d+ tests|\*\* TEST .* \*\*', line): tests.append(line)
+progress_log = folder / 'logs' / 'progress-tests.log'
+if progress_log.exists() and '** TEST EXECUTE SUCCEEDED **' not in progress_log.read_text(errors='replace'):
+    errors.append('Progress drag/Undo preflight did not complete successfully; inspect ProgressGate.xcresult.')
 test_log = folder / 'logs' / 'tests.log'
 if not test_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in test_log.read_text(errors='replace'):
     errors.append('tests.log: Unit/UI execution did not finish successfully; inspect the job timeout and xcresult before accepting this build.')

@@ -40,6 +40,13 @@ unit = len({(suite, name) for suite, name in passed if suite.startswith('TwilDia
 ui = len({(suite, name) for suite, name in passed if suite.startswith('TwilDiaryUITests.')})
 if not unit or not ui:
     raise SystemExit('Missing individually passed unit/UI test evidence.')
+progress_smoke = None
+progress_log = logs / 'progress-tests.log'
+if progress_log.exists():
+    value = progress_log.read_text(encoding='utf-8', errors='replace')
+    if '** TEST EXECUTE SUCCEEDED **' not in value or re.search(r'Test Case .* failed', value):
+        raise SystemExit('Progress drag/Undo preflight did not pass.')
+    progress_smoke = {'ui': 1, 'status': 'success'}
 ipa = args.input / 'ipa' / 'TwilDiary-unsigned.ipa'
 digest = hashlib.sha256(ipa.read_bytes()).hexdigest()
 expected = (ipa.with_suffix('.ipa.sha256')).read_text(encoding='utf-8').split()[0]
@@ -79,6 +86,8 @@ for attachment_manifest in attachment_manifests:
             if not name.lower().endswith('.png') or item.get('isAssociatedWithFailure'):
                 continue
             label = re.sub(r'_\d+_[0-9A-F-]+\.png$', '', item['suggestedHumanReadableName'], flags=re.I)
+            if attachment_manifest.parent.name == 'ProgressGate':
+                label = 'Progress gate ' + label
             slug = re.sub(r'[^a-z0-9]+', '-', label.lower()).strip('-') + '.png'
             if any(row['file'] == slug for row in manifest):
                 raise SystemExit('Duplicate screenshot label: ' + slug)
@@ -87,7 +96,7 @@ for attachment_manifest in attachment_manifests:
 if not manifest:
     raise SystemExit('No retained named screenshots were exported.')
 report = {'run': run['databaseId'], 'commit': run['headSha'], 'build': int(args.build), 'status': 'success',
-          'tests': {'core': int(core_count[1]), 'native_unit': unit, 'ui': ui}, 'layoutTests': layout_tests, 'warnings': 0,
+          'tests': {'core': int(core_count[1]), 'native_unit': unit, 'ui': ui}, 'layoutTests': layout_tests, 'progressSmoke': progress_smoke, 'warnings': 0,
           'reviewScope': 'Automated evidence verified. Visual comparison and real-device behavior require separate review.', 'screenshots': manifest}
 (args.output / 'manifest.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
 (args.output / 'ipa-verification.json').write_text(json.dumps(verification, indent=2) + '\n', encoding='utf-8')
