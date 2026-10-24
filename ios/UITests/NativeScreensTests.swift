@@ -718,7 +718,8 @@ import UIKit
         app.buttons["tab-home"].tap()
         XCTAssertFalse(app.buttons["explore-done"].exists)
         explore.tap(); XCTAssertTrue(app.buttons["explore-done"].waitForExistence(timeout: 5))
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.4)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.4)))
+        completeContentBack(app, beside: app.staticTexts["Recommendation of the day"])
+        wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.buttons["explore-done"])], timeout: 5)
         XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5))
         capture("Native Explore returned Home")
     }
@@ -729,7 +730,7 @@ import UIKit
         app.buttons["search-library-frieren"].tap()
         XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.keyboards.firstMatch.exists)
-        app.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.30)).press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.30)))
+        completeContentBack(app, beside: app.staticTexts["title-hero-name"])
         XCTAssertTrue(field.waitForExistence(timeout: 5)); XCTAssertEqual(field.value as? String, "Frieren")
         XCTAssertTrue(app.buttons["search-library-frieren"].exists); capture("Search retained after content Back")
         app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
@@ -751,6 +752,16 @@ import UIKit
         XCTAssertTrue(scoped.waitForExistence(timeout: 5)); scoped.typeText("Clockmaker\n")
         XCTAssertFalse(app.buttons["search-movie:900001"].exists)
         XCTAssertTrue(app.staticTexts["A clear little corner"].exists); capture("Glance scoped search")
+    }
+    private func completeContentBack(_ app: XCUIApplication, beside anchor: XCUIElement) {
+        XCTAssertTrue(anchor.waitForExistence(timeout: 5))
+        // UIKit can cancel a 57%-width drag after its recognition threshold. Start well
+        // inside the content (not the edge), then move far enough to commit the pop.
+        // Anchor the height to static content, avoiding carousels and progress controls.
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let y = anchor.frame.midY
+        origin.withOffset(CGVector(dx: app.frame.width * 0.12, dy: y)).press(forDuration: 0.05,
+            thenDragTo: origin.withOffset(CGVector(dx: app.frame.width * 0.98, dy: y)))
     }
     func testToastExpiresAndCardCoverAndUsefulMenuWork() {
         let app = launch(mutations: true)

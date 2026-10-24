@@ -1,5 +1,11 @@
 # Native TwilDiary progress
 
+## Current continuation — build 30 reviewed, build 31 prepared
+
+Run40115623427 attempt2/source548afbf completed failure: Core56/56, native unit119/119, simulator/test bundles compile with zero warnings; early UI8/10. All six Settings Done destinations now return correctly. Late-metadata Glance Notes/save/reopen and bounded Surprise tap/swipe/reroll/Open pass. Two remaining failures are content Back tests. Downloaded exact attempt2 screenshot/result artifacts12569678521/12569543206 (ZIP CRC checked) under .local/ios-app-build-40115623427-attempt2, avoiding same-name attempt1 artifacts. Frame-by-frame Explore recording shows a genuine interactive native pop that cancels; saved-title swipe does not return. No new IPA, full43 UI or extra-phone acceptance.
+
+Build31 uses a long deliberate content swipe (12% to98% of screen width) at a static heading/hero-name height, rather than the former57%-width gesture at a fixed viewport height. It still starts inside content and verifies the owning destination/query returns; the separate short cancellation/hidden-keyboard check remains. No replacement navigation recognizer or UIKit delegate override. Apple's documented interactiveContentPopGestureRecognizer owns content Back; preserve controls' horizontal tracking. Add a hero-name accessibility identifier and wait for outgoing Explore Done disappearance. Bounded curl retries now include transient send failures observed in attempt1, with the pinned XcodeGen checksum unchanged. All prior tests remain enabled. Exact next action: self-review/commit/push31, follow native119/early10/full43/all-phone gates and inspect actual screenshots; repair failures before starting the complete follow-on navigation-bar/community/Glass requirements below. No hosted mutations/deployments.
+
 ## Next user-requested batch — only after the preceding bug-fix batch is verified
 
 New24Oct device references f7536327 /4e7a07b4 /7100f25e /cc8340c4 queue these changes after build29 and its repairs:
