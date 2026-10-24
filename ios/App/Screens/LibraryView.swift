@@ -115,7 +115,7 @@ struct LibraryView: View {
                         }
                     }.padding(.horizontal, 14)
                 } else if list {
-                    LazyVStack(spacing: 10) { ForEach(filtered) { title in poster(title, row: true) } }.padding(.horizontal, 14)
+                    LazyVStack(spacing: 12) { ForEach(filtered) { title in poster(title, row: true) } }.padding(.horizontal, 14)
                 } else {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), alignment: .leading, spacing: 20) { ForEach(filtered) { poster($0) } }.padding(.horizontal, 14)
                 }

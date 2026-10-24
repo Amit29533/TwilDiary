@@ -6,6 +6,9 @@ enum DiaryTheme: String, CaseIterable, Identifiable {
     case twilight, ocean, jade, rose, amber, glass
     var id: Self { self }
     var name: String { self == .glass ? "Liquid Glass" : rawValue.capitalized }
+    var text: Color { Color(webHex: self == .glass ? "#f5f5f7" : "#f3f0f7") }
+    var muted: Color { Color(webHex: self == .glass ? "#a6a6af" : "#a09aa9") }
+    var field: Color { Color(webHex: self == .glass ? "#101013" : "#111115") }
     var detail: String {
         switch self {
         case .twilight: "The original violet"
@@ -209,7 +212,7 @@ struct RatingBadge: View {
         HStack(spacing: 3) {
             Image(systemName: "star.fill").font(.system(size: community ? 10 : 12))
                 .foregroundStyle(Color(webHex: community ? "#ffe030" : "#f4d06a"))
-            Text(score, format: .number.precision(.fractionLength(1)))
+            Text(score, format: .number.precision(.fractionLength(1))).frame(minHeight: community ? 17.25 : 18)
         }.font(.system(size: community ? 11.5 : 12, weight: community ? .medium : .semibold))
             .foregroundStyle(Color(webHex: community ? "#f5f5f5" : "#f3f0f7"))
             .shadow(color: .black.opacity(0.9), radius: community ? 3 : 0, y: 1)

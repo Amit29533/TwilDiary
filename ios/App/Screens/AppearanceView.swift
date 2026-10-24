@@ -25,9 +25,9 @@ struct AppearanceView: View {
                             }
                         }
                         Text("Changes instantly · saved on this device")
-                            .font(.system(size: 11.2)).foregroundStyle(Color(webHex: "#a09aa9"))
+                            .font(.system(size: 11.2)).foregroundStyle(theme.muted).frame(minHeight: 16.8)
                             .padding(.top, 15)
-                    }.diaryPanel(padding: 18, radius: 22)
+                    }.diaryPanel(padding: 19, radius: 22)
                 }.padding(.horizontal, 14).padding(.top, 2).padding(.bottom, 24)
             }
         }.background(.black).navigationBarBackButtonHidden().toolbar(.hidden, for: .navigationBar)
@@ -38,10 +38,10 @@ struct AppearanceView: View {
             HStack(spacing: 6) {
                 DiaryIcon(name: "sparkles", size: 14)
                 Text("MAKE IT YOURS").font(.system(size: 9.92, weight: .heavy)).tracking(1.19)
-            }.foregroundStyle(theme.accent).padding(.bottom, 7)
-            Text("Appearance").font(.system(size: 21.6, weight: .bold)).tracking(-0.86)
+            }.frame(height: 14.88).foregroundStyle(theme.accent).padding(.bottom, 7)
+            Text("Appearance").font(.system(size: 21.6, weight: .bold)).tracking(-0.86).frame(minHeight: 25.92)
             Text("A different mood. The same diary.").font(.system(size: 13.12))
-                .foregroundStyle(Color(webHex: "#a09aa9")).padding(.top, 5)
+                .foregroundStyle(theme.muted).frame(minHeight: 19.68).padding(.top, 5)
         }
     }
 }
@@ -49,6 +49,7 @@ struct AppearanceView: View {
 private struct ThemeOption: View {
     let item: DiaryTheme
     let selected: Bool
+    @AppStorage("theme") private var theme = DiaryTheme.twilight
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -56,13 +57,14 @@ private struct ThemeOption: View {
             HStack(spacing: 6) {
                 Circle().fill(item.accent).frame(width: 8, height: 8)
                 Text(item.name).font(.system(size: 13.12, weight: .semibold))
-            }.padding(.horizontal, 3).padding(.top, 9)
-            Text(item.detail).font(.system(size: 10.4)).foregroundStyle(Color(webHex: "#a09aa9"))
-                .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 3).padding(.top, 3)
-        }.padding(.horizontal, 7).padding(.top, 7).padding(.bottom, 11)
+            }.frame(minHeight: 19.68).padding(.horizontal, 3).padding(.top, 9)
+            Text(item.detail).font(.system(size: 10.4)).foregroundStyle(theme.muted)
+                .fixedSize(horizontal: false, vertical: true).frame(minHeight: 14.56, alignment: .leading)
+                .padding(.horizontal, 3).padding(.top, 3)
+        }.padding(.horizontal, 8).padding(.top, 8).padding(.bottom, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .foregroundStyle(Color(webHex: "#f3f0f7"))
-            .background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 18))
+            .foregroundStyle(theme.text)
+            .background(theme.field, in: RoundedRectangle(cornerRadius: 18))
             .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(selected ? item.accent : .white.opacity(0.13), lineWidth: selected ? 2 : 1))
             .accessibilityElement(children: .ignore)
     }
@@ -75,14 +77,14 @@ private struct ThemeMiniature: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 5) {
-                BrandMark().fill(item.accent).frame(width: 9, height: 9)
+                BrandMark().fill(item.accent).frame(width: 10, height: 10)
                 Capsule().fill(Color(webHex: "#f3f0f7d9")).frame(width: 40, height: 5)
                 Spacer(minLength: 0)
                 Circle().strokeBorder(.white.opacity(0.44)).frame(width: 5, height: 5)
-            }.frame(height: 14).padding(.bottom, 10)
+            }.frame(height: 18).padding(.bottom, 10)
             sampleCard
             sampleNavigation.padding(.top, 7)
-        }.padding(11).fixedSize(horizontal: false, vertical: true)
+        }.padding(12).fixedSize(horizontal: false, vertical: true)
             .frame(height: 112, alignment: .top)
             .frame(maxWidth: .infinity)
             .background {
@@ -93,7 +95,7 @@ private struct ThemeMiniature: View {
             }
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(.white.opacity(0.03)))
-            .overlay(alignment: .topTrailing) { selectionMark.padding(6) }
+            .overlay(alignment: .topTrailing) { selectionMark.padding(7) }
             .accessibilityHidden(true)
     }
 
@@ -111,7 +113,7 @@ private struct ThemeMiniature: View {
                         .padding(.top, 4)
                 }.frame(height: 33)
             }.frame(height: 33)
-        }.padding(8).background { sampleSurface }
+        }.padding(9).background { sampleSurface }
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(item == .glass ? 0.21 : 0.075)))
     }

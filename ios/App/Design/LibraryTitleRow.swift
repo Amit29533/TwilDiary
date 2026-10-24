@@ -15,7 +15,7 @@ struct LibraryTitleRow: View {
             Artwork(path: title.poster, title: title.name).frame(width: 72, height: 108)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 10) {
-                Text(title.name).font(.system(size: 15, weight: .semibold)).lineLimit(1)
+                Text(title.name).font(.system(size: 15, weight: .semibold)).lineLimit(1).frame(minHeight: 20.25)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 InlineFlowLayout(spacing: 10, rowSpacing: 10) {
                     if let score { RatingBadge(score: score) }
@@ -24,7 +24,7 @@ struct LibraryTitleRow: View {
                     if present { DiaryIcon(name: "monitor", size: 15) }
                 }.foregroundStyle(Color(webHex: "#c5c0cf"))
             }.frame(maxWidth: .infinity, alignment: .leading)
-        }.padding(.horizontal, 12).padding(.vertical, 10)
+        }.padding(.horizontal, 13).padding(.vertical, 11)
             .foregroundStyle(Color(webHex: "#f3f0f7"))
             .background {
                 GeometryReader { geometry in
