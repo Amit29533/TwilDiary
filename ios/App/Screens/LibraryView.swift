@@ -103,7 +103,7 @@ struct LibraryView: View {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 3), alignment: .leading, spacing: 20) { ForEach(filtered) { poster($0) } }.padding(.horizontal, 14)
                 }
                 if filtered.isEmpty { ContentUnavailableView(archived ? "Trash is clear" : "No matching titles", systemImage: archived ? "trash" : "books.vertical", description: Text(archived ? "Removed titles will appear here. Try clearing filters if a title is missing." : "Change your filters or search.")) }
-            }.refreshable { await store.refresh() }
+            }.refreshable { await store.refresh(); await store.loadPublicRatings(collection, source: ratingSource) }
     }
     private func applyShortcut() {
         guard !archived, router.libraryRevision > appliedShortcutRevision else { return }

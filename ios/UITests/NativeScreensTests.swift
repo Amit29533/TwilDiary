@@ -25,7 +25,7 @@ import UIKit
         XCTAssertLessThan(second.maxX, third.minX)
         XCTAssertLessThanOrEqual(third.maxX, app.frame.width - 10)
         app.buttons["title-again"].tap()
-        XCTAssertTrue(app.staticTexts["Episodes"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
         let track = app.sliders["episode-progress"]
         XCTAssertTrue(track.waitForExistence(timeout: 5))
         XCTAssertEqual(track.value as? String, "8 of 16 episodes watched")
