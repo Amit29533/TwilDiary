@@ -16,6 +16,12 @@ Local history follow-up (also excluded from build 20): dedicated HistoryQuery an
 Pending shared artwork correction: Library keeps its source initials-only fallback; ordinary title/continue/catalog/history/random posters use the source clapperboard/name placeholder. Loading images retain their background without falsely rendering a failed-image placeholder. Missing hero art uses the source three-color gradient, avoiding giant initials behind movie headers. Modal pick adds a containing accessibility element and clears on account transition. All require next native CI/visual acceptance; Apple modal/escape APIs checked in official documentation.
 
 
+Pending More summary follow-up: source Trakt copy/priorities for loading, unavailable, scanning, active review, reconnect and disconnected states. Expired/disconnected status no longer exposes stale review totals in More; exact singular and completed/link-only behavior covered. Added DEBUG-only provider scenarios and a four-state UI walkthrough. The full Trakt connection/actions continue to follow TraktConnection.svelte; no new provider mutations or reauth policy invented. Compilation/UI/screenshots await the next CI batch.
+
+
+Build 20 has passed Core and both simulator/arm64 compilations and is executing unit/UI tests. Its long compile times put the original 65-minute allowance under pressure; no passing outcome is inferred. Next CI batch keeps all checks but allows 100 minutes, caches native compilation intermediates after both builds, disables indexing work irrelevant to CI, and records Xcode build timing summaries. Every restored cache still goes through ordinary xcodebuild dependency validation; no build/test command is skipped. Cache size/performance and zero-warning gate await evidence.
+
+
 Build 19 also includes these source-driven improvements, all awaiting native CI/visual acceptance:
 - Shared saved/catalog hero and backdrop; online TV season picker, read-only episode pieces, four-row/expanded lists, explicit spoiler reveal, lazy season cache and retries.
 - Exact suggested-category imports, archived-identity Restore routing, replace navigation after import, session/cancellation guards, and in-memory opt-in import fixtures that preserve notes/ratings/history.
@@ -27,7 +33,7 @@ Build 19 also includes these source-driven improvements, all awaiting native CI/
 - Visual review caught zero-width Person fact labels and excessive row heights despite a passing interaction test. Fixed label column/wrapping and artwork behind navigation; added row geometry assertions. Diagnostic contact sheet: .local/ios-app-build-40067854460/diagnostic/contact-sheet.jpg.
 - Bounded async test prerequisites and explicit XCTest execution timeouts; no assertions or tests skipped. Core passing build cache now saves before later UI outcomes.
 
-Primary web reference manifest is **91/91 passing states at 390×844** after random/Add/history expansion, all image hashes verified. New states cover catalog reveal/season/list and manual add/review. They use isolated loopback data and blocked hosted/provider requests. Secondary 402×778 references remain comparison inputs. Native build-19 screenshots have not yet been captured.
+Primary web reference manifest is **94/94 passing states at 390×844** after random/Add/history expansion, all image hashes verified. New states cover catalog reveal/season/list and manual add/review. They use isolated loopback data and blocked hosted/provider requests. Secondary 402×778 references remain comparison inputs. Native build-19 screenshots have not yet been captured.
 
 **Exact next action:** inspect build 20 / 40078903285 Core/simulator/device compilation and tests; finish and commit the unpushed random-pick follow-up while waiting. On failure retrieve the complete failed logs, repair every compiler/test issue and rerun. On a full pass, download all results/screenshots/IPA, run ios/tools/collect-build.py, inspect full screenshots and web side-by-sides, save scoped evidence, share actual passed-build screenshots/IPA, then continue the first unfinished parity items. Browser CUA remains disabled in Work settings; CLI/isolated Playwright and CI artifacts are available, so this does not block development. No Mac/local Swift, hosted writes or deployments.
 

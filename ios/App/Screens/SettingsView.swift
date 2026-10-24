@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("publicRatingSource") private var ratingSource = PublicRatingSource.tmdb
     @AppStorage("hideSpoilers") private var hideSpoilers = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showSearch = false
     @State private var confirmSignOut = false
     @State private var summary: TraktController?
@@ -25,7 +26,7 @@ struct SettingsView: View {
                         Divider().padding(.leading, 58)
                         NavigationLink { FilesView() } label: { settingsRow("hard-drive", "Files & drives", subtitle: "Folders, seasons and local copies", disclosure: true) }.accessibilityIdentifier("settings-files")
                         Divider().padding(.leading, 58)
-                        NavigationLink { TrashView() } label: { settingsRow("trash-2", "Trash", subtitle: store.workspace.titles.contains(where: { $0.deletedAt != nil }) ? "\(store.workspace.titles.filter { $0.deletedAt != nil }.count) removed titles" : "No removed titles", disclosure: true) }
+                        NavigationLink { TrashView() } label: { settingsRow("trash-2", "Trash", subtitle: store.workspace.titles.contains(where: { $0.deletedAt != nil }) ? "\(store.workspace.titles.filter { $0.deletedAt != nil }.count) removed \(store.workspace.titles.filter { $0.deletedAt != nil }.count == 1 ? "title" : "titles")" : "No removed titles", disclosure: true) }
                     }
                     settingsSection("Tracking") {
                         HStack(spacing: 8) { settingsIcon("eye-off"); Toggle(isOn: $hideSpoilers) { VStack(alignment: .leading, spacing: 3) { Text("Hide episode spoilers").font(.subheadline.weight(.semibold)); Text("Hide unwatched titles, summaries and images").font(.caption).foregroundStyle(.secondary) } }.tint(theme.accent) }.padding(14)
@@ -46,7 +47,7 @@ struct SettingsView: View {
                     settingsSection("Connections") {
                         NavigationLink { TMDBConnectionView() } label: { settingsRow("database", "TMDB", subtitle: "Posters, details, seasons and episodes", disclosure: true) }
                         Divider().padding(.leading, 58)
-                        NavigationLink { TraktView(store: store) } label: { settingsRow("link-2", "Trakt", subtitle: "History, ratings and watchlist", value: summary?.status?.connected == true ? "Connected" : "Set up", disclosure: true) }.accessibilityIdentifier("settings-trakt")
+                        NavigationLink { TraktView(store: store) } label: { settingsRow("link-2", "Trakt", subtitle: "History, ratings and watchlist", value: summary?.status?.needsReconnect == true ? "Reconnect" : summary?.status?.connected == true ? "Connected" : "Set up", disclosure: true) }.accessibilityIdentifier("settings-trakt")
                     }
                     settingsSection("Data & backup") {
                         Button { exportDiary() } label: { settingsRow("download", "Export diary", subtitle: "Titles, progress, notes and file mappings", disclosure: true) }
@@ -63,15 +64,22 @@ struct SettingsView: View {
                 }.buttonStyle(.plain).padding(.horizontal, 14).padding(.bottom, 24)
             }.refreshable { await summary?.refresh() }
         }.confirmationDialog("Sign out on this device? Your hosted diary stays saved.", isPresented: $confirmSignOut, titleVisibility: .visible) { Button("Sign out", role: .destructive) { store.signOut() } }
-            .task { if summary == nil { summary = TraktController(service: makeTraktService(store: store)) }; await summary?.refresh() }
+            .task(id: store.sessionRevision) { summary = TraktController(service: makeTraktService(store: store)); await summary?.refresh() }
+            .onChange(of: scenePhase) { _, phase in if phase == .active { Task { await summary?.refresh() } } }
             .fileExporter(isPresented: $showExport, document: exportDocument, contentType: .json, defaultFilename: "TwilDiary-\(DiaryDate.day(store.now))") { result in if case .failure(let error) = result { store.error = error.localizedDescription } }
     }
     private var traktSummary: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack { Text("Trakt sync").font(.caption.bold()); Spacer(); Text(summary?.error != nil ? "Unavailable" : (summary?.sync?.pendingChanges ?? 0) > 0 ? "Needs review" : summary?.status?.connected == true ? "Connected" : "Not connected").font(.caption2.bold()).foregroundStyle((summary?.sync?.pendingChanges ?? 0) > 0 ? Color.yellow : Color.secondary) }
-            Text((summary?.sync?.pendingChanges ?? 0) > 0 ? "\(summary?.sync?.pendingChanges ?? 0) changes to review" : summary?.status?.connected == true ? "Keep your watches in sync" : "Bring your watch history together").font(.system(size: 20, weight: .semibold))
-            Text("Scan Trakt to review incoming and outgoing changes before applying them.").font(.system(size: 13)).foregroundStyle(.secondary).lineSpacing(3)
-            NavigationLink { TraktView(store: store) } label: { Text((summary?.sync?.pendingChanges ?? 0) > 0 ? "Review changes" : "Open Trakt sync").font(.system(size: 13, weight: .semibold)).padding(.horizontal, 16).frame(height: 42).foregroundStyle(Color(webHex: "#21182e")).background(theme.accent, in: RoundedRectangle(cornerRadius: 12)) }.accessibilityIdentifier("settings-trakt-summary")
+        let value = TraktOverview(status: summary?.status, sync: summary?.sync, checked: summary?.status != nil || summary?.error != nil, unavailable: summary?.error != nil)
+        let color: Color = value.attention ? .yellow : value.badge == "Connected" ? .mint : .secondary
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                HStack(spacing: 6) { DiaryIcon(name: "link-2", size: 16); Text("Trakt sync").font(.caption.bold()) }
+                Spacer(minLength: 0)
+                Text(value.badge).font(.caption2.bold()).foregroundStyle(color).padding(.horizontal, 8).padding(.vertical, 5).background(color.opacity(0.1), in: Capsule()).accessibilityIdentifier("settings-trakt-badge")
+            }
+            Text(value.title).font(.system(size: 20, weight: .semibold)).accessibilityIdentifier("settings-trakt-title")
+            Text(value.detail).font(.system(size: 13)).foregroundStyle(.secondary).lineSpacing(3)
+            NavigationLink { TraktView(store: store) } label: { Text(value.action).font(.system(size: 13, weight: .semibold)).padding(.horizontal, 16).frame(height: 42).foregroundStyle(theme.ink).background(theme.accent, in: RoundedRectangle(cornerRadius: 12)) }.accessibilityIdentifier("settings-trakt-summary")
         }.diaryPanel()
     }
     private func settingsSection<Content: View>(_ name: String, @ViewBuilder content: () -> Content) -> some View {

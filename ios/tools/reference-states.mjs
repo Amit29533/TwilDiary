@@ -19,6 +19,7 @@ export const referenceStates = [
   screen('files','/preview/files'),
   screen('scanner-empty','/preview/review'),
   screen('more','/preview/more'),
+  ...['review','scanning','expired'].map(kind=>screen('more-trakt-'+kind,'/preview/more',{scenario:'trakt-'+kind})),
   screen('appearance','/preview/more/appearance'),
   screen('tmdb','/preview/more/tmdb'),
   screen('trakt-disconnected','/preview/more/trakt'),

@@ -1113,6 +1113,162 @@
     "passed": true
   },
   {
+    "id": "more-trakt-review",
+    "path": "/preview/more",
+    "scenario": "trakt-review",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1859,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "TMDBTrakt",
+        "value": "tmdb"
+      },
+      {
+        "tag": "INPUT",
+        "label": "Hide episode spoilers",
+        "value": "on"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Export diaryTitles, progress, notes and file mappings",
+        "value": ""
+      }
+    ],
+    "file": "more-trakt-review.png",
+    "sha256": "741bdcbcd5a4f4926de316a5604cbc59f31921b76f663eab8cb9ca707d817f37",
+    "passed": true
+  },
+  {
+    "id": "more-trakt-scanning",
+    "path": "/preview/more",
+    "scenario": "trakt-scanning",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1859,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "TMDBTrakt",
+        "value": "tmdb"
+      },
+      {
+        "tag": "INPUT",
+        "label": "Hide episode spoilers",
+        "value": "on"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Export diaryTitles, progress, notes and file mappings",
+        "value": ""
+      }
+    ],
+    "file": "more-trakt-scanning.png",
+    "sha256": "725c4b7e6ddb407b5b9c6861438ca17288af068cf3a3e6a65c4ea1c40fb6bdfb",
+    "passed": true
+  },
+  {
+    "id": "more-trakt-expired",
+    "path": "/preview/more",
+    "scenario": "trakt-expired",
+    "theme": "twilight",
+    "engine": "chromium",
+    "browserVersion": "156.0.8078.4",
+    "referenceTime": "2026-10-23T12:00:00.000Z",
+    "geometry": {
+      "width": 390,
+      "height": 844,
+      "documentWidth": 390,
+      "documentHeight": 1859,
+      "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
+    },
+    "errors": [],
+    "controls": [
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Search",
+        "value": ""
+      },
+      {
+        "tag": "SELECT",
+        "label": "TMDBTrakt",
+        "value": "tmdb"
+      },
+      {
+        "tag": "INPUT",
+        "label": "Hide episode spoilers",
+        "value": "on"
+      },
+      {
+        "tag": "BUTTON",
+        "label": "Export diaryTitles, progress, notes and file mappings",
+        "value": ""
+      }
+    ],
+    "file": "more-trakt-expired.png",
+    "sha256": "35333144e0748f9f808354fc143172531f69161e3eda8b5fded78ae214204b3a",
+    "passed": true
+  },
+  {
     "id": "appearance",
     "path": "/preview/more/appearance",
     "scenario": "default",

@@ -4,7 +4,7 @@ cd "$(dirname "$0")/../.."
 ARTIFACTS="$PWD/ios/.artifacts"
 mkdir -p "$ARTIFACTS/logs"
 PROJECT="$PWD/ios/TwilDiary.xcodeproj"
-COMMON=(-project "$PROJECT" -scheme TwilDiary -clonedSourcePackagesDirPath "$PWD/ios/.spm" CODE_SIGNING_ALLOWED=NO)
+COMMON=(-project "$PROJECT" -scheme TwilDiary -clonedSourcePackagesDirPath "$PWD/ios/.spm" CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO -showBuildTimingSummary)
 SIM_ARCH=$(uname -m)
 
 case "${1:?CI stage required}" in

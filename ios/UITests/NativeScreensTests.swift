@@ -3,13 +3,14 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
         if scanner { app.launchArguments.append("--ui-scanner") }
         if ratingsUnavailable { app.launchArguments.append("--ui-ratings-unavailable") }
         if titleMetadata { app.launchArguments.append("--ui-title-metadata") }
         if empty { app.launchArguments.append("--ui-empty") }
+        if let traktScenario { app.launchArguments.append("--ui-trakt=" + traktScenario) }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
     }
@@ -120,6 +121,21 @@ import UIKit
         XCTAssertTrue(more.isHittable); let before = more.label; more.tap()
         XCTAssertTrue(!more.exists || more.label != before, "Paging must reveal the next twelve watches")
         capture("History expanded page")
+    }
+
+    func testMoreTraktSummaryUsesConnectionAndScanStateInsteadOfStaleCounts() {
+        for (scenario, expected, action) in [
+            ("disconnected", "Bring your watch history together", "Set up Trakt"),
+            ("reconnect", "Reconnect to Trakt", "Open Trakt sync"),
+            ("scanning", "Your scan is in progress", "Continue scan"),
+            ("unavailable", "Check your connection", "Set up Trakt")
+        ] {
+            let app = launch(traktScenario: scenario); app.buttons["tab-more"].tap()
+            XCTAssertTrue(app.staticTexts[expected].waitForExistence(timeout: 5))
+            XCTAssertEqual(app.buttons["settings-trakt-summary"].label, action)
+            XCTAssertFalse(app.staticTexts["8 changes to review"].exists)
+            capture("More Trakt " + scenario); app.terminate()
+        }
     }
 
     func testLibrarySearchAndSelectionPersistAcrossTabs() {

@@ -1,8 +1,8 @@
 [
   {
-    "id": "history-normalized-search",
-    "path": "/preview/recently-watched",
-    "scenario": "default",
+    "id": "more-trakt-review",
+    "path": "/preview/more",
+    "scenario": "trakt-review",
     "theme": "twilight",
     "engine": "chromium",
     "browserVersion": "156.0.8078.4",
@@ -11,7 +11,7 @@
       "width": 390,
       "height": 844,
       "documentWidth": 390,
-      "documentHeight": 1721,
+      "documentHeight": 1859,
       "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
     },
     "errors": [],
@@ -23,53 +23,38 @@
       },
       {
         "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
         "label": "Search",
         "value": ""
       },
       {
-        "tag": "BUTTON",
-        "label": "Date filters",
-        "value": ""
+        "tag": "SELECT",
+        "label": "TMDBTrakt",
+        "value": "tmdb"
       },
       {
         "tag": "INPUT",
-        "label": "Search watch history",
-        "value": "Ｆｒｉｅｒｅｎ"
+        "label": "Hide episode spoilers",
+        "value": "on"
       },
       {
         "tag": "BUTTON",
-        "label": "Any date",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Today",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Last 7 days",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "This month",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Clear filters",
+        "label": "Export diaryTitles, progress, notes and file mappings",
         "value": ""
       }
     ],
-    "file": "history-normalized-search.png",
-    "sha256": "37ea3c742518b866f542a07fc0d84945b15131a83eb32fb9798a41a594f4703a",
+    "file": "more-trakt-review.png",
+    "sha256": "741bdcbcd5a4f4926de316a5604cbc59f31921b76f663eab8cb9ca707d817f37",
     "passed": true
   },
   {
-    "id": "history-expanded",
-    "path": "/preview/recently-watched",
-    "scenario": "default",
+    "id": "more-trakt-scanning",
+    "path": "/preview/more",
+    "scenario": "trakt-scanning",
     "theme": "twilight",
     "engine": "chromium",
     "browserVersion": "156.0.8078.4",
@@ -78,7 +63,7 @@
       "width": 390,
       "height": 844,
       "documentWidth": 390,
-      "documentHeight": 3071,
+      "documentHeight": 1859,
       "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
     },
     "errors": [],
@@ -90,53 +75,38 @@
       },
       {
         "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
         "label": "Search",
         "value": ""
       },
       {
-        "tag": "BUTTON",
-        "label": "Date filters",
-        "value": ""
+        "tag": "SELECT",
+        "label": "TMDBTrakt",
+        "value": "tmdb"
       },
       {
         "tag": "INPUT",
-        "label": "Search watch history",
-        "value": ""
+        "label": "Hide episode spoilers",
+        "value": "on"
       },
       {
         "tag": "BUTTON",
-        "label": "Any date",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Today",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Last 7 days",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "This month",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Show more watches (4)",
+        "label": "Export diaryTitles, progress, notes and file mappings",
         "value": ""
       }
     ],
-    "file": "history-expanded.png",
-    "sha256": "6cce5d8ef79d7a4f0ff60e2a20f924b76471b1362c0b6d33fce1a76d6c032a11",
+    "file": "more-trakt-scanning.png",
+    "sha256": "725c4b7e6ddb407b5b9c6861438ca17288af068cf3a3e6a65c4ea1c40fb6bdfb",
     "passed": true
   },
   {
-    "id": "history-week",
-    "path": "/preview/recently-watched",
-    "scenario": "default",
+    "id": "more-trakt-expired",
+    "path": "/preview/more",
+    "scenario": "trakt-expired",
     "theme": "twilight",
     "engine": "chromium",
     "browserVersion": "156.0.8078.4",
@@ -145,7 +115,7 @@
       "width": 390,
       "height": 844,
       "documentWidth": 390,
-      "documentHeight": 1783,
+      "documentHeight": 1859,
       "font": "Inter, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif"
     },
     "errors": [],
@@ -157,52 +127,32 @@
       },
       {
         "tag": "BUTTON",
+        "label": "Spin TwilDiary logo",
+        "value": ""
+      },
+      {
+        "tag": "BUTTON",
         "label": "Search",
         "value": ""
       },
       {
-        "tag": "BUTTON",
-        "label": "Date filters",
-        "value": ""
+        "tag": "SELECT",
+        "label": "TMDBTrakt",
+        "value": "tmdb"
       },
       {
         "tag": "INPUT",
-        "label": "Search watch history",
-        "value": ""
+        "label": "Hide episode spoilers",
+        "value": "on"
       },
       {
         "tag": "BUTTON",
-        "label": "Any date",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Today",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Last 7 days",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "This month",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Clear filters",
-        "value": ""
-      },
-      {
-        "tag": "BUTTON",
-        "label": "Show more watches (1)",
+        "label": "Export diaryTitles, progress, notes and file mappings",
         "value": ""
       }
     ],
-    "file": "history-week.png",
-    "sha256": "1f1a4bfc847241f3e7c787e360877ec676a0247411f5439e201b982f8c97a6aa",
+    "file": "more-trakt-expired.png",
+    "sha256": "35333144e0748f9f808354fc143172531f69161e3eda8b5fded78ae214204b3a",
     "passed": true
   }
 ]

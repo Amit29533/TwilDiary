@@ -6,13 +6,20 @@ import TwilDiaryCore
 @MainActor final class FixtureTraktService: TraktServicing {
     private var connection: TraktStatus
     private var snapshot: TraktSync
-    init() {
+    private let unavailable: Bool
+    init(scenario: String = "review") {
+        unavailable = scenario == "unavailable"
         let statusURL = Bundle.main.url(forResource: "trakt-status", withExtension: "json")!
         let syncURL = Bundle.main.url(forResource: "trakt-sync", withExtension: "json")!
         connection = try! JSONDecoder().decode(TraktStatus.self, from: Data(contentsOf: statusURL))
         snapshot = try! JSONDecoder().decode(TraktSync.self, from: Data(contentsOf: syncURL))
+        if scenario == "disconnected" {
+            connection = TraktStatus(configured: true, connected: false)
+            snapshot.run = nil; snapshot.items = []; snapshot.counts = [:]
+        } else if scenario == "reconnect" { connection = TraktStatus(configured: true, connected: true, username: "reference-user", needsReconnect: true) }
+        else if scenario == "scanning" { snapshot.run?.state = "building" }
     }
-    func status() async throws -> TraktStatus { connection }
+    func status() async throws -> TraktStatus { if unavailable { throw APIError.message("The connection is temporarily unavailable. Try again.") }; return connection }
     func review(kind: TraktKind, query: String, after: String?) async throws -> TraktSync {
         var result = snapshot
         result.items = result.items.filter { (kind == .all || $0.kind == kind.rawValue) && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)) }
@@ -45,7 +52,11 @@ import TwilDiaryCore
 
 @MainActor func makeTraktService(store: DiaryStore) -> any TraktServicing {
     #if DEBUG
-    if store.isPreview { return FixtureTraktService() }
+    if store.isPreview {
+        let prefix = "--ui-trakt="
+        let scenario = ProcessInfo.processInfo.arguments.first { $0.hasPrefix(prefix) }.map { String($0.dropFirst(prefix.count)) } ?? "review"
+        return FixtureTraktService(scenario: scenario)
+    }
     #endif
     return LiveTraktService(store: store)
 }
