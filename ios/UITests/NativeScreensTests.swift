@@ -560,15 +560,15 @@ import UIKit
         let mark = app.buttons["mark-title-watch"]
         if !mark.isHittable { app.swipeUp() }
         mark.tap()
-        wait(for: [expectation(for: NSPredicate(format: "value == '9 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        waitForProgress("9 of 16 episodes watched", slider: progress)
         app.buttons["Undo"].tap()
-        wait(for: [expectation(for: NSPredicate(format: "value == '8 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        waitForProgress("8 of 16 episodes watched", slider: progress)
         let start = progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
         XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 10), "A range edit must produce a real Undo receipt, not only a draft value")
-        wait(for: [expectation(for: NSPredicate(format: "value == '10 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        waitForProgress("10 of 16 episodes watched", slider: progress)
         app.buttons["Undo"].tap()
-        wait(for: [expectation(for: NSPredicate(format: "value == '8 of 16 episodes watched'"), evaluatedWith: progress)], timeout: 10)
+        waitForProgress("8 of 16 episodes watched", slider: progress)
         app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["title-quiet-orbit"].tap()
         let movieMark = app.buttons["mark-title-watch"]
         XCTAssertTrue(movieMark.waitForExistence(timeout: 5)); movieMark.tap()
@@ -731,11 +731,13 @@ import UIKit
         let app = launch(); app.buttons["tab-home"].tap(); app.buttons["search-twildiary"].tap()
         let field = app.textFields["Search library and online"]
         XCTAssertTrue(field.waitForExistence(timeout: 5)); field.typeText("Frieren")
-        app.buttons["search-library-frieren"].tap()
-        XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.keyboards.firstMatch.exists)
-        completeContentBack(app, beside: app.staticTexts["title-hero-name"])
-        XCTAssertTrue(field.waitForExistence(timeout: 5)); XCTAssertEqual(field.value as? String, "Frieren")
+        for _ in 0..<2 {
+            app.buttons["search-library-frieren"].tap()
+            XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
+            XCTAssertFalse(app.keyboards.firstMatch.exists)
+            completeContentBack(app, beside: app.staticTexts["title-hero-name"])
+            XCTAssertTrue(field.waitForExistence(timeout: 5)); XCTAssertEqual(field.value as? String, "Frieren")
+        }
         XCTAssertTrue(app.buttons["search-library-frieren"].exists); capture("Search retained after content Back")
         app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
         XCTAssertTrue(field.waitForExistence(timeout: 5)); field.typeText("Clockmaker")
@@ -756,6 +758,14 @@ import UIKit
         XCTAssertTrue(scoped.waitForExistence(timeout: 5)); scoped.typeText("Clockmaker\n")
         XCTAssertFalse(app.buttons["search-movie:900001"].exists)
         XCTAssertTrue(app.staticTexts["A clear little corner"].exists); capture("Glance scoped search")
+    }
+    private func waitForProgress(_ value: String, slider: XCUIElement) {
+        // A false format predicate on an XCUIElement asks XCTest to dump the entire
+        // hierarchy. That diagnostic can outlast the real, deliberately short Undo
+        // window. Poll the same actual accessibility value without that extra dump.
+        let condition = NSPredicate { _, _ in (slider.value as? String) == value }
+        wait(for: [expectation(for: condition, evaluatedWith: "episode progress")], timeout: 10)
+        XCTAssertEqual(slider.value as? String, value)
     }
     private func completeContentBack(_ app: XCUIApplication, beside anchor: XCUIElement) {
         XCTAssertTrue(anchor.waitForExistence(timeout: 5))

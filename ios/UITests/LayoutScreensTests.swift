@@ -73,12 +73,17 @@ import XCTest
         let summary = app.staticTexts["title-synopsis-text"]
         XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: 5))
         let leadingFrame = summary.frame
+        let leadingText = summary.label.hasSuffix("…") ? String(summary.label.dropLast()) : summary.label
         app.buttons["More"].tap()
         let continuation = app.staticTexts["title-synopsis-continuation"]
         XCTAssertTrue(continuation.waitForExistence(timeout: 5))
         XCTAssertEqual(summary.frame.minX, leadingFrame.minX, accuracy: 1)
         XCTAssertEqual(summary.frame.minY, leadingFrame.minY, accuracy: 1)
-        XCTAssertEqual(summary.frame.width, leadingFrame.width, accuracy: 1)
+        // Accessibility reports glyph ink, so removing the ellipsis legitimately
+        // changes its width. Check the retained copy, position and two-line height.
+        XCTAssertEqual(summary.label, leadingText)
+        XCTAssertEqual(summary.frame.height, leadingFrame.height, accuracy: 1)
+        XCTAssertLessThanOrEqual(summary.frame.maxX, app.frame.width - 14)
         XCTAssertGreaterThan(summary.frame.minX, app.frame.width / 3)
         XCTAssertGreaterThan(continuation.frame.width, app.frame.width * 0.8)
         XCTAssertLessThan(continuation.frame.minX, 24)

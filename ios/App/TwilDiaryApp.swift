@@ -52,6 +52,10 @@ struct SavedTitleRoute: Hashable {
     var libraryRevision = 0
     var statsRevision = 0
     var detailTabs = Set<AppTab>()
+    func setDetailVisibility(_ visible: Bool, tab: AppTab) {
+        guard detailTabs.contains(tab) != visible else { return }
+        if visible { detailTabs.insert(tab) } else { detailTabs.remove(tab) }
+    }
     @discardableResult func goBack(tab: AppTab? = nil) -> Bool {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         let owner = tab ?? selectedTab
@@ -166,15 +170,15 @@ struct RootView: View {
     private var navigation: some View { DiaryNavigationBar() }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {
-            content().background(tab == .library && theme != .glass ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
-                .navigationDestination(for: String.self) { TitleDetailView(id: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
-                .navigationDestination(for: SavedTitleRoute.self) { TitleDetailView(id: $0.id, linkedSeason: $0.season, focusEpisodes: $0.focusEpisodes, focusNotes: $0.focusNotes).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
-                .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
-                .navigationDestination(for: ExploreSectionRoute.self) { ExploreSectionView(route: $0, store: store).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) } }
-                .navigationDestination(for: PersonFilmographyRoute.self) { PersonFilmographyView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) } }
-                .navigationDestination(for: PersonRoute.self) { PersonView(route: $0).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.insert(tab) } }
+            content().background(tab == .library && theme != .glass ? Color(webHex: "#0e0d13") : .black).toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router)
+                .navigationDestination(for: String.self) { TitleDetailView(id: $0).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
+                .navigationDestination(for: SavedTitleRoute.self) { TitleDetailView(id: $0.id, linkedSeason: $0.season, focusEpisodes: $0.focusEpisodes, focusNotes: $0.focusNotes).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
+                .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
+                .navigationDestination(for: ExploreSectionRoute.self) { ExploreSectionView(route: $0, store: store).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router) }
+                .navigationDestination(for: PersonFilmographyRoute.self) { PersonFilmographyView(route: $0).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router) }
+                .navigationDestination(for: PersonRoute.self) { PersonView(route: $0).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
                 .navigationDestination(for: HistoryRoute.self) { route in
-                    HistoryView(initialDay: route.day, initialUnknown: route.unknown).toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
+                    HistoryView(initialDay: route.day, initialUnknown: route.unknown).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router)
                 }
                 .navigationDestination(for: AppDestination.self) { destination in
                     Group { switch destination {
@@ -187,7 +191,7 @@ struct RootView: View {
                     case .trakt: TraktView(store: store)
                     case .tmdb: TMDBConnectionView()
                     case .about: AboutView()
-                    } }.toolbar(.hidden, for: .tabBar).onAppear { router.detailTabs.remove(tab) }
+                    } }.toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router)
                 }
         }.toolbar(.hidden, for: .tabBar)
             .environment(\.diaryBack, DiaryBackAction { router.goBack(tab: tab) })
