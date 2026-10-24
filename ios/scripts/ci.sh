@@ -82,15 +82,23 @@ PY
     ;;
   test-layouts)
     xcrun simctl shutdown "$SIMULATOR_ID" || true
+    layout_status=0
     while IFS=$'\t' read -r layout_name layout_id; do
-      xcrun simctl boot "$layout_id"
-      xcrun simctl bootstatus "$layout_id" -b
-      xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$layout_id,arch=$SIM_ARCH" \
+      if ! xcrun simctl boot "$layout_id" || ! xcrun simctl bootstatus "$layout_id" -b; then
+        echo "Layout simulator failed to boot: $layout_name" >&2
+        layout_status=1
+        xcrun simctl shutdown "$layout_id" || true
+        continue
+      fi
+      if ! xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$layout_id,arch=$SIM_ARCH" \
         -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 360 -only-testing:TwilDiaryUITests/LayoutScreensTests \
         -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/Layout-$layout_name.xcresult" \
-        2>&1 | tee "$ARTIFACTS/logs/layout-$layout_name-tests.log"
-      xcrun simctl shutdown "$layout_id"
+        2>&1 | tee "$ARTIFACTS/logs/layout-$layout_name-tests.log"; then
+        layout_status=1
+      fi
+      xcrun simctl shutdown "$layout_id" || true
     done < <(python3 -c 'import json; [print(item["name"].replace(" ", "") + "\t" + item["udid"]) for item in json.load(open("ios/.artifacts/layout-simulators.json"))]')
+    exit "$layout_status"
     ;;
   screenshots-progress)
     python3 - "$ARTIFACTS" <<'PY'
