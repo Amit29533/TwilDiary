@@ -45,7 +45,8 @@ extension DiaryStore {
     }
     func importTitle(_ details: CatalogDetails, category: String) async -> String? {
         guard !busy, canMutate else { return nil }
-        busy = true; defer { busy = false }
+        let revision = sessionRevision
+        busy = true; defer { if revision == sessionRevision { busy = false } }
         var confirmed = false
         do {
             let result: ImportedTitle = try await read("/api/metadata/import", method: "POST", body: ["mediaType": details.mediaType.rawValue, "tmdbId": details.id, "category": category, "status": "planned", "score": NSNull()])
@@ -53,7 +54,9 @@ extension DiaryStore {
             try await reload()
             error = nil
             return result.title.id
-        } catch {
+        } catch is CancellationError { return nil }
+        catch {
+            guard revision == sessionRevision else { return nil }
             if confirmed { self.error = "Added to your library, but the refresh failed. Refresh or try adding again to reopen it; a second copy will not be created." }
             else { self.error = error.localizedDescription }
             return nil

@@ -41,6 +41,19 @@ import TwilDiaryCore
                     "seasons": seasonObjects]
                 titles.append(title); response = ["title": title, "added": true]
             }
+        } else if route == "/api/titles", method == "POST" {
+            guard body.keys.allSatisfy({ ["id", "name", "category", "year", "status", "score"].contains($0) }), let id = body["id"] as? String, !id.hasPrefix("tmdb-"), id.range(of: #"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$"#, options: .regularExpression) != nil,
+                  let name = body["name"] as? String, let category = body["category"] as? String, let status = body["status"] as? String else { throw APIError.rejected(400, "Invalid manual title.") }
+            var draft = ManualTitleDraft(); draft.name = name; draft.category = category; draft.status = status
+            draft.year = (body["year"] as? Int).map(String.init) ?? ""; draft.score = (body["score"] as? Double).map { String($0) } ?? ""
+            let input = try draft.validated(id: id)
+            if let existing = workspace.titles.first(where: { $0.id == id }) {
+                guard existing.name.lowercased() == input.name.lowercased(), existing.category == input.category, existing.year == input.year, existing.deletedAt == nil else { throw APIError.rejected(409, "This title identity already exists. Open the existing title or restore it from Trash.") }
+                response = ["title": try object(existing)]
+            } else {
+                let title: [String: Any] = ["id": id, "name": input.name, "category": input.category, "year": input.year as Any? ?? NSNull(), "overview": "", "poster": NSNull(), "backdrop": NSNull(), "communityScore": NSNull(), "tmdbId": NSNull(), "genres": [], "tags": [], "runtimeMinutes": NSNull(), "status": status, "score": input.score as Any? ?? NSNull(), "favorite": false, "queued": false, "notes": "", "deletedAt": NSNull(), "version": 1, "seasons": []]
+                titles.append(title); response = ["title": title]
+            }
         } else if route == "/api/scanner/review", method == "GET" {
             response = ["items": scans, "nextCursor": NSNull()]
         } else if parts.count == 5, Array(parts.prefix(3)) == ["api", "scanner", "review"], parts[4] == "resolve", method == "POST" {

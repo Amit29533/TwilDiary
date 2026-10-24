@@ -127,6 +127,24 @@ import UIKit
         capture("Title revealed episode collapsed")
     }
 
+    func testManualTitleYearValidationStatusRatingAndSavedNavigation() {
+        let app = launch(mutations: true); app.buttons["tab-home"].tap(); app.buttons["search-twildiary"].tap(); app.buttons["Add manually"].tap()
+        let name = app.textFields["manual-name"], year = app.textFields["manual-year"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5)); name.tap(); name.typeText("Manual reference movie")
+        year.tap(); year.typeText("1799"); app.buttons["manual-keyboard-done"].tap()
+        app.buttons["manual-save"].tap(); XCTAssertTrue(app.staticTexts["Choose a valid release year"].waitForExistence(timeout: 5)); capture("Manual invalid year")
+        year.tap(); year.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4) + "1800"); app.buttons["manual-keyboard-done"].tap()
+        app.buttons["manual-status"].tap(); app.buttons["Watching"].tap()
+        app.buttons["Rating"].tap()
+        let score = app.textFields["manual-score"]
+        XCTAssertTrue(score.waitForExistence(timeout: 5)); score.tap(); score.typeText("7.5"); app.buttons["manual-keyboard-done"].tap(); capture("Manual title review")
+        let save = app.buttons["manual-save"]
+        for _ in 0..<4 { if save.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(save.isHittable); save.tap()
+        XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 10)); XCTAssertEqual(app.buttons["title-personal-rating"].value as? String, "7.5")
+        XCTAssertTrue(app.buttons["title-watch-status"].exists); capture("Manual title saved")
+    }
+
     func testCatalogSeriesSeasonsSpoilersAndImport() {
         let app = launch(mutations: true); app.buttons["tab-home"].tap(); app.buttons["search-twildiary"].tap()
         let search = app.textFields["Search library and online"]

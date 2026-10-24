@@ -240,9 +240,9 @@ import TwilDiaryCore
             let _: EmptyResponse = try await self.read("/api/titles/\(title.id)", method: "PATCH", body: body)
         }
     }
-    func setStatus(_ title: MediaTitle, status: String, watchedAt: Date? = nil) async {
-        if status != "planned" && status != "completed" { await patch(title, values: ["status": status]); return }
-        await perform { try await self.applyProgress([title], status: status, watchedAt: watchedAt ?? self.now) }
+    @discardableResult func setStatus(_ title: MediaTitle, status: String, watchedAt: Date? = nil) async -> Bool {
+        if status != "planned" && status != "completed" { return await patch(title, values: ["status": status]) }
+        return await perform { try await self.applyProgress([title], status: status, watchedAt: watchedAt ?? self.now) }
     }
     @discardableResult func manage(_ reviewed: [MediaTitle], change: CollectionChange) async -> Bool {
         await perform {

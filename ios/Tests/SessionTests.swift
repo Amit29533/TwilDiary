@@ -108,6 +108,32 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         XCTAssertEqual(body["status"] as? String, "planned"); XCTAssertTrue(body["score"] is NSNull)
     }
 
+    func testManualCreateRefreshFailureRetainsCallerIdentityAndExplicitNulls() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { request in
+            if request.url?.path == "/api/titles" { return .init(#"{"title":{"id":"manual-reference"}}"#) }
+            return .init(503, #"{"error":{"message":"Synthetic read outage"}}"#)
+        }
+        let store = DiaryStore(api: api(storage)); var draft = ManualTitleDraft(); draft.name = "Reference"
+        do { _ = try await store.createManualTitle(draft.validated(id: "manual-reference")); XCTFail("A failed refresh must remain retryable") }
+        catch { XCTAssertTrue(error.localizedDescription.contains("a second copy will not be created")) }
+        XCTAssertFalse(store.busy)
+        let request = try XCTUnwrap(StubProtocol.state.recorded().first)
+        let body = try XCTUnwrap(JSONSerialization.jsonObject(with: try XCTUnwrap(request.httpBody)) as? [String: Any])
+        XCTAssertEqual(body["id"] as? String, "manual-reference"); XCTAssertTrue(body["score"] is NSNull); XCTAssertTrue(body["year"] is NSNull)
+    }
+
+    func testLateCatalogImportCannotPublishAnErrorAfterSignOut() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { _ in var reply = StubProtocol.Reply(#"{"title":{"id":"tmdb-tv-900001"}}"#); reply.delay = 0.15; return reply }
+        let store = DiaryStore(api: api(storage)), details = PreviewCatalog.browse(CatalogRoute(kind: .tv, id: 900001)).details
+        let task = Task { await store.importTitle(details, category: details.suggestedCategory) }
+        while StubProtocol.state.recorded().isEmpty { await Task.yield() }
+        store.signOut(); let result = await task.value
+        XCTAssertNil(result); XCTAssertNil(store.error); XCTAssertTrue(store.needsSignIn); XCTAssertFalse(store.busy)
+        XCTAssertTrue(store.workspace.titles.isEmpty)
+    }
+
     func testSignInSurvivesDatabaseQuotaAndDoesNotProbeWorkspaceForAuthentication() async {
         StubProtocol.state.reset { request in
             if request.url?.path == "/api/session" { return .init(#"{"authenticated":true}"#) }

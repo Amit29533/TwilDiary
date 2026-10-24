@@ -52,6 +52,19 @@ import TwilDiaryCore
         await controller.load(1); XCTAssertEqual(controller.items.count, 1)
     }
     private struct ImportReceipt: Decodable { let title: MediaTitle; let added: Bool }
+    private struct ManualReceipt: Decodable { let title: MediaTitle }
+    func testManualFixtureRetryPreservesPersonalFieldsAndRejectsChangedIdentity() throws {
+        let fixture = FixtureDiaryBackend(workspace: PreviewData.workspace)
+        let body: [String: Any] = ["id": "manual-reference", "name": "Reference", "category": "movie", "year": 1800, "status": "watching", "score": 7.5]
+        let receipt: ManualReceipt = try fixture.request("/api/titles", method: "POST", body: body)
+        XCTAssertEqual(receipt.title.year, 1800); XCTAssertEqual(receipt.title.status, "watching"); XCTAssertEqual(receipt.title.score, 7.5)
+        let _: EmptyResponse = try fixture.request("/api/titles/manual-reference", method: "PATCH", body: ["expectedVersion": 1, "notes": "Keep this", "score": 8.0])
+        let again: ManualReceipt = try fixture.request("/api/titles", method: "POST", body: body)
+        XCTAssertEqual(again.title.notes, "Keep this"); XCTAssertEqual(again.title.score, 8.0)
+        var changed = body; changed["name"] = "Different"
+        XCTAssertThrowsError(try fixture.request("/api/titles", method: "POST", body: changed) as ManualReceipt)
+        XCTAssertEqual(fixture.workspace.titles.filter { $0.id == "manual-reference" }.count, 1)
+    }
     func testIsolatedImportIsIdempotentAndPreservesPersonalData() throws {
         let fixture = FixtureDiaryBackend(workspace: PreviewData.workspace)
         let body: [String: Any] = ["mediaType": "tv", "tmdbId": 900001, "category": "anime", "status": "planned"]
