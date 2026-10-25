@@ -197,3 +197,8 @@ uncompiled; no new acceptance checkbox or stable promotion is implied.
 - [ ] Audit native navigation/layout/motion, metadata/search/cache, session boundaries and all mutation receipts.
 - [ ] Audit backend schema/API/data invariants, sync retry/leases/idempotence and free-plan query budget.
 - [ ] Run complete web/native/UI/release suites; inspect artifacts and record remaining phone checks.
+
+Native60audit checkpoint:213native/16of17focused pass, zero compiler warnings.
+One concrete left Glance cover/page interaction remains;61prepares symmetric
+suppression and six cold-cache race/executor tests based on129.45ms measured
+10k-event synchronous load. Full403backend cases pass. No stable acceptance.

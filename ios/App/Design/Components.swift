@@ -330,8 +330,13 @@ struct ProgressCard: View {
                 .offset(x: drag)
         }.background(.green.opacity(0.15), in: RoundedRectangle(cornerRadius: 14)).clipShape(RoundedRectangle(cornerRadius: 14))
             .simultaneousGesture(DragGesture(minimumDistance: 22).onChanged { value in
-                guard !compact, value.startLocation.x > 24, canMark else { return }
-                if value.translation.width > abs(value.translation.height) * 1.3 { drag = min(120, max(0, value.translation.width)); suppressNavigationUntil = .now.addingTimeInterval(0.35) }
+                guard !compact, value.startLocation.x > 24 else { return }
+                if abs(value.translation.width) > abs(value.translation.height) * 1.3 {
+                    // Both page directions must suppress a cover tap, including
+                    // completed/offline cards that cannot log a watch.
+                    suppressNavigationUntil = .now.addingTimeInterval(0.35)
+                    if canMark { drag = min(120, max(0, value.translation.width)) }
+                }
             }.onEnded { value in
                 let mark = drag > 80 && value.translation.width < 160; if drag > 22 { suppressNavigationUntil = .now.addingTimeInterval(0.35) }; withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.8)) { drag = 0 }
                 if mark { Task { await markWatch() } }

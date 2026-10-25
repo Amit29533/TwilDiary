@@ -14,6 +14,45 @@ results and actual artifacts; reconcile before editing. Notes and source test
 counts never substitute for runtime evidence. No Mac/Xcode/Swift runtime is
 available locally; Windows checks grammar/YAML/Bash/Python only.
 
+## Native61 — measured cold-path repair and native60 evidence
+
+Current source61is prepared, not yet compiled. CM60run
+**6ade2b024a72334e32e50d12**, exacte17189ebddd4392c87ac3d5fb33a44d00486b15d:
+zero compiler warnings;213native pass;16of17focused UI cases pass. Remaining
+failure is NativeScreensTests:141, left Glance-to-Library page swipe opens
+Frieren. Recording confirms the cover push; symmetric negative-direction tap
+suppression was missing in ProgressCard.61suppresses horizontal cover taps in
+both directions, including non-markable cards. Assertions stay intact, adding
+failure hierarchy/screenshots. Full primary/extra-phone/Release gates were not
+reached on60; no IPA or stable promotion is inferred.
+
+Native60archive D:/Downloads/TwilDiary_26_artifacts.zip is263,790,207bytes with
+ZIP CRC pass, extracted .local/codemagic60-diagnostics. Original screenshots
+from individually passed cases plus exact scope are in
+**ios/docs/screenshots/step-10/build-60-focused**. Visually checked compact
+header, episode tick placement, retained dark Information cards/blur, and import
+progress. Phone animation quality remains unproved.
+
+Actual native60scale diagnostic:10,000events synchronous cache load129.45ms,
+index44.02ms.61moves cold encrypted file read/decode/validation to a detached
+utility task; Keychain and generation-fenced publication stay on MainActor.
+Launch performs memory-only resident lookup; network refresh awaits one cold
+restore; sign-out/account/snapshot changes reject stale read results. Existing
+sealed format/owner partition/size limits remain. Six added native regressions
+cover executor yielding, cancellation, save/removal invalidation, offline launch
+and account change;219native source cases, runtime pending.
+
+Backend audit reproduced a partial activities response being accepted as a full
+review snapshot. Require all six selected timestamps; new negative test failed
+before the fix and passes afterward. Full **403backend cases**, web0errors/
+0warnings typecheck, production build and3PWA tests pass.13CI-tool tests and
+Windows grammar/workflow checks pass; these do not replace macOS acceptance.
+No hosted migration/deploy applied. Quota/auth rollout checks remain open.
+
+Exact next action: push61to codex/ios-ci-next and run the official complete CM
+regression. Read actual failures/artifacts before another change. Do not promote
+until complete same-SHA acceptance. GitHub ios-native remains54d59f55e.
+
 ## Native60 — follow-up from actual59 artifacts
 
 CM59 **6ade213a4a72334e32e50a40**, c12f24bf33712905a545b394915642f0c009bd36:

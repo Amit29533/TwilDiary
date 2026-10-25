@@ -84,6 +84,8 @@ import TwilDiaryCore
     private var undoAction: (() async throws -> Void)?
     private let api: DiaryAPI
     private let cache: any WorkspaceCaching
+    @ObservationIgnored private var cacheRestoration: Task<Void, Never>?
+    private(set) var restoringCache = false
     private var sessionGeneration = UUID()
     var sessionRevision: UUID { sessionGeneration }
     private var snapshotGeneration = UUID()
@@ -137,6 +139,7 @@ import TwilDiaryCore
         indexWorkspace()
     }
     func connect(_ credential: AccessCredential) async {
+        cacheRestoration?.cancel(); cacheRestoration = nil; restoringCache = false
         let previousScope = api.credential?.cacheScope
         retainedTraktController?.invalidateSession(); retainedTraktController = nil
         let generation = UUID(); sessionGeneration = generation; snapshotGeneration = UUID()
@@ -162,6 +165,7 @@ import TwilDiaryCore
         } catch { if generation == sessionGeneration { fail(error) } }
     }
     func signOut() {
+        cacheRestoration?.cancel(); cacheRestoration = nil; restoringCache = false
         retainedTraktController?.invalidateSession(); retainedTraktController = nil
         if !isPreview { PreferencesTraktApplyCheckpoint().runID = nil }
         #if DEBUG
@@ -191,6 +195,8 @@ import TwilDiaryCore
         #endif
         let session = sessionGeneration
         loading = true; defer { if session == sessionGeneration { loading = false } }
+        await cacheRestoration?.value
+        guard session == sessionGeneration, !needsSignIn, !Task.isCancelled else { return }
         do { try await reload(); if session == sessionGeneration { error = nil } }
         catch is CancellationError { }
         catch { if session == sessionGeneration { fail(error) } }
@@ -244,10 +250,23 @@ import TwilDiaryCore
         }
     }
     private func restoreCachedWorkspace() {
-        guard let credential = api.credential, credential.isValid, let snapshot = cache.load(scope: credential.cacheScope),
-              (try? snapshot.workspace.validatingIdentities()) != nil else { return }
-        workspace = snapshot.workspace; hasLoadedWorkspace = true
-        showingCachedSnapshot = true; lastRefreshedAt = snapshot.savedAt
+        guard let credential = api.credential, credential.isValid, !hasLoadedWorkspace else { return }
+        if let snapshot = cache.residentSnapshot(scope: credential.cacheScope) {
+            workspace = snapshot.workspace; hasLoadedWorkspace = true
+            showingCachedSnapshot = true; lastRefreshedAt = snapshot.savedAt
+            return
+        }
+        let session = sessionGeneration, revision = snapshotGeneration, scope = credential.cacheScope
+        restoringCache = true
+        cacheRestoration = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { if session == self.sessionGeneration { self.restoringCache = false } }
+            guard let snapshot = try? await self.cache.loadAsynchronously(scope: scope),
+                  !Task.isCancelled, session == self.sessionGeneration, revision == self.snapshotGeneration,
+                  !self.needsSignIn, !self.hasLoadedWorkspace, self.api.credential?.cacheScope == scope else { return }
+            self.workspace = snapshot.workspace; self.hasLoadedWorkspace = true
+            self.showingCachedSnapshot = true; self.lastRefreshedAt = snapshot.savedAt
+        }
     }
     private func indexWorkspace() {
         cachedHome = nil; cachedStats = nil

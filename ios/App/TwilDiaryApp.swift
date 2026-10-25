@@ -120,8 +120,8 @@ struct RootView: View {
             } else if !store.hasLoadedWorkspace {
                 VStack(spacing: 22) {
                     BrandMark().fill(.tint).frame(width: 48, height: 48)
-                    Text(store.loading ? "Opening your diary" : "Your diary is temporarily unavailable").font(.title2.bold())
-                    if store.loading { ProgressView() }
+                    Text(store.loading || store.restoringCache ? "Opening your diary" : "Your diary is temporarily unavailable").font(.title2.bold())
+                    if store.loading || store.restoringCache { ProgressView() }
                     else {
                         Text(store.error ?? "You’re signed in. Retry to load your diary.").foregroundStyle(.secondary).multilineTextAlignment(.center)
                         Button("Retry") { Task { await store.refresh() } }.buttonStyle(.borderedProminent).controlSize(.large)

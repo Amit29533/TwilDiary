@@ -139,6 +139,12 @@ import UIKit
         for tab in ["stats", "glance", "library", "home"] {
             swipe(false)
             wait(for: [expectation(for: NSPredicate(format: "selected == true"), evaluatedWith: app.tabBars.buttons[tab.capitalized])], timeout: 5)
+            if !app.tabBars.buttons[tab.capitalized].isSelected {
+                let hierarchy = XCTAttachment(string: app.debugDescription)
+                hierarchy.name = "Unexpected page after left swipe to " + tab
+                hierarchy.lifetime = .keepAlways; add(hierarchy)
+                capture("Unexpected left swipe destination " + tab)
+            }
         }
         capture("Root tabs swiped both directions without wrapping")
         app.tabBars.buttons["Glance"].tap()

@@ -754,6 +754,69 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
         XCTAssertTrue(store.workspace.titles.isEmpty)
         XCTAssertNil(cache.load(scope: credential.cacheScope))
     }
+    func testProtectedColdCacheRestoresBeforeAnOfflineRefreshWithoutBlockingInitialization() async throws {
+        let folder = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let gate = CachePreparationGate()
+        let cache = ProtectedWorkspaceCache(directory: folder, key: SymmetricKey(size: .bits256), beforeLoad: { try gate.holdFirst() })
+        try cache.save(PreviewData.workspace, scope: credential.cacheScope, at: .now)
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { _ in .init(503, "Synthetic offline", contentType: "text/plain") }
+        let store = DiaryStore(api: api(storage), cache: cache)
+        XCTAssertFalse(store.hasLoadedWorkspace); XCTAssertTrue(store.restoringCache)
+        let refresh = Task { await store.refresh() }
+        guard await waitForRegressionCondition({ gate.hasStarted }) else {
+            refresh.cancel(); gate.resume(); await refresh.value; XCTFail("Cold restore never started"); return
+        }
+        XCTAssertFalse(gate.startedOnMainThread)
+        XCTAssertTrue(StubProtocol.state.recorded().isEmpty, "Refresh must await the single cold restore")
+        gate.resume(); await refresh.value
+        XCTAssertEqual(store.workspace.titles, PreviewData.workspace.titles)
+        XCTAssertTrue(store.hasLoadedWorkspace); XCTAssertTrue(store.showingCachedSnapshot)
+        XCTAssertFalse(store.restoringCache); XCTAssertFalse(store.loading)
+        XCTAssertFalse(store.needsSignIn)
+    }
+
+    func testSignOutDuringColdCacheRestorationCannotResurrectTheDiary() async throws {
+        let folder = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let gate = CachePreparationGate()
+        let cache = ProtectedWorkspaceCache(directory: folder, key: SymmetricKey(size: .bits256), beforeLoad: { try gate.holdFirst() })
+        try cache.save(PreviewData.workspace, scope: credential.cacheScope, at: .now)
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage), cache: cache)
+        let refresh = Task { await store.refresh() }
+        guard await waitForRegressionCondition({ gate.hasStarted && store.loading }) else {
+            refresh.cancel(); gate.resume(); await refresh.value; XCTFail("Cold restore never started"); return
+        }
+        store.signOut(); gate.resume(); await refresh.value
+        XCTAssertTrue(store.workspace.titles.isEmpty); XCTAssertTrue(store.needsSignIn)
+        XCTAssertFalse(store.hasLoadedWorkspace); XCTAssertFalse(store.restoringCache); XCTAssertFalse(store.loading)
+        XCTAssertTrue(StubProtocol.state.recorded().isEmpty)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: folder.path))
+    }
+
+    func testAccountChangeDuringColdRestorationRejectsThePreviousOwnersSnapshot() async throws {
+        let folder = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let gate = CachePreparationGate()
+        let cache = ProtectedWorkspaceCache(directory: folder, key: SymmetricKey(size: .bits256), beforeLoad: { try gate.holdFirst() })
+        try cache.save(PreviewData.workspace, scope: credential.cacheScope, at: .now)
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage), cache: cache)
+        let oldRefresh = Task { await store.refresh() }
+        guard await waitForRegressionCondition({ gate.hasStarted && store.loading }) else {
+            oldRefresh.cancel(); gate.resume(); await oldRefresh.value; XCTFail("Cold restore never started"); return
+        }
+        StubProtocol.state.reset { request in
+            .init(request.url?.path == "/api/session" ? #"{"authenticated":true}"# : #"{"items":[],"next":null}"#)
+        }
+        await store.connect(AccessCredential(token: "synthetic-other-owner", expires: .distantFuture))
+        gate.resume(); await oldRefresh.value
+        XCTAssertEqual(storage.credential?.token, "synthetic-other-owner")
+        XCTAssertTrue(store.workspace.titles.isEmpty); XCTAssertTrue(store.hasLoadedWorkspace)
+        XCTAssertFalse(store.showingCachedSnapshot); XCTAssertFalse(store.needsSignIn); XCTAssertFalse(store.restoringCache)
+    }
     func testSignOutWhileLoadingCannotResurrectSessionOrDiary() async throws {
         StubProtocol.state.reset { _ in
             var reply = StubProtocol.Reply(#"{"items":[],"next":null}"#); reply.delay = 0.15; return reply

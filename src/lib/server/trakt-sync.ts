@@ -95,7 +95,7 @@ async function activity(trakt: Trakt) {
         typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : null;
     }
   }
-  if (!Object.values(selected).some(Boolean))
+  if (!Object.values(selected).every(Boolean))
     throw new ApiError(
       502,
       'trakt_incomplete',

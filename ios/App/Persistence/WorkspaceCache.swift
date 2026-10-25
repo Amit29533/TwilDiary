@@ -11,13 +11,18 @@ struct CachedWorkspace: Codable, Sendable {
 }
 
 @MainActor protocol WorkspaceCaching {
+    /// Memory-only lookup. A cold disk read must use the asynchronous path.
+    func residentSnapshot(scope: String) -> CachedWorkspace?
     func load(scope: String) -> CachedWorkspace?
+    func loadAsynchronously(scope: String) async throws -> CachedWorkspace?
     func save(_ workspace: Workspace, scope: String, at date: Date) throws
     func saveAsynchronously(_ workspace: Workspace, scope: String, at date: Date) async throws
     func removeAll() throws
 }
 
 extension WorkspaceCaching {
+    func residentSnapshot(scope: String) -> CachedWorkspace? { nil }
+    func loadAsynchronously(scope: String) async throws -> CachedWorkspace? { load(scope: scope) }
     func saveAsynchronously(_ workspace: Workspace, scope: String, at date: Date) async throws {
         try save(workspace, scope: scope, at: date)
     }
@@ -26,6 +31,7 @@ extension WorkspaceCaching {
 @MainActor final class MemoryWorkspaceCache: WorkspaceCaching {
     private var snapshot: CachedWorkspace?
     func load(scope: String) -> CachedWorkspace? { snapshot?.scope == scope ? snapshot : nil }
+    func residentSnapshot(scope: String) -> CachedWorkspace? { load(scope: scope) }
     func save(_ workspace: Workspace, scope: String, at date: Date) throws {
         snapshot = CachedWorkspace(schema: 1, scope: scope, savedAt: date, workspace: try workspace.validatingIdentities())
     }
@@ -38,26 +44,37 @@ extension WorkspaceCaching {
     private let testKey: SymmetricKey?
     private let maximumBytes: Int
     private let beforePrepare: (@Sendable () throws -> Void)?
+    private let beforeLoad: (@Sendable () throws -> Void)?
     private var writeGeneration = UUID()
     init(directory: URL? = nil, key: SymmetricKey? = nil, maximumBytes: Int = 50 * 1_024 * 1_024,
-         beforePrepare: (@Sendable () throws -> Void)? = nil) {
+         beforePrepare: (@Sendable () throws -> Void)? = nil,
+         beforeLoad: (@Sendable () throws -> Void)? = nil) {
         self.directory = directory ?? URL.applicationSupportDirectory.appendingPathComponent("PrivateDiary", isDirectory: true)
         testKey = key
         self.maximumBytes = max(0, maximumBytes)
         self.beforePrepare = beforePrepare
+        self.beforeLoad = beforeLoad
     }
     func load(scope: String) -> CachedWorkspace? {
-        do {
-            let url = file(scope)
-            let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-            guard size > 0 && size <= maximumBytes else { return nil }
-            let encrypted = try Data(contentsOf: url)
-            let plaintext = try AES.GCM.open(AES.GCM.SealedBox(combined: encrypted), using: key(create: false), authenticating: Data(scope.utf8))
-            let value = try JSONDecoder().decode(CachedWorkspace.self, from: plaintext)
-            guard value.schema == 1, value.scope == scope else { return nil }
-            _ = try value.workspace.validatingIdentities()
-            return value
-        } catch { return nil }
+        try? WorkspaceCacheCodec.read(file(scope), scope: scope, key: key(create: false), maximumBytes: maximumBytes)
+    }
+    func loadAsynchronously(scope: String) async throws -> CachedWorkspace? {
+        let ticket = writeGeneration, url = file(scope), maximum = maximumBytes, prepare = beforeLoad
+        // Keychain stays on its existing owner; file I/O, authentication and
+        // decoding execute off the UI actor, in the same bounded sealed format.
+        guard let currentKey = try? key(create: false) else { return nil }
+        let work = Task.detached(priority: .utility) {
+            try Task.checkCancellation()
+            try prepare?()
+            try Task.checkCancellation()
+            do { return try WorkspaceCacheCodec.read(url, scope: scope, key: currentKey, maximumBytes: maximum) }
+            catch is CancellationError { throw CancellationError() }
+            catch { return nil as CachedWorkspace? }
+        }
+        let value = try await withTaskCancellationHandler(operation: { try await work.value }, onCancel: { work.cancel() })
+        try Task.checkCancellation()
+        guard ticket == writeGeneration else { throw CancellationError() }
+        return value
     }
     func save(_ workspace: Workspace, scope: String, at date: Date) throws {
         writeGeneration = UUID()
@@ -114,6 +131,20 @@ extension WorkspaceCaching {
 }
 
 private enum WorkspaceCacheCodec {
+    static func read(_ url: URL, scope: String, key: SymmetricKey, maximumBytes: Int) throws -> CachedWorkspace? {
+        try Task.checkCancellation()
+        let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        guard size > 0 && size <= maximumBytes else { return nil }
+        let encrypted = try Data(contentsOf: url)
+        guard encrypted.count <= maximumBytes else { return nil }
+        try Task.checkCancellation()
+        let plaintext = try AES.GCM.open(AES.GCM.SealedBox(combined: encrypted), using: key, authenticating: Data(scope.utf8))
+        let value = try JSONDecoder().decode(CachedWorkspace.self, from: plaintext)
+        guard value.schema == 1, value.scope == scope else { return nil }
+        _ = try value.workspace.validatingIdentities()
+        try Task.checkCancellation()
+        return value
+    }
     static func prepare(_ workspace: Workspace, scope: String, at date: Date, key: SymmetricKey, maximumBytes: Int) throws -> Data {
         try Task.checkCancellation()
         let snapshot = CachedWorkspace(schema: 1, scope: scope, savedAt: date, workspace: try workspace.validatingIdentities())

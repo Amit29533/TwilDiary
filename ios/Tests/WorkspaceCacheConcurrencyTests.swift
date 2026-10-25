@@ -27,6 +27,66 @@ final class CachePreparationGate: @unchecked Sendable {
 @MainActor final class WorkspaceCacheConcurrencyTests: XCTestCase {
     private let scope = "synthetic-cache-owner"
 
+    func testColdReadYieldsTheMainActorAndRetainsTheExistingOwnerScopedFormat() async throws {
+        let folder = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let gate = CachePreparationGate(), key = SymmetricKey(size: .bits256), date = Date(timeIntervalSince1970: 5)
+        let cache = ProtectedWorkspaceCache(directory: folder, key: key, beforeLoad: { try gate.holdFirst() })
+        let original = SampleWorkspace.make()
+        try cache.save(original, scope: scope, at: date)
+        XCTAssertNil(cache.residentSnapshot(scope: scope), "A protected disk read must not run synchronously at launch")
+        let reading = Task { try await cache.loadAsynchronously(scope: scope) }
+        guard await waitForRegressionCondition({ gate.hasStarted }) else {
+            reading.cancel(); gate.resume(); _ = try? await reading.value; XCTFail("Cold read never started"); return
+        }
+        XCTAssertFalse(gate.startedOnMainThread, "The held reader must not block UI actor work")
+        gate.resume()
+        let value = try await reading.value
+        let restored = try XCTUnwrap(value)
+        XCTAssertEqual(restored.workspace.events, original.events); XCTAssertEqual(restored.savedAt, date)
+        let other = try await cache.loadAsynchronously(scope: "different-owner")
+        XCTAssertNil(other)
+    }
+
+    func testRemovalInvalidatesAnInFlightColdRead() async throws {
+        let folder = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let gate = CachePreparationGate()
+        let cache = ProtectedWorkspaceCache(directory: folder, key: SymmetricKey(size: .bits256), beforeLoad: { try gate.holdFirst() })
+        try cache.save(SampleWorkspace.make(), scope: scope, at: .now)
+        let reading = Task { try await cache.loadAsynchronously(scope: scope) }
+        guard await waitForRegressionCondition({ gate.hasStarted }) else {
+            reading.cancel(); gate.resume(); _ = try? await reading.value; XCTFail("Cold read never started"); return
+        }
+        try cache.removeAll(); gate.resume()
+        do { _ = try await reading.value; XCTFail("An invalidated read must never publish") }
+        catch is CancellationError { }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: folder.path))
+    }
+
+    func testNewerSaveInvalidatesAnOlderColdReadAndCancellationKeepsTheFile() async throws {
+        let folder = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let gate = CachePreparationGate()
+        let cache = ProtectedWorkspaceCache(directory: folder, key: SymmetricKey(size: .bits256), beforeLoad: { try gate.holdFirst() })
+        try cache.save(SampleWorkspace.make(), scope: scope, at: .distantPast)
+        let reading = Task { try await cache.loadAsynchronously(scope: scope) }
+        guard await waitForRegressionCondition({ gate.hasStarted }) else {
+            reading.cancel(); gate.resume(); _ = try? await reading.value; XCTFail("Cold read never started"); return
+        }
+        let date = Date(timeIntervalSince1970: 6)
+        try await cache.saveAsynchronously(Workspace(), scope: scope, at: date)
+        gate.resume()
+        do { _ = try await reading.value; XCTFail("An older reader must not publish after a newer save") }
+        catch is CancellationError { }
+        let cancelled = Task { try await cache.loadAsynchronously(scope: scope) }
+        cancelled.cancel()
+        do { _ = try await cancelled.value; XCTFail("A cancelled reader was accepted") }
+        catch is CancellationError { }
+        XCTAssertEqual(cache.load(scope: scope)?.savedAt, date)
+        XCTAssertEqual(cache.load(scope: scope)?.workspace.events.count, 0)
+    }
+
     func testDetachedPreparationYieldsTheMainActorAndKeepsTheExistingEncryptedFormat() async throws {
         let folder = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: folder) }
