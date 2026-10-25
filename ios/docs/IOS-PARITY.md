@@ -1,6 +1,6 @@
 # Native parity status — work in progress
 
-## Current evidence — native61 accepted on Codemagic;62 running;63 draft
+## Current evidence —61delivered;62qualified/GitHub running;63candidate/64draft
 
 Native61 source8c9514094e96498855b83034c52c4b4349af8fee / CM6ade36de4a72334e32e5107f
 has a complete official pass:219native,17focused,10early and53primary UI tests,
@@ -13,10 +13,13 @@ flows, not every phone/edge case or pixel-perfect production acceptance.
 Native62 / CM6ade49474a72334e32e515c7 / source50134fc has passed219native,
 17focused and10early UI plus physical Release/resource checks. Its actual app
 contains the new required-reason privacy manifest and excludes test fixtures.
-Full primary/extra-phone acceptance and artifacts are still running.63is a
-separate cold-quota bootstrap draft (228native/54primary source cases); it has
-only local grammar/tool checks so far. Stable GitHub remains54after its focused
-gate failure; no later source is labelled independently accepted there.
+Official complete CM62check121268303837is successful for exact50134fc. Its final
+artifact archive download remains pending browser access. Exact source62has
+advanced toios-native; independent GHA40228034161passes candidate-proof plus
+407backendtests/typecheck/Workerbuild and is compiling native targets.63is a
+separate running cold-quota candidate (228native/54primary source cases).64is a
+local parent-reference/one-read-retry draft (232native/54UI/69Core source cases),
+with408backendtests passing. Neither63nor64has runtime acceptance yet.
 
 | Area | Native61 automated evidence | Remaining practical limit |
 | --- | --- | --- |
@@ -32,7 +35,7 @@ gate failure; no later source is labelled independently accepted there.
 | Manual Trakt | Reviewed safe/conflict actions,2,000-change worker, tab continuation, Pause/resume, quotas/read-back |63cold-process quota recovery is not yet runtime accepted |
 | Incoming Trakt | Enable/disable/review UI; owner previously confirms setting survives restarts | Live scheduled latency/active Free CPU and hosted optimized-schema rollout |
 | Offline/session/cache | Owner-bound authenticated AES-GCM cache, off-main sealing/cold read, sign-out and late callback fences | Real-device cold launch/lock/interruption/battery |
-| Database/workflow |407local API/shared-rule/SQLite tests, migration/query plans;16CI-tool cases |0014–0016not deployed;62new GHA backend job not yet run |
+| Database/workflow |407independent GHA API/shared-rule tests, typecheck/Workerbuild; local migrations/query plans and16tool cases |0014–0016not deployed; independent native GHA still running |
 
 The Home automatic carousel is implemented and passed61; the earlier report of
 its absence is obsolete. The bottom navigation is now first-party SwiftUI

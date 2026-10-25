@@ -35,14 +35,14 @@ iOS26.5 iPhone17Pro/17e/17ProMax. CM M2candidate; GHA macos-26-intel independent
   pass is verified; final screenshot/IPA archive download remains pending.
   Only this exact SHA fast-forwardedios-native. **GHA40228034161** candidate-proof
   and backend-contracts pass; downloaded Ubuntu logs prove407tests, typecheck
-  0errors/0warnings and successful Worker build. Intel core/native stages running.
+  0errors/0warnings and successful Worker build. Intel Core calculations passed; simulator/test targets compiling.
   Do not call the independent GHA/IPA stable until all later gates pass.
 - **63 running Codemagic candidate:** source0c087e72745e44a39cb4439ea1036f3ee26c0a71,
   CM6ade51214a72334e32e51821, official check121268338393 in_progress. Queued UI
   metadata and official GitHub check both identify this exact SHA.228native and
   54primary UI source cases; no runtime result yet. Candidate refcodex/ios-ci-next
   stays at this source. No automatic candidate trigger.
-- **64 local draft:** eb0f3db oncodex/ios-phone-polish.232native/54primary and69Core
+- **64 local draft:** eb0f3db plus evidence/document reconciliation oncodex/ios-phone-polish.232native/54primary and69Core
   source cases; Swift grammar/YAML/Bash and16CI-tool cases pass.408backend tests
   and0-error/0-warning typecheck pass. Not compiled/run on macOS. Do not publish
   it over63's candidate ref while that evidence is still being collected.

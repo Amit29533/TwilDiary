@@ -17,10 +17,12 @@ These mappings come from Apple's current
 [required-reason API categories](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype).
 Core source contains no direct UserDefaults/systemUptime/file timestamp/disk
 capacity calls. Test and CI timing/file inspection are not shipping app APIs.
-A future manifest must be packaged into the actual executable bundle and
-verified there, per Apple's
+The manifest is packaged into the actual executable bundle and verified there
+by the Release gate, per Apple's
 [manifest placement guidance](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files).
-No manifest packaging acceptance is claimed yet.
+Native62 physical Release logs confirm the required-reason manifest is in the
+actual bundle. Complete official CM62success is verified; final IPA archive
+download/independent GHA remain separate evidence.
 
 ## Data flows actually present
 
@@ -46,7 +48,7 @@ claim that a diary stored in D1 collects nothing. Final deployment retention,
 manifest/data-type mapping, built-bundle check and optional App Store labels are
 still open. They do not require changing the current unsigned phone test path.
 
-## Required-reason packaging follow-up — local62draft
+## Required-reason packaging follow-up — qualified62
 
 Inspecting the delivered native54IPA confirms no PrivacyInfo.xcprivacy is present.
 62adds the two reviewed app-owned API reasons above and NSPrivacyTracking=false.
@@ -54,5 +56,6 @@ It does not add an empty NSPrivacyCollectedDataTypes array: actual D1/provider
 retention and final App Store labels remain a separate unresolved review.
 XcodeGen explicitly copies the manifest as a resource. The Release packaging gate
 now rejects missing/malformed manifests, duplicate/incorrect reasons and leaked
-test resources.16CI-tool tests pass locally. Real generated project/build-bundle
-verification requires the next macOS candidate; no packaging acceptance yet.
+test resources.16CI-tool tests pass locally. Actual62macOS generated-project and
+physical Release resource gates pass, including both required API reasons. This
+does not finalize App Store data collection labels or external log retention.
