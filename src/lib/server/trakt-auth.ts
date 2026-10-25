@@ -255,7 +255,8 @@ export async function finishTrakt(
 export async function authorizedTrakt(
   db: Db,
   env: ServerBindings,
-  transport: typeof fetch = fetch
+  transport: typeof fetch = fetch,
+  limits: { maxResponseBytes?: number } = {}
 ) {
   let row = await db.select().from(traktConnections).where(eq(traktConnections.id, 'trakt')).get();
   if (!row || row.state !== 'connected' || !row.ciphertext || row.clientId !== env.TRAKT_CLIENT_ID)
@@ -287,7 +288,8 @@ export async function authorizedTrakt(
               refresh_token: secret.refresh_token,
               grant_type: 'refresh_token'
             },
-            transport
+            transport,
+            ...limits
           })
         ).data
       );
@@ -330,13 +332,15 @@ export async function authorizedTrakt(
   }
   return {
     accountId: row.accountId!,
+    connectionVersion: row.version,
     username: row.username!,
     accessToken: secret.access_token,
     request: async (path: string, options: { method?: 'GET' | 'POST'; body?: unknown } = {}) => {
       try {
         return await traktRequest(path, env.TRAKT_CLIENT_ID!, secret.access_token, {
           ...options,
-          transport
+          transport,
+          ...limits
         });
       } catch (error) {
         if (error instanceof TraktError && error.code === 'trakt_reconnect_required')

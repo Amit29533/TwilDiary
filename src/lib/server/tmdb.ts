@@ -55,7 +55,11 @@ function match(value: unknown, type?: 'movie' | 'tv'): SearchMatch | null {
     posterPath: path(item.poster_path)
   };
 }
-export function createTmdb(token: string | undefined, transport: typeof fetch = fetch) {
+export function createTmdb(
+  token: string | undefined,
+  transport: typeof fetch = fetch,
+  options: { maxResponseBytes?: number } = {}
+) {
   async function request(endpoint: string, params: Record<string, string> = {}) {
     if (!token?.trim())
       throw new ApiError(
@@ -102,7 +106,7 @@ export function createTmdb(token: string | undefined, transport: typeof fetch = 
           const { done, value } = await reader.read();
           if (done) break;
           size += value.byteLength;
-          if (size > 2_000_000) {
+          if (size > Math.min(2_000_000, options.maxResponseBytes ?? 2_000_000)) {
             await reader.cancel();
             throw upstream();
           }

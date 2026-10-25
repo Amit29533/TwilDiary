@@ -7,6 +7,7 @@ import {
   foreignKey,
   index,
   integer,
+  primaryKey,
   real,
   sqliteTable,
   text,
@@ -358,6 +359,68 @@ export const traktOauthSessions = sqliteTable('trakt_oauth_sessions', {
   redirectUri: text('redirect_uri').notNull(),
   expiresAt: integer('expires_at').notNull()
 });
+
+/** Opt-in scheduled incoming watches; never an outgoing/full-sync configuration. */
+export const traktIncoming = sqliteTable(
+  'trakt_incoming',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id').notNull(),
+    clientId: text('client_id').notNull(),
+    enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
+    generation: integer('generation').notNull().default(1),
+    lease: text('lease'),
+    leaseUntil: integer('lease_until'),
+    nextAt: integer('next_at').notNull().default(0),
+    failures: integer('failures').notNull().default(0),
+    activity: text('activity'),
+    scanActivity: text('scan_activity'),
+    scanStart: text('scan_start'),
+    scanEnd: text('scan_end'),
+    page: integer('page').notNull().default(1),
+    checkedAt: text('checked_at'),
+    importedAt: text('imported_at'),
+    error: text('error'),
+    budgetDay: text('budget_day').notNull().default(''),
+    budgetUsed: integer('budget_used').notNull().default(0)
+  },
+  (t) => [
+    check('incoming_singleton', sql`${t.id}='trakt'`),
+    check('incoming_enabled', sql`${t.enabled} IN (0,1)`),
+    check('incoming_page_range', sql`${t.page} BETWEEN 1 AND 201`)
+  ]
+);
+
+/** Retained acknowledgements survive local history/Trash purge to prevent revival. */
+export const traktIncomingRemoved = sqliteTable(
+  'trakt_incoming_removed',
+  {
+    kind: text('kind').notNull(),
+    externalId: text('external_id').notNull()
+  },
+  (t) => [primaryKey({ columns: [t.kind, t.externalId] })]
+);
+
+export const traktIncomingHistory = sqliteTable(
+  'trakt_incoming_history',
+  {
+    accountId: text('account_id').notNull(),
+    remoteId: text('remote_id').notNull(),
+    payload: text('payload').notNull(),
+    state: text('state', { enum: ['pending', 'complete', 'review'] })
+      .notNull()
+      .default('pending'),
+    nextAt: integer('next_at').notNull().default(0),
+    priority: integer('priority').notNull().default(0),
+    reason: text('reason'),
+    createdAt: text('created_at').notNull()
+  },
+  (t) => [
+    primaryKey({ columns: [t.accountId, t.remoteId] }),
+    index('trakt_incoming_due').on(t.accountId, t.state, t.nextAt, t.priority, t.remoteId),
+    check('incoming_history_state', sql`${t.state} IN ('pending','complete','review')`)
+  ]
+);
 export const traktSyncRuns = sqliteTable(
   'trakt_sync_runs',
   {

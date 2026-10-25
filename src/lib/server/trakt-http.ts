@@ -10,7 +10,12 @@ export async function traktRequest(
   path: string,
   clientId: string,
   token: string | undefined,
-  options: { method?: 'GET' | 'POST'; body?: unknown; transport?: typeof fetch } = {}
+  options: {
+    method?: 'GET' | 'POST';
+    body?: unknown;
+    transport?: typeof fetch;
+    maxResponseBytes?: number;
+  } = {}
 ) {
   if (
     !/^\/(?:oauth\/token|sync\/[a-z_]+(?:\/[a-z_]+)?|sync\/history\/(?:movies|episodes)\/\d{1,10}|users\/settings|recommendations\/(?:movies|shows)|search\/tmdb\/\d{1,10}|(?:movies|shows)\/\d{1,10}\/(?:ratings|stats|sentiments)|shows\/\d{1,10}\/seasons\/\d{1,3}\/episodes\/\d{1,4})$/.test(
@@ -44,7 +49,7 @@ export async function traktRequest(
       429,
       'trakt_rate_limited',
       'Trakt is busy. Try again after the cooldown.',
-      Number.isFinite(raw) && raw > 0 ? Math.min(raw, 3600) : 60
+      Number.isFinite(raw) && raw > 0 ? Math.ceil(raw) : 60
     );
   }
   if (response.status === 401)
@@ -74,7 +79,7 @@ export async function traktRequest(
       const { value, done } = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > 2_000_000) {
+      if (size > Math.min(2_000_000, options.maxResponseBytes ?? 2_000_000)) {
         await reader.cancel();
         throw new Error();
       }

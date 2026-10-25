@@ -22,7 +22,7 @@ export function watchStatusUpdate(
         (SELECT count(*) FROM episodes e WHERE e.season_id=s.id)<s.expected_episodes))
     AND NOT EXISTS(SELECT 1 FROM episodes e JOIN seasons s ON s.id=e.season_id
       WHERE e.title_id=${titleId} AND s.number>0
-      AND NOT EXISTS(SELECT 1 FROM watch_events w WHERE w.episode_id=e.id AND ${active}))
+      AND NOT EXISTS(SELECT 1 FROM watch_events w WHERE w.title_id=${titleId} AND w.episode_id=e.id AND ${active}))
   )`;
   const completedMovie = sql`EXISTS(SELECT 1 FROM watch_events w
     WHERE w.title_id=${titleId} AND w.episode_id IS NULL AND ${active})`;

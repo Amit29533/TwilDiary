@@ -26,6 +26,8 @@ Confirmed scope: **watched history, title ratings, and watchlist ↔ Planned**. 
 
 `More → Trakt` provides app setup, account connection/disconnection, explicit decimal-rating choices, Preview sync, resumable steps, a cooldown timer, safe additions and per-conflict Keep TwilDiary / Use Trakt / Skip controls. Removals and simultaneous differences always require review. Nothing syncs merely because an account was connected. Sync is manually initiated in this increment; no background polling or scheduled account writes are enabled.
 
+The owner subsequently requested opt-in minute incoming watches on 2026-10-25. The additive implementation and Free-plan constraints are documented in [TRAKT-INCOMING-SYNC.md](TRAKT-INCOMING-SYNC.md). It remains undeployed/disabled; the earlier reviewed two-way/deletion rules still apply.
+
 - PKCE sign-in uses a random owner-bound state, encrypted verifier, one-use callback and HTTPS redirect on the app's own origin. No client secret is required. Installed-PWA users are directed to complete sign-in in the browser so Safari and standalone storage do not split the state cookie.
 - Access and refresh tokens are AES-256-GCM encrypted in D1 using a server-only key. Refresh uses a database lease and version check for rotating refresh tokens. Disconnect clears local token material and preserves the diary/baselines.
 - A preview collects all explicitly paginated provider pages before proposing changes. Missing pagination, invalid items, inconsistent totals or changed remote activities block application rather than being interpreted as removals.
