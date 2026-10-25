@@ -19,7 +19,7 @@ available locally; Windows checks grammar/YAML/Bash/Python only.
 | Track | Exact source | Current evidence |
 | --- | --- | --- |
 | GitHub ios-native, native54 | d59f55e5fa574382b067477f6b4fb079690507a8 | Complete Codemagic54 passed. GHA54attempt1 stopped on an incompatible restored pre-split Core module; cache invalidated, same-source attempt2 requested. |
-| Codemagic candidate codex/ios-ci-next, native55 | ae2cfdcccbe58fbd2f353abbbfabb4fa67b59766 | Warning-free simulator build and all194native tests pass, including every new cache/store race. UI/full gates still running. |
+| Codemagic candidate codex/ios-ci-next, native55 | ae2cfdcccbe58fbd2f353abbbfabb4fa67b59766 | Warning-free simulator build and all194native/all8focused/all10early cases pass. Full51/extra-phone/Release still running. |
 | Local codex/ios-carousel-parity, native56 |9e30c49 plus this documentation update; use git rev-parse HEAD| Carousel batch,196native/52primary/9focused source cases; uncompiled. |
 
 Native source is **Amit29533/TwilDiary**, /ios. Original web /preview source
@@ -48,7 +48,7 @@ https://codemagic.io/app/6adcc927390bc3069c9e5490/build/6adde71f4a72334e32e4fa14
 - Official same-SHA check was verified before fast-forwarding ios-native.
   Independent GitHub54 **40192486938**:
   https://github.com/Amit29533/TwilDiary/actions/runs/40192486938
-  Candidate-proof passes. Attempt1failed simulator test compilation: RandomPickScopeTests saw both old Core.SampleWorkspace and new TestSupport.SampleWorkspace, although Core source no longer contains that helper and clean CM54/55compile. Actual log restored pre-split native cache9471189867. Invalidating the13matching old native cache entries prevents fallback to another pre-split module; rerun failed macOS job on unchanged54source after that environment repair. This is not yet an
+  Candidate-proof passes. Attempt1failed simulator test compilation: RandomPickScopeTests saw both old Core.SampleWorkspace and new TestSupport.SampleWorkspace, although Core source no longer contains that helper and clean CM54/55compile. Actual log restored pre-split native cache9471189867. Invalidating the13matching old native cache entries prevents fallback to another pre-split module; rerun failed macOS job on unchanged54source after that environment repair (attempt2queued/running). This is not yet an
   independently green stable release. Read its latest jobs before changing it.
 
 Delivered: **D:/Downloads/TwilDiary-native54-codemagic-passed.ipa**
@@ -106,7 +106,7 @@ scene identity/pause restoration and an ID/session-keyed cancelled task.
 A small rounded top-corner popover exposes previous/next/pause rather than the
 web's hover/focus-only controls. This deliberate native adaptation is documented
 in IOS-PARITY.md. Two policy tests and one actual automatic/pause/tab-return
-UI test are added; the new case joins the focused gate (9cases, all old8remain)
+UI test are added; Home search explicitly suppresses automatic movement while open; the new case joins the focused gate (9cases, all old8remain)
 so failures stop before the long suite. Source196native/52primary; local
 .local/validate56.py passes, **no56Swift compile/runtime/screenshots yet**.
 
@@ -129,7 +129,7 @@ GHA54attempt1fails with ambiguous SampleWorkspace.make and two downstream key-pa
    Read54GitHub focused/full/extra-phone evidence independently. Do not retry
    unchanged failures or promote a diagnostic-only success.
 2. If55fullgreen, download/verify current artifacts and measurements, then
-   promote the exact55SHA. A red55requires inspecting concrete logs first.
+   hold it while54GitHub is collecting independent evidence; do not cancel54by pushing55. Promote only after the active GitHub run resolves, or batch its accepted changes into the later fully-qualified56source. A red55requires inspecting concrete logs first.
 3. Continue56self-review while55runs. New56carousel UI test resolves its identified container independent of UIKit accessibility element type, rejects nil selection and also requires exactly one fully visible/hittable cover after movement. Keep56off the candidate ref until ready;
    then run its own complete Codemagic validation. Verify real automatic/pause,
    restoration, card/root gestures and current screenshots; no hidden assertion

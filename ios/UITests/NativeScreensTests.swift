@@ -72,7 +72,7 @@ import UIKit
         capture("Continue carousel stays paused")
     }
     private func assertContinueCardIsFullyVisible(_ app: XCUIApplication) {
-        let visible = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "progress-cover-")).allElementsBoundByIndex.filter(\.isHittable)
+        let visible = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "progress-cover-")).allElementsBoundByIndex.filter { $0.isHittable }
         XCTAssertEqual(visible.count, 1, "Only the selected continuation card should be an active visible cover")
         guard let cover = visible.first else { return }
         XCTAssertGreaterThanOrEqual(cover.frame.minX, app.frame.minX + 8)

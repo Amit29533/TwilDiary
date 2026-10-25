@@ -17,6 +17,7 @@ enum ContinueCarouselPolicy {
 /// No timer runs offscreen, behind another tab/page, during a write or with VoiceOver.
 struct ContinueWatchingCarousel: View {
     let titles: [MediaTitle]
+    var automaticAllowed = true
     @Environment(DiaryStore.self) private var store
     @Environment(AppRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
@@ -35,7 +36,7 @@ struct ContinueWatchingCarousel: View {
         Binding(get: { selection.isEmpty ? nil : selection }, set: { if let value = $0 { selection = value } })
     }
     private var automatic: Bool {
-        visible && scenePhase == .active && router.selectedTab == .home
+        automaticAllowed && visible && scenePhase == .active && router.selectedTab == .home
             && (router.paths[.home]?.count ?? 0) == 0 && router.randomPick == nil
             && !paused && !reduceMotion && !voiceOver && !showControls && scrollIdle
             && !store.busy && store.cardActions.isEmpty && !store.needsSignIn && titles.count > 1

@@ -24,7 +24,7 @@ struct HomeView: View {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     if !watching.isEmpty { VStack(spacing: 10) {
                         SectionHeading(name: "Pick up where you left off") { Button("Glance →") { router.selectedTab = .glance } }
-                        ContinueWatchingCarousel(titles: watching)
+                        ContinueWatchingCarousel(titles: watching, automaticAllowed: !showSearch)
                     } }
                     ScrollView(.horizontal) {
                         HStack(spacing: 8) {
