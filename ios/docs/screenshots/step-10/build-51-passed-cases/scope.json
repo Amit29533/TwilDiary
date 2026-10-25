@@ -23,5 +23,7 @@
       "exportedFileName": "ED5764A9-87D5-4B3B-A491-A6A06626D57F.png",
       "sha256": "9c047becddb2ffdcf78259465846f0e082576acea49559ac39c12c2996ba0d79"
     }
-  ]
+  ],
+  "buildWarnings": 1,
+  "warningScope": "Core App Intents metadata extraction; final-summary finding, not a Swift compiler error."
 }

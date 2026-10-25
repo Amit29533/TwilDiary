@@ -1,5 +1,17 @@
 # Native TwilDiary progress
 
+## Native53 prepared — measured swipe evidence, early warning gate and phone IPA track
+
+Correction to earlier notes: final51summary reports ONE App Intents metadata-tool warning in the now-shared TwilDiaryCore framework, not zero warnings. Swift compilation/native187/sixfocused passed; early9of10had the History swipe failure already recorded. Native52/run6adddb1e4a72334e32e4f735 exactd3bc2bfc59e18f679733f203e31ff138fb0d8570 finished FAILURE:188native and all7focused passed, including all six settings destinations; early settings passed again, but Explore's shorter central content swipe cancelled.9of10early pass. The same Core metadata warning remains, so52cannot qualify regardless of UI results. Full51/all-phone/Release skipped; no IPA52.
+
+Downloaded native52's197.87MB artifact archive by authenticated normal link+download event to D:/Downloads/TwilDiary_19_artifacts.zip. Logs extracted .local/codemagic52-diagnostics. Real gesture metrics support narrowing the test: baseline48.24->393.96pt content strokes reach318.33pt translation and return on all settings pages; central140.7->393.96pt strokes reach232.67pt, with Explore releasing at388pt/s and cancelling, while successful saved-title returns released above531pt/s.53 uses the long stroke for native-bar pages and saved titles too; the saved-title anchor moves to visible plain synopsis below the poster, avoiding the original artwork-region target. Same complete/cancel/retained-query/keyboard assertions remain; no production pop fallback, recognizer/delegate override or timeout extension. Explore joins the focused gate (8existing cases).
+
+53 links first-party AppIntents explicitly for the shared iOS Core framework, fixing the exact target reported by the extraction warning; macOS package tests remain unchanged by the conditional framework link. Shared compile-log verifier now fails immediately after simulator/device compilation on a missing success marker or any tool/compiler warning. Three local regressions cover success, the real metadata-warning pattern and incomplete build. This closes the costly prior behavior of running UI tests before noticing a build warning.
+
+The52large-snapshot diagnostic passed:1,000watches save8.59ms/load3.63ms/index5.20ms;10,000watches save66.66ms/load56.28ms/index25.47ms on the M2 simulator. This confirms synchronous cache work can cross a frame budget; it is diagnostic, not phone performance acceptance. The safe asynchronous cache/lifecycle refactor remains separate after a stable native baseline.
+
+Owner-assisted diagnostic workflow is now available in candidate source3f831dc and carried into53. Next commit contains these narrow53repairs (bundle version53), then run that SAME source in complete regression and differently named phone-IPA diagnostic. The diagnostic proves unsigned physical compilation/resource cleanliness only and cannot satisfy promotion (4local guard tests). Native source188/primary51/8focused, local syntax/YAML/Bash/Python/13CI-tool checks pass; runtime53pending. Keep ios-native at8c9f163 until exact-source complete regression is green. No hosted/backend changes.
+
 ## Phone diagnostic track prepared; native52 complete regression remains separate
 
 CM52/run6adddb1e4a72334e32e4f735 is building the frozen d3bc2bf source on codex/ios-ci-next. It includes188native and7focused cases; actual results remain pending. Browser proof .local/codemagic52-started.jpg. No stable promotion.

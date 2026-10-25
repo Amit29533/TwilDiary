@@ -39,10 +39,14 @@ PY
   build-simulator)
     xcodebuild build-for-testing "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -derivedDataPath "$PWD/ios/.derived/simulator" 2>&1 | tee "$ARTIFACTS/logs/simulator-build.log"
+    python3 -B ios/tools/test_verify_build_log.py
+    python3 ios/tools/verify-build-log.py "$ARTIFACTS/logs/simulator-build.log" '** TEST BUILD SUCCEEDED **'
     ;;
   build-device)
     xcodebuild build "${COMMON[@]}" -destination 'generic/platform=iOS' -configuration Release \
       -derivedDataPath "$PWD/ios/.derived/device" 2>&1 | tee "$ARTIFACTS/logs/device-build.log"
+    python3 -B ios/tools/test_verify_build_log.py
+    python3 ios/tools/verify-build-log.py "$ARTIFACTS/logs/device-build.log" '** BUILD SUCCEEDED **'
     ;;
   package)
     python3 -B ios/tools/test_verify_release_resources.py
@@ -70,6 +74,7 @@ PY
       -only-testing:TwilDiaryUITests/NativeScreensTests/testT31LibraryLayoutAndSortSurviveAProcessRelaunch \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testT35WatchedEpisodeOffersRewatchAndUndoKeepsItsOriginalWatch \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeBackReturnsFromEverySettingsDestination \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeExploreReturnsByBackActiveHomeTabAndFullContentSwipe \
       -only-testing:TwilDiaryUITests/LayoutScreensTests/testEveryThemeIsSelectableAndGlassSearchKeepsOneContainedField \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testPersonShelvesOpenFilmographyLayoutsAndPreserveReturnNavigation \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testTitleWatchAndUndoUpdateTheEpisodePiecesAndMovieHistory \

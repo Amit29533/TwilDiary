@@ -99,7 +99,7 @@ import OSLog
             let distance = Double(pan?.translation(in: gesture.view).x ?? 0)
             let velocity = Double(pan?.velocity(in: gesture.view).x ?? 0)
             let kind = observedKinds[ObjectIdentifier(gesture)] ?? "unknown"
-            logger.notice("nativePop kind=\(kind) state=\(gesture.state.rawValue) enabled=\(gesture.isEnabled) translationX=\(distance) velocityX=\(velocity)")
+            logger.notice("nativePop kind=\(kind, privacy: .public) state=\(gesture.state.rawValue) enabled=\(gesture.isEnabled) translationX=\(distance) velocityX=\(velocity)")
         }
         #endif
     }

@@ -29,7 +29,7 @@ a stronger built-bundle gate. Native187/full51/all-phone/Release acceptance is
 pending; these are candidate changes, not a new stable release.
 
 Native51 passed187native and all6focused checks (including the explicit episode
-rewatch/Undo/History case), with zero build warnings.9of10early checks passed;
+rewatch/Undo/History case), with one Core metadata-tool warning found in the final summary.9of10early checks passed;
 one settings History content swipe began then cancelled. The original unedited
 passing-case screenshots and scope manifest are in
 screenshots/step-10/build-51-passed-cases.52 narrows the settings test stroke to
@@ -37,6 +37,20 @@ the longer, previously passed baseline, adds that case to the focused gate and
 prepares a1,000/10,000-watch cache/index diagnostic. No stable publication or
 full51/all-phone/Release acceptance. The release-resource separation is compiled
 and unit-tested in51; its actual physical Release resource gate is still pending.
+
+Native52 passed188native, all7focused and9/10early cases. Settings Back/swipes
+passed twice. Explore cancelled the shorter232.67pt native content pan; the
+longer318.33pt baseline stroke passed on settings.53 uses the long plain-text
+stroke for all content-return checks, including synopsis below the title poster,
+and adds Explore to the focused gate. It conditionally links first-party
+AppIntents for the exact Core framework warning, and rejects tool warnings
+immediately after compilation. Physical phone diagnostic and full regression
+remain separate; no stable promotion.
+
+The52M2 diagnostic measured10,000watches: protected save66.66ms, load56.28ms,
+index25.47ms (1,000:8.59/3.63/5.20ms). This supports prioritizing off-main cache
+I/O while retaining owner/session/sign-out fences. It does not establish phone
+frame rate or justify a rushed concurrency rewrite during UI stabilization.
 
 ## Actual current evidence
 

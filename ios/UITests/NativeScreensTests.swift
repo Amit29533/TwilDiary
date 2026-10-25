@@ -946,7 +946,7 @@ import UIKit
         app.buttons["tab-home"].tap()
         wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.navigationBars["Explore"])], timeout: 5)
         explore.tap(); XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: 5))
-        completeContentBack(app, beside: app.staticTexts["Recommendation of the day"])
+        completeContentBack(app, beside: app.staticTexts["Recommendation of the day"], from: 0.12, velocity: .slow)
         wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.navigationBars["Explore"])], timeout: 5)
         XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5))
         capture("Native Explore returned Home")
@@ -960,7 +960,10 @@ import UIKit
             XCTAssertTrue(app.buttons["title-personal-rating"].waitForExistence(timeout: 5))
             XCTAssertFalse(app.keyboards.firstMatch.exists)
             XCTAssertFalse(app.buttons["tab-home"].exists, "The presented title must hide root chrome before a native Back gesture")
-            completeContentBack(app, beside: app.staticTexts["title-hero-name"])
+            // The plain synopsis is below the poster and has no horizontal
+            // control. A long content stroke here avoids depending on velocity
+            // to finish a shorter pan across the hero's artwork hit region.
+            completeContentBack(app, beside: app.staticTexts["title-synopsis-text"])
             XCTAssertTrue(field.waitForExistence(timeout: 5)); XCTAssertEqual(field.value as? String, "Frieren")
         }
         XCTAssertTrue(app.buttons["search-library-frieren"].exists); capture("Search retained after content Back")
@@ -1000,12 +1003,12 @@ import UIKit
         app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: bounds.midX, dy: bounds.midY)).tap()
     }
     private func completeContentBack(_ app: XCUIApplication, beside anchor: XCUIElement,
-                                     from fraction: CGFloat = 0.35, velocity: XCUIGestureVelocity = .fast) {
+                                     from fraction: CGFloat = 0.12, velocity: XCUIGestureVelocity = .slow) {
         XCTAssertTrue(anchor.waitForExistence(timeout: 5))
-        // Exercise UIKit's content recognizer from the central content region.
-        // A 12%-width start is only48pt on this phone, near the leading edge
-        // handled by a separate recognizer. Travel over half the viewport.
-        // Anchor the height to static content, avoiding carousels and progress controls.
+        // Start in content, outside the screen-edge strip, and cross most of
+        // the viewport. The shorter central stroke can legitimately cancel
+        // when XCTest's release velocity varies. Use visible plain text as
+        // the height anchor, avoiding carousels, artwork and progress controls.
         let origin = app.coordinate(withNormalizedOffset: .zero)
         let y = anchor.frame.midY
         origin.withOffset(CGVector(dx: app.frame.width * fraction, dy: y)).press(forDuration: 0.05,
@@ -1110,9 +1113,7 @@ import UIKit
             XCTAssertTrue(entry.exists, "Back must return to the same settings stack")
             XCTAssertTrue(entry.isHittable); entry.tap()
             let content = app.scrollViews.staticTexts.element(boundBy: 0)
-            // Preserve the baseline settings stroke. These native-bar pages
-            // need the longer content drag; title/search keeps its central
-            // start clear of the poster's interactive hit region.
+            // Preserve the long baseline settings content stroke.
             completeContentBack(app, beside: content, from: 0.12, velocity: .slow)
             XCTAssertTrue(app.buttons["settings-trakt-summary"].waitForExistence(timeout: 5))
             XCTAssertFalse(app.navigationBars[title].exists)

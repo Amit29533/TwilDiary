@@ -9,7 +9,7 @@ let package = Package(
         .library(name: "TwilDiaryTestSupport", targets: ["TwilDiaryTestSupport"])
     ],
     targets: [
-        .target(name: "TwilDiaryCore"),
+        .target(name: "TwilDiaryCore", linkerSettings: [.linkedFramework("AppIntents", .when(platforms: [.iOS]))]),
         .target(name: "TwilDiaryTestSupport", dependencies: ["TwilDiaryCore"], resources: [.process("Fixtures")]),
         .testTarget(name: "TwilDiaryCoreTests", dependencies: ["TwilDiaryCore", "TwilDiaryTestSupport"], resources: [.process("Fixtures")])
     ]
