@@ -999,7 +999,8 @@ import UIKit
         XCTAssertFalse(bounds.isEmpty)
         app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: bounds.midX, dy: bounds.midY)).tap()
     }
-    private func completeContentBack(_ app: XCUIApplication, beside anchor: XCUIElement) {
+    private func completeContentBack(_ app: XCUIApplication, beside anchor: XCUIElement,
+                                     from fraction: CGFloat = 0.35, velocity: XCUIGestureVelocity = .fast) {
         XCTAssertTrue(anchor.waitForExistence(timeout: 5))
         // Exercise UIKit's content recognizer from the central content region.
         // A 12%-width start is only48pt on this phone, near the leading edge
@@ -1007,8 +1008,8 @@ import UIKit
         // Anchor the height to static content, avoiding carousels and progress controls.
         let origin = app.coordinate(withNormalizedOffset: .zero)
         let y = anchor.frame.midY
-        origin.withOffset(CGVector(dx: app.frame.width * 0.35, dy: y)).press(forDuration: 0.05,
-            thenDragTo: origin.withOffset(CGVector(dx: app.frame.width * 0.98, dy: y)), withVelocity: .fast, thenHoldForDuration: 0)
+        origin.withOffset(CGVector(dx: app.frame.width * fraction, dy: y)).press(forDuration: 0.05,
+            thenDragTo: origin.withOffset(CGVector(dx: app.frame.width * 0.98, dy: y)), withVelocity: velocity, thenHoldForDuration: 0)
     }
     func testToastExpiresAndCardCoverAndUsefulMenuWork() {
         let app = launch(mutations: true)
@@ -1109,7 +1110,10 @@ import UIKit
             XCTAssertTrue(entry.exists, "Back must return to the same settings stack")
             XCTAssertTrue(entry.isHittable); entry.tap()
             let content = app.scrollViews.staticTexts.element(boundBy: 0)
-            completeContentBack(app, beside: content)
+            // Preserve the baseline settings stroke. These native-bar pages
+            // need the longer content drag; title/search keeps its central
+            // start clear of the poster's interactive hit region.
+            completeContentBack(app, beside: content, from: 0.12, velocity: .slow)
             XCTAssertTrue(app.buttons["settings-trakt-summary"].waitForExistence(timeout: 5))
             XCTAssertFalse(app.navigationBars[title].exists)
         }

@@ -28,6 +28,16 @@ and bounds the unit process. It also prepares test-only resource separation and
 a stronger built-bundle gate. Native187/full51/all-phone/Release acceptance is
 pending; these are candidate changes, not a new stable release.
 
+Native51 passed187native and all6focused checks (including the explicit episode
+rewatch/Undo/History case), with zero build warnings.9of10early checks passed;
+one settings History content swipe began then cancelled. The original unedited
+passing-case screenshots and scope manifest are in
+screenshots/step-10/build-51-passed-cases.52 narrows the settings test stroke to
+the longer, previously passed baseline, adds that case to the focused gate and
+prepares a1,000/10,000-watch cache/index diagnostic. No stable publication or
+full51/all-phone/Release acceptance. The release-resource separation is compiled
+and unit-tested in51; its actual physical Release resource gate is still pending.
+
 ## Actual current evidence
 
 * Codemagic47 `6addaa674a72334e32e4ed86` checked out exact

@@ -20,6 +20,7 @@ import OSLog
         private var publishing: Task<Void, Never>?
         private var transitionPending = false
         private var observing = [UIGestureRecognizer]()
+        private var observedKinds = [ObjectIdentifier: String]()
         private let logger = Logger(subsystem: "com.amit29533.TwilDiary.navigation", category: "presentation")
         override func loadView() {
             let surface = UIView()
@@ -42,6 +43,7 @@ import OSLog
             #if DEBUG
             for gesture in observing { gesture.removeTarget(self, action: #selector(observePop(_:))) }
             observing.removeAll()
+            observedKinds.removeAll()
             #endif
         }
         func publishWhenAttached() {
@@ -77,10 +79,13 @@ import OSLog
             }
             onPresented?()
             #if DEBUG
-            let gestures = [navigation.interactivePopGestureRecognizer, navigation.interactiveContentPopGestureRecognizer].compactMap { $0 }
+            let gestures: [(UIGestureRecognizer?, String)] = [(navigation.interactivePopGestureRecognizer, "edge"), (navigation.interactiveContentPopGestureRecognizer, "content")]
             if observing.isEmpty {
-                observing = gestures
-                for gesture in gestures { gesture.addTarget(self, action: #selector(observePop(_:))) }
+                for (candidate, kind) in gestures {
+                    guard let gesture = candidate else { continue }
+                    observing.append(gesture); observedKinds[ObjectIdentifier(gesture)] = kind
+                    gesture.addTarget(self, action: #selector(observePop(_:)))
+                }
             }
             logger.notice("presented depth=\(navigation.viewControllers.count) barHidden=\(navigation.isNavigationBarHidden) edgeEnabled=\(navigation.interactivePopGestureRecognizer?.isEnabled ?? false) contentEnabled=\(navigation.interactiveContentPopGestureRecognizer?.isEnabled ?? false)")
             #endif
@@ -89,7 +94,12 @@ import OSLog
         }
         #if DEBUG
         @objc private func observePop(_ gesture: UIGestureRecognizer) {
-            logger.notice("nativePop state=\(gesture.state.rawValue) enabled=\(gesture.isEnabled)")
+            guard gesture.state != .changed else { return }
+            let pan = gesture as? UIPanGestureRecognizer
+            let distance = Double(pan?.translation(in: gesture.view).x ?? 0)
+            let velocity = Double(pan?.velocity(in: gesture.view).x ?? 0)
+            let kind = observedKinds[ObjectIdentifier(gesture)] ?? "unknown"
+            logger.notice("nativePop kind=\(kind) state=\(gesture.state.rawValue) enabled=\(gesture.isEnabled) translationX=\(distance) velocityX=\(velocity)")
         }
         #endif
     }

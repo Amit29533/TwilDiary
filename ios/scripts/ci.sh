@@ -69,6 +69,7 @@ PY
       -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 240 \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testT31LibraryLayoutAndSortSurviveAProcessRelaunch \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testT35WatchedEpisodeOffersRewatchAndUndoKeepsItsOriginalWatch \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeBackReturnsFromEverySettingsDestination \
       -only-testing:TwilDiaryUITests/LayoutScreensTests/testEveryThemeIsSelectableAndGlassSearchKeepsOneContainedField \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testPersonShelvesOpenFilmographyLayoutsAndPreserveReturnNavigation \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testTitleWatchAndUndoUpdateTheEpisodePiecesAndMovieHistory \
