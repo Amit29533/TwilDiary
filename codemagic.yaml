@@ -54,3 +54,48 @@ workflows:
       - ios/.artifacts/toolchain.txt
       - ios/.artifacts/*simulator*.json
       - ios/.artifacts/devices.json
+  native-ios-device-diagnostic:
+    # Owner-authorized phone verification. This name deliberately cannot satisfy
+    # verify-codemagic.py's complete-regression promotion requirement.
+    name: TwilDiary device diagnostic — phone testing only
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: '26.6'
+      vars:
+        TZ: Asia/Kolkata
+    scripts:
+      - name: Compile unsigned physical iPhone diagnostic
+        script: |
+          #!/usr/bin/env bash
+          set -euo pipefail
+          cd "$CM_BUILD_DIR"
+          mkdir -p ios/.artifacts/logs
+          { sw_vers; xcodebuild -version; } | tee ios/.artifacts/toolchain.txt
+          bash ios/scripts/xcodegen.sh
+          bash ios/scripts/ci.sh build-device
+          bash ios/scripts/ci.sh package
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, plistlib, re, shutil, subprocess
+          root = pathlib.Path('ios/.artifacts')
+          log = (root / 'logs/device-build.log').read_text(errors='replace')
+          if '** BUILD SUCCEEDED **' not in log or re.search(r'\bwarning:', log, re.I):
+              raise SystemExit('Diagnostic device compilation requires success and zero warnings.')
+          ipa = root / 'TwilDiary-device-diagnostic.ipa'
+          shutil.copyfile(root / 'TwilDiary-unsigned.ipa', ipa)
+          digest = hashlib.sha256(ipa.read_bytes()).hexdigest()
+          (root / (ipa.name + '.sha256')).write_text(digest + '  ' + ipa.name + '\n')
+          info = plistlib.loads(pathlib.Path('ios/.derived/device/Build/Products/Release-iphoneos/TwilDiary.app/Info.plist').read_bytes())
+          value = {'kind': 'device-diagnostic', 'regressionAcceptance': False,
+                   'note': 'Compilation and resource checks only; complete simulator regression is a separate workflow.',
+                   'sourceSHA': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(), 'buildNumber': info['CFBundleVersion'],
+                   'codemagicBuild': os.environ['CM_BUILD_ID'], 'sha256': digest}
+          (root / 'device-diagnostic-provenance.json').write_text(json.dumps(value, indent=2) + '\n')
+          print('Unsigned phone diagnostic packaged; this workflow does not qualify stable promotion.')
+          PY
+    artifacts:
+      - ios/.artifacts/TwilDiary-device-diagnostic.ipa
+      - ios/.artifacts/TwilDiary-device-diagnostic.ipa.sha256
+      - ios/.artifacts/device-diagnostic-provenance.json
+      - ios/.artifacts/logs/*.log
+      - ios/.artifacts/toolchain.txt

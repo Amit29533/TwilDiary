@@ -27,3 +27,21 @@ is an accepted stable release. New review features are preserved on local
 `codex/ios-review-pending` at `5064856`, without promotion, until current
 navigation/layout regressions are closed. No build track deploys the backend
 or writes the hosted diary as part of its tests.
+
+
+## Owner-assisted device diagnostic
+
+The owner explicitly offered to install an IPA to verify simulator-blocked
+native gesture issues. The separate Codemagic workflow
+`native-ios-device-diagnostic` compiles the physical Release, enforces zero
+build warnings and the actual bundle resource gate, then publishes
+`TwilDiary-device-diagnostic.ipa`, SHA256 and provenance. It does not run the
+simulator suite and its differently named official check cannot satisfy stable
+promotion. A regression test covers a newer successful diagnostic alongside a
+failed complete regression. No signing, hosted deployment or library mutation
+is part of this workflow.
+
+The unsigned diagnostic is a phone test artifact. It records the checkout's
+actual Git SHA and bundle build number; do not describe it as a full-regression
+or GitHub-stable release. The complete candidate regression may continue in
+parallel, and only its exact fully green SHA can enter the stable branch.

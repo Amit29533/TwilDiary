@@ -36,6 +36,13 @@ class PromotionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             promotion.accepted_check([{"check_runs": [good]}, {"check_runs": [newer]}], "source")
 
+    def test_device_diagnostic_cannot_qualify_or_override_a_failed_regression(self):
+        diagnostic = {**self.check(), "id": 3, "name": "TwilDiary device diagnostic — phone testing only"}
+        failed = {**self.check(), "id": 2, "conclusion": "failure"}
+        for checks in [[diagnostic], [failed, diagnostic]]:
+            with self.assertRaises(ValueError):
+                promotion.accepted_check([{"check_runs": checks}], "source")
+
 
 if __name__ == "__main__":
     unittest.main()

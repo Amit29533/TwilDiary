@@ -1,5 +1,13 @@
 # Native TwilDiary progress
 
+## Phone diagnostic track prepared; native52 complete regression remains separate
+
+CM52/run6adddb1e4a72334e32e4f735 is building the frozen d3bc2bf source on codex/ios-ci-next. It includes188native and7focused cases; actual results remain pending. Browser proof .local/codemagic52-started.jpg. No stable promotion.
+
+Using the owner's earlier explicit offer to install an IPA when simulator gestures remain blocked, added a separately named Codemagic physical-device diagnostic workflow. It pins26.6/XcodeGen, compiles unsigned Release, enforces zero compiler warnings and the real bundle fixture gate, and publishes IPA+hash+source/build provenance. It has no simulator-pass claim, signing, hosted write or backend deployment. Its check name is deliberately different; four local promotion tests prove a successful diagnostic cannot qualify or override a failed complete regression. Source changes here are workflow/docs/tool tests only: native App/Core/project/UITests remain identical to d3bc2bf and the IPA bundle version remains52. Do not change the frozen52regression or cancel it to collect an IPA.
+
+Exact next: commit/push this diagnostic-only source to candidate ref, start its distinct phone-testing workflow once, preserve source/run identity, download via authenticated normal click+download-event (downloadMedia times out/does not preserve Codemagic's artifact auth). Keep the52regression running. Inspect its unit/7focused/early/full/all-phone gates before any ios-native promotion. origin/ios-native still8c9f163; no new stable IPA.
+
 ## Native52 prepared from concrete51 evidence — preserve accepted tests and narrow the swipe repair
 
 CM51/run6addd3324a72334e32e4f553 (exact3c5c766ecb852364d498a2863746ec3e7d60ad9c) finished FAILURE:0build warnings,187native pass, all6focused pass including retained search/cancelled Back, Library relaunch and episode rewatch+Undo+exact8-history count. Early regression9of10passed; only NativeBackReturnsFromEverySettingsDestination failed on the second History entry's content swipe atline1113. Native Back button passed, genuine content recognizer began/changed/ended, then UIKit retaineddepth2. Full51/all-phone/Release/IPA were correctly skipped; no stable promotion.
