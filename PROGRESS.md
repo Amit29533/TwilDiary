@@ -1,5 +1,11 @@
 # Native TwilDiary progress
 
+## Native41 compile failure: remove invalid XCTest teardown actor access
+
+Codemagic41/run6add6f6c4a72334e32e4e4a7 confirms exact881f36a04b15a9fd561bff6bde17bfa6a854b7d1 and fails compilation after2m41s. The newly added tearDownWithError diagnostic override is synchronous nonisolated in XCTest despite the class MainActor annotation; constructing/querying XCUIApplication there is invalid under Swift6. This was an avoidable self-review mistake, not a product/UI pass or provider issue. Removed that override entirely. Incoming failure diagnostics now execute only in the existing MainActor test body before its assertion.42 changes only this diagnostic placement/version; repeat/full/zero-warning gates unchanged. Do not call41 a UI failure or accepted native167 pass: no UI executed. Exact next: commit/push42 validation ref, start Codemagic42 and read compiler result before other changes.
+
+Browser access restored; official Wrangler OAuth consent page is ready under the existing account. Asked owner to complete Authorize because the page includes agreement acknowledgement; no new credential created/exposed, no permission expansion or production deployment performed. Backup/403/migration statuses above remain unchanged until refreshed CLI verification. Native40 archive is still not on disk; avoid additional blind download clicks. GitHub39 remains on its own ref pending final diagnostics.
+
 ## Native41 validation running — 881f36a
 
 Codemagic run6add6f6c4a72334e32e4e4a7 started on temporary codex/ios-ci-next after its fast-forward to881f36a04b15a9fd561bff6bde17bfa6a854b7d1. Source checkout confirmation is the next gate, not assumed from the branch selection. Screenshot .local/codemagic-build41-start.png retained/shared. Expected167 native, focused two-case repeat gate, unchanged47 primary,3 layouts per extra phone, zero warnings and fixture-free Release IPA. Full runs stop early if the two repeated repair checks fail; successful targeted checks alone never constitute release acceptance. Browser control is working again. Native40 diagnostic archive download remains unresolved: timeout/paused-document response and no local ZIP, not a claimed artifact review. Current40 original remains 497e9fb; do not label41 preview source as a passed screenshot.

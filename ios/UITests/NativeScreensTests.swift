@@ -3,16 +3,6 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    override func tearDownWithError() throws {
-        if (testRun?.failureCount ?? 0) > 0 {
-            // Every app launched by this class is an isolated DEBUG fixture.
-            // Retain the actual hierarchy so the next repair has evidence.
-            let hierarchy = XCUIApplication().debugDescription
-            let attachment = XCTAttachment(string: hierarchy)
-            attachment.name = "Failed fixture accessibility hierarchy"; attachment.lifetime = .keepAlways; add(attachment)
-            print("Failed fixture accessibility hierarchy:\n" + hierarchy)
-        }
-    }
     private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false, slowWrites: Bool = false, slowMetadata: Bool = false, communityUnavailable: Bool = false, cachedSnapshot: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
@@ -467,7 +457,13 @@ import UIKit
         let toggle = app.switches["trakt-incoming-toggle"]
         XCTAssertTrue(app.navigationBars["Trakt"].waitForExistence(timeout: 10))
         for _ in 0..<5 { if toggle.exists && toggle.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        let toggleExists = toggle.waitForExistence(timeout: 5)
+        if !toggleExists {
+            let attachment = XCTAttachment(string: app.debugDescription)
+            attachment.name = "Incoming fixture accessibility hierarchy"; attachment.lifetime = .keepAlways; add(attachment)
+            print("Incoming fixture accessibility hierarchy:\n" + app.debugDescription)
+        }
+        XCTAssertTrue(toggleExists)
         XCTAssertTrue(toggle.isHittable)
         XCTAssertEqual(toggle.value as? String, "0")
         toggle.tap()
