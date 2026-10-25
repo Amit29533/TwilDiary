@@ -3,6 +3,24 @@ import Observation
 import TwilDiaryCore
 
 @MainActor @Observable final class DiaryStore {
+    @ObservationIgnored private var retainedTraktController: TraktController?
+    var traktController: TraktController {
+        if let retainedTraktController { return retainedTraktController }
+        let checkpoint: any TraktApplyCheckpointStoring = isPreview ? MemoryTraktApplyCheckpoint() : PreferencesTraktApplyCheckpoint()
+        let controller = TraktController(service: makeTraktService(store: self), checkpoint: checkpoint, onTransferFinished: { [weak self] in
+            guard let self, !self.needsSignIn, self.quotaBlockedUntil == nil else { return }
+            await self.refresh()
+        })
+        retainedTraktController = controller
+        return controller
+    }
+    func resumeTraktOnForeground() async {
+        guard retainedTraktController != nil || (!isPreview && PreferencesTraktApplyCheckpoint().runID != nil) else { return }
+        let controller = traktController
+        await controller.finishSuspendingTransfer()
+        if !controller.busy { await controller.refresh(); await controller.resumeApprovedApply() }
+    }
+    func suspendTraktForBackground() { retainedTraktController?.suspendForBackground() }
     struct HomeProjection {
         let overview: HomeOverview
         let watching: [MediaTitle]
@@ -120,6 +138,7 @@ import TwilDiaryCore
     }
     func connect(_ credential: AccessCredential) async {
         let previousScope = api.credential?.cacheScope
+        retainedTraktController?.invalidateSession(); retainedTraktController = nil
         let generation = UUID(); sessionGeneration = generation; snapshotGeneration = UUID()
         lastForegroundRead = nil
         invalidateDiscovery()
@@ -143,6 +162,8 @@ import TwilDiaryCore
         } catch { if generation == sessionGeneration { fail(error) } }
     }
     func signOut() {
+        retainedTraktController?.invalidateSession(); retainedTraktController = nil
+        if !isPreview { PreferencesTraktApplyCheckpoint().runID = nil }
         #if DEBUG
         fixture = nil
         failNextFixtureRefresh = false
@@ -553,7 +574,10 @@ import TwilDiaryCore
         }
     }
     private func fail(_ cause: Error) {
-        if case APIError.signIn = cause { needsSignIn = true }
+        if case APIError.signIn = cause {
+            retainedTraktController?.invalidateSession(); retainedTraktController = nil
+            needsSignIn = true
+        }
         error = cause.localizedDescription
     }
     private static func definitivelyRejected(_ cause: Error) -> Bool {

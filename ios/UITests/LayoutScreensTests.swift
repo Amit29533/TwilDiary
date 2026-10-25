@@ -7,12 +7,12 @@ import XCTest
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if longSynopsis { app.launchArguments.append("--ui-long-synopsis") }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"; app.launch()
-        XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
+        XCTAssertTrue(app.tabBars.buttons["Home"].waitForExistence(timeout: 15)); return app
     }
     func testPhoneChromeGridSearchAndEpisodeTrackStayInsideTheViewport() {
         let app = launch()
-        app.buttons["tab-home"].tap(); capture("Home", app: app)
-        app.buttons["tab-library"].tap()
+        app.tabBars.buttons["Home"].tap(); capture("Home", app: app)
+        app.tabBars.buttons["Library"].tap()
         let titles = ["after-rain", "again", "frieren"].map { app.buttons["title-" + $0] }
         for title in titles { XCTAssertTrue(title.waitForExistence(timeout: 5)); XCTAssertGreaterThanOrEqual(title.frame.minX, 10); XCTAssertLessThanOrEqual(title.frame.maxX, app.frame.width - 10) }
         XCTAssertLessThan(titles[0].frame.maxX, titles[1].frame.minX); XCTAssertLessThan(titles[1].frame.maxX, titles[2].frame.minX)
@@ -40,14 +40,14 @@ import XCTest
         XCTAssertTrue(field.waitForExistence(timeout: 5)); field.typeText("Frieren\n")
         XCTAssertTrue(app.buttons["search-library-frieren"].exists); XCTAssertFalse(app.buttons["search-library-again"].exists)
         capture("Search", app: app)
-        app.buttons["tab-stats"].tap(); XCTAssertTrue(app.buttons["stats-calendar"].waitForExistence(timeout: 5)); capture("Stats", app: app)
+        app.tabBars.buttons["Stats"].tap(); XCTAssertTrue(app.buttons["stats-calendar"].waitForExistence(timeout: 5)); capture("Stats", app: app)
         for tab in ["home", "library", "glance", "stats", "more"] {
-            let button = app.buttons["tab-" + tab]
+            let button = app.tabBars.buttons[tab.capitalized]
             XCTAssertTrue(button.isHittable); XCTAssertGreaterThanOrEqual(button.frame.minX, 0); XCTAssertLessThanOrEqual(button.frame.maxX, app.frame.width)
         }
     }
     func testEveryThemeIsSelectableAndGlassSearchKeepsOneContainedField() {
-        let app = launch(); app.buttons["tab-more"].tap(); openThemes(app)
+        let app = launch(); app.tabBars.buttons["More"].tap(); openThemes(app)
         let first = app.buttons["theme-twilight"], second = app.buttons["theme-ocean"]
         XCTAssertTrue(first.waitForExistence(timeout: 5)); XCTAssertTrue(second.exists)
         XCTAssertLessThan(first.frame.maxX, second.frame.minX)
@@ -60,7 +60,7 @@ import XCTest
             for _ in 0..<4 { if item.isHittable { break }; app.swipeDown() }
             XCTAssertTrue(item.isHittable); item.tap(); XCTAssertTrue(item.isSelected); capture("Theme " + theme, app: app)
         }
-        app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["tab-library"].tap(); app.buttons["Search library"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap(); app.tabBars.buttons["Library"].tap(); app.buttons["Search library"].tap()
         let search = app.textFields["Search library and online"]
         XCTAssertTrue(search.waitForExistence(timeout: 5)); XCTAssertGreaterThanOrEqual(search.frame.minX, 14); XCTAssertLessThanOrEqual(search.frame.maxX, app.frame.width - 14)
         search.typeText("Frieren\n"); capture("Glass search", app: app)
@@ -78,13 +78,13 @@ import XCTest
         XCTAssertLessThanOrEqual(compact.frame.maxX, app.frame.width)
         capture("Glass compact scrolled title header", app: app)
         app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.buttons["tab-more"].tap(); openThemes(app)
+        app.tabBars.buttons["More"].tap(); openThemes(app)
         let twilight = app.buttons["theme-twilight"]
         for _ in 0..<5 { if twilight.isHittable { break }; app.swipeDown() }
         XCTAssertTrue(twilight.isHittable); twilight.tap(); XCTAssertTrue(twilight.isSelected)
     }
     func testExpandedSummaryAndWatchDateRemainInsideEveryPhone() {
-        let app = launch(longSynopsis: true); app.buttons["tab-library"].tap(); app.buttons["title-frieren"].tap()
+        let app = launch(longSynopsis: true); app.tabBars.buttons["Library"].tap(); app.buttons["title-frieren"].tap()
         let summary = app.staticTexts["title-synopsis-text"]
         XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: 5))
         let leadingFrame = summary.frame

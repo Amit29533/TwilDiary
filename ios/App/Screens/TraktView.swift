@@ -13,7 +13,7 @@ import TwilDiaryCore
     @AppStorage("traktGrid") private var grid = false
     init(store: DiaryStore) {
         self.store = store
-        _controller = State(initialValue: TraktController(service: makeTraktService(store: store)))
+        _controller = State(initialValue: store.traktController)
         _incoming = State(initialValue: IncomingTraktController(service: makeIncomingTraktService(store: store)))
     }
     var body: some View {
@@ -25,7 +25,10 @@ import TwilDiaryCore
                     preferences
                     incomingWatches
                     if controller.sync?.run?.state == "building" { scanProgress }
-                    if let sync = controller.sync, sync.run != nil { review(sync) }
+                    if let sync = controller.sync, sync.run != nil {
+                        if sync.reviewing || sync.run?.state == "complete" { transferProgress(sync) }
+                        review(sync)
+                    }
                 }
                 if let error = controller.error { VStack(alignment: .leading, spacing: 8) { Text(error).font(.subheadline).foregroundStyle(.secondary); Button("Retry") { Task { await controller.refresh() } }.disabled(controller.busy) }.diaryPanel().accessibilityIdentifier("trakt-error") }
             }.padding(16).padding(.bottom, 100)
@@ -42,7 +45,6 @@ import TwilDiaryCore
                     clock = .now
                 }
             }
-            .onDisappear { controller.paused = true }
             .onChange(of: scenePhase) { _, phase in if phase == .active && !controller.busy { Task { await controller.refresh() } } }
             .sheet(isPresented: $showSignIn) {
                 if let credential = store.browserCredential() {
@@ -55,6 +57,36 @@ import TwilDiaryCore
                     }
                 }
             }
+    }
+    private func transferProgress(_ sync: TraktSync) -> some View {
+        let progress = TraktApplyProgress(sync)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(controller.applyingAll ? "Importing reviewed changes" : "Import progress").font(.headline)
+                Spacer(minLength: 8)
+                Text("\(progress.percent)%").font(.headline).monospacedDigit().foregroundStyle(theme.accent)
+                    .accessibilityIdentifier("trakt-apply-percent")
+            }
+            ProgressView(value: progress.fraction).accessibilityLabel("Reviewed sync progress")
+                .accessibilityValue("\(progress.finished) of \(progress.total) processed")
+                .accessibilityIdentifier("trakt-apply-progress")
+            Text("\(progress.applied.formatted()) saved · \(progress.skipped.formatted()) skipped · \(progress.remaining.formatted()) remaining")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("trakt-apply-counts")
+            if progress.failed > 0 { Text("\(progress.failed.formatted()) changes need attention; they are kept for review.").font(.caption).foregroundStyle(.orange) }
+            if let message = controller.retryMessage { Text(message).font(.caption).foregroundStyle(.secondary) }
+            if controller.applyingAll {
+                if coolingDown {
+                    Text("Resuming automatically after \(controller.cooldownUntil.formatted(date: .omitted, time: .standard)).")
+                        .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("trakt-auto-resume")
+                } else { Text("You can browse the other tabs while this continues. Keep the app open.").font(.caption).foregroundStyle(.secondary) }
+                Button(controller.paused ? "Pausing after this request…" : "Pause import", systemImage: "pause.fill") { controller.pauseApplying() }
+                    .buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(controller.paused).accessibilityIdentifier("trakt-pause-import")
+            } else if controller.paused && sync.reviewing && (sync.counts["safe"] ?? 0) > 0 {
+                Button("Resume import", systemImage: "play.fill") { controller.startApprovedApply() }
+                    .buttonStyle(.borderedProminent).buttonBorderShape(.capsule).accessibilityIdentifier("trakt-resume-import")
+            }
+        }.diaryPanel().accessibilityElement(children: .contain).accessibilityIdentifier("trakt-transfer-panel")
     }
     private var incomingWatches: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -97,7 +129,10 @@ import TwilDiaryCore
                 Button("Connect Trakt") { showSignIn = true }.buttonStyle(.borderedProminent).disabled(controller.busy)
                 Link("Connect in browser", destination: AppConfiguration.backend.appendingPathComponent("preview/more/trakt")).font(.caption)
             } else if controller.status != nil { Text("Configure the Trakt Client ID on your server using the PC app. Sign-in uses PKCE; no client secret is needed.").font(.subheadline).foregroundStyle(.secondary) }
-            if coolingDown { Text("Trakt asked us to wait \(Int(ceil(controller.cooldownUntil.timeIntervalSince(clock))))s before continuing.").font(.caption).foregroundStyle(.secondary) }
+            if coolingDown {
+                Text("Waiting \(max(0, Int(ceil(controller.cooldownUntil.timeIntervalSince(clock))))) seconds before the next request.")
+                    .font(.caption).monospacedDigit().foregroundStyle(.secondary).accessibilityIdentifier("trakt-cooldown-countdown")
+            }
         }.diaryPanel()
     }
     private var preferences: some View {
@@ -118,7 +153,12 @@ import TwilDiaryCore
                 let progress = TraktScanProgress(run: run)
                 Text(progress.title).font(.subheadline.weight(.semibold))
                 Text(progress.detail).font(.subheadline).foregroundStyle(.secondary).accessibilityIdentifier("trakt-scan-progress-detail")
+                if let fraction = progress.fraction {
+                    ProgressView(value: fraction).accessibilityLabel("Comparison progress")
+                    Text("\(Int((fraction * 100).rounded(.down)))% of this comparison stage").font(.caption).monospacedDigit()
+                } else { Text("This stage has no reliable total yet.").font(.caption).foregroundStyle(.secondary) }
             }
+            if let message = controller.retryMessage { Text(message).font(.caption).foregroundStyle(.secondary) }
             Text("Manual full-library comparison. Nothing is applied until the review is ready. Automatic incoming watches pause during this scan and review.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if controller.busy { Button(controller.paused ? "Pausing…" : "Pause after this step") { controller.paused = true }.disabled(controller.paused) }
@@ -163,17 +203,20 @@ import TwilDiaryCore
     }
     private func applyPanel(_ sync: TraktSync) -> some View {
         VStack(spacing: 9) {
-            Button { Task { await controller.apply(); await store.refresh() } } label: {
+            Button { controller.startApprovedApply() } label: {
                 Text(sync.readyChanges > 0 ? "Apply all ready changes (\(sync.readyChanges))" : "Link existing items (\(sync.counts["links"] ?? 0))")
                     .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity).frame(minHeight: 50)
-                    .foregroundStyle(Color(webHex: "#21182e")).background(theme.accent, in: RoundedRectangle(cornerRadius: 12))
+                    .foregroundStyle(theme.ink).background(theme.accent, in: Capsule())
             }.buttonStyle(.plain).disabled(controller.busy || coolingDown).accessibilityIdentifier("trakt-apply-ready")
             Text("Conflicts need your choice above. Filters only change what’s shown.").font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center)
         }
     }
     private func reviewItem(_ change: TraktChange, sync: TraktSync) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) { Text(change.name).font(.subheadline.bold()); Spacer(); Text(change.kindLabel).font(.caption.bold()).foregroundStyle(theme.accent).padding(6).background(theme.accent.opacity(0.1), in: Capsule()) }
+            Text(change.kindLabel).font(.system(size: 10, weight: .semibold)).foregroundStyle(theme.accent)
+                .padding(.horizontal, 8).padding(.vertical, 4).background(theme.accent.opacity(0.1), in: Capsule())
+            Text(change.name).font(.subheadline.bold()).fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Text(change.error ?? change.detail).font(.caption).foregroundStyle(.secondary)
             if let context = change.context {
                 if let season = context.season, let episode = context.episode, change.kind == "history" { Text("S\(season) · E\(episode)").font(.caption).foregroundStyle(.secondary) }
@@ -195,10 +238,12 @@ import TwilDiaryCore
         if change.state == "uncertain" { action("Check Trakt", change: change, choice: .local) }
         else if change.review && !change.blocked { action("Keep TwilDiary", change: change, choice: .local); action("Use Trakt", change: change, choice: .trakt) }
         else if !change.blocked { action("Apply", change: change, choice: .apply) }
-        Button("Skip") { Task { await controller.apply(change: change, choice: .skip); await store.refresh() } }.font(.caption).accessibilityIdentifier("trakt-skip-" + change.id)
+        Button("Skip") { Task { await controller.apply(change: change, choice: .skip); await store.refresh() } }.buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.regular).font(.caption)
+            .frame(minHeight: 44).frame(maxWidth: grid ? .infinity : nil).accessibilityIdentifier("trakt-skip-" + change.id)
     }
     private func action(_ label: String, change: TraktChange, choice: TraktChoice) -> some View {
-        Button(label) { Task { await controller.apply(change: change, choice: choice); await store.refresh() } }.buttonStyle(.bordered).font(.caption).disabled(coolingDown).accessibilityIdentifier("trakt-" + choice.rawValue + "-" + change.id)
+        Button(label) { Task { await controller.apply(change: change, choice: choice); await store.refresh() } }.buttonStyle(.borderedProminent).buttonBorderShape(.capsule).controlSize(.regular).font(.caption)
+            .frame(minHeight: 44).frame(maxWidth: grid ? .infinity : nil).disabled(coolingDown).accessibilityIdentifier("trakt-" + choice.rawValue + "-" + change.id)
     }
     private func reviewValue(_ kind: String, _ value: String?) -> String {
         if kind == "rating" { return value ?? "No rating" }

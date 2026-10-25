@@ -14,13 +14,34 @@ results and actual artifacts; reconcile before editing. Notes and source test
 counts never substitute for runtime evidence. No Mac/Xcode/Swift runtime is
 available locally; Windows checks grammar/YAML/Bash/Python only.
 
-## Three distinct source states
+## Active candidate and audit — native58
+
+Owner authorized a rigorous whole-project audit on25October. First complete the
+coherent import/quota repair, then audit remaining native UI/data/auth/cache,
+backend invariants/query costs and release flows. Track evidence and regressions;
+do not claim every line or phone behavior tested from source inspection alone.
 
 | Track | Exact source | Current evidence |
 | --- | --- | --- |
-| GitHub ios-native, native54 | d59f55e5fa574382b067477f6b4fb079690507a8 | Complete Codemagic54 passed. GHA54attempt1 stopped on an incompatible restored pre-split Core module; cache invalidated; attempt2 compiled/unit188passed but two focused UI cases failed (settings-theme reachability and retained Glance search). Do not rerun unchanged. |
-| Codemagic candidate codex/ios-ci-next, native55 | ae2cfdcccbe58fbd2f353abbbfabb4fa67b59766 | Warning-free simulator build and allComplete CM55passed:0warnings/194native/8focused/10early/51primary/3layouts each extra phone/Release. Official success verified; artifacts need download. |
-| Local codex/ios-carousel-parity, native56 |9e30c49 plus this documentation update; use git rev-parse HEAD| Carousel batch,196native/52primary/10focused source cases; uncompiled. |
+| GitHub ios-native, native54 | d59f55e5fa574382b067477f6b4fb079690507a8 | CM54complete pass; GHA40192486938attempt2warning-free compile/188native pass but two focused UI failures. No unchanged rerun. Owner phone results recorded. |
+| Complete Codemagic55 | ae2cfdcccbe58fbd2f353abbbfabb4fa67b59766 | Full regression passed; verified IPA download still pending. |
+| Codemagic57 | abc62cca039f3acda4388b001e7bc53851ca11ca | CM6ade0cac4a72334e32e5044d:0compiler warnings/197native pass; focused gate failed10cases, primarily old custom tab-home selectors after adopting native TabView. No promotion. |
+| Local native58, codex/ios-phone-polish | this commit | Candidate:212native/53primary/17focused source cases. Native tab tests use public UITabBar labels; approved bulk job persists across tabs and restarts, paced safe cooldown/reconciliation, progress and rounded actions. No macOS58evidence yet. |
+
+The opened D1 metrics confirm12.23Mrows read/36.56kwritten inLast24hours;
+three repeated count scans alone6.70Mreads and next-change selection2.30M.
+Additive migration0014uses transactionally maintained review buckets and ordered
+partial indexes; explicit LIMIT1on ready selection. Full396Node tests pass;
+final web typecheck has0errors/0warnings; production build and13CI-tool tests pass.
+Windows Swift grammar/YAML checks pass; macOS compilation/runtime remains unverified.
+Detailed evidence and rollout order: ios/docs/TRAKT-IMPORT-RELIABILITY.md.
+No hosted migration/deploy applied; current daily allowance is exhausted. Direct
+Wrangler analytics401, authenticated dashboard works. No hosted writes in audit.
+
+Exact next action: push this reviewed candidate only and start one complete
+Codemagic regression; inspect actual
+failures and screenshots while continuing independent audit. Do not promote an
+incomplete candidate or call a partial gate stable.
 
 Native source is **Amit29533/TwilDiary**, /ios. Original web /preview source
 and user-directed native changes are authoritative. The old TwilDiary-iOS repo
@@ -31,8 +52,7 @@ Only a complete official Codemagic regression success for an exact SHA may
 promote that SHA to ios-native. GitHub then independently runs the complete
 suite before stable IPA publication. The differently named device-diagnostic
 workflow cannot satisfy promotion. Candidate source on GitHub is needed for
-Codemagic checkout; it is not stable publication. Preserve the frozen55ref
-while it runs. Do not accidentally send local56with54/55acceptance.
+Codemagic checkout; it is not stable publication. Preserve each running candidate SHA. Do not promote58under54/55acceptance.
 
 ## Last complete acceptance — native54
 

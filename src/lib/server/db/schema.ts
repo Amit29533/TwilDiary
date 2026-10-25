@@ -456,7 +456,12 @@ export const traktRemoteItems = sqliteTable(
     remoteKey: text('remote_key').notNull(),
     payload: text('payload', { mode: 'json' }).$type<Record<string, unknown>>().notNull()
   },
-  (t) => [uniqueIndex('trakt_remote_run_key').on(t.runId, t.kind, t.remoteKey)]
+  (t) => [
+    uniqueIndex('trakt_remote_run_key').on(t.runId, t.kind, t.remoteKey),
+    index('trakt_remote_plan_order')
+      .on(t.runId, t.id)
+      .where(sql`kind!='activities'`)
+  ]
 );
 export const traktSyncBaselines = sqliteTable(
   'trakt_sync_baselines',
@@ -493,7 +498,34 @@ export const traktSyncChanges = sqliteTable(
       .default('pending'),
     error: text('error')
   },
-  (t) => [index('trakt_changes_run').on(t.runId, t.state, t.id)]
+  (t) => [
+    index('trakt_changes_run').on(t.runId, t.state, t.id),
+    index('trakt_changes_ready_pick')
+      .on(
+        t.runId,
+        sql`CASE WHEN kind='history' AND direction='pull' THEN 0 WHEN direction='link' THEN 1 WHEN kind='rating' THEN 2 ELSE 3 END`,
+        t.id
+      )
+      .where(sql`state='pending' AND review=0`)
+  ]
+);
+
+/** Trigger-maintained aggregates; never updated outside proposal transactions. */
+export const traktSyncChangeCounts = sqliteTable(
+  'trakt_sync_change_counts',
+  {
+    runId: text('run_id')
+      .notNull()
+      .references(() => traktSyncRuns.id, { onDelete: 'cascade' }),
+    state: text('state').notNull(),
+    review: integer('review', { mode: 'boolean' }).notNull(),
+    direction: text('direction').notNull(),
+    amount: integer('amount').notNull().default(0)
+  },
+  (t) => [
+    primaryKey({ columns: [t.runId, t.state, t.review, t.direction] }),
+    check('trakt_count_nonnegative', sql`${t.amount} >= 0`)
+  ]
 );
 
 /** Durable receipts keep a status/progress change and its Undo safe to retry. */

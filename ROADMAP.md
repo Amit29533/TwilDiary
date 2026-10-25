@@ -189,3 +189,11 @@ ios/docs/DEVICE-RESULTS-BUILD54.md. Native57prepares native tab handling, actual
 content paging, continuous compact header, animated focus scroll, smaller Undo,
 thumbnail check overlays and persistent glass/tinted Information. Remains
 uncompiled; no new acceptance checkbox or stable promotion is implied.
+
+## Owner audit extension —25October2026
+
+- [ ] Complete bulk-import lifecycle/progress/cooldown repair and native macOS regression.
+- [ ] Validate D1 aggregate/index migration in local Workers runtime; deploy safely after quota recovery and verify actual metrics.
+- [ ] Audit native navigation/layout/motion, metadata/search/cache, session boundaries and all mutation receipts.
+- [ ] Audit backend schema/API/data invariants, sync retry/leases/idempotence and free-plan query budget.
+- [ ] Run complete web/native/UI/release suites; inspect artifacts and record remaining phone checks.

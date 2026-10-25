@@ -7,8 +7,10 @@ import TwilDiaryCore
     private var connection: TraktStatus
     private var snapshot: TraktSync
     private let unavailable: Bool
+    private let largeImport: Bool
     init(scenario: String = "review") {
         unavailable = scenario == "unavailable"
+        largeImport = scenario == "large-import"
         let statusURL = Bundle.main.url(forResource: "trakt-status", withExtension: "json")!
         let syncURL = Bundle.main.url(forResource: "trakt-sync", withExtension: "json")!
         connection = try! JSONDecoder().decode(TraktStatus.self, from: Data(contentsOf: statusURL))
@@ -22,6 +24,7 @@ import TwilDiaryCore
             snapshot.run = try! JSONDecoder().decode(TraktSync.Run.self, from: Data(#"{"id":"fixture-comparing","state":"building","stage":"plan-remote-batch","page":481,"progress":2185,"retryAfter":0}"#.utf8))
             snapshot.counts = ["pending": 720, "links": 2]
         }
+        if largeImport { snapshot.counts = ["pending": 2000, "safe": 2000, "applied": 0] }
     }
     func status() async throws -> TraktStatus { if unavailable { throw APIError.message("The connection is temporarily unavailable. Try again.") }; return connection }
     func review(kind: TraktKind, query: String, after: String?) async throws -> TraktSync {
@@ -36,6 +39,15 @@ import TwilDiaryCore
     }
     func step(id: String) async throws -> TraktSync { snapshot.run?.state = "review"; return snapshot }
     func apply(id: String, change: String?, choice: TraktChoice) async throws -> TraktSync {
+        if largeImport && change == nil {
+            try await Task.sleep(for: .milliseconds(200))
+            let saved = min(40, snapshot.counts["pending"] ?? 0)
+            snapshot.counts["pending", default: 0] -= saved
+            snapshot.counts["safe", default: 0] -= saved
+            snapshot.counts["applied", default: 0] += saved
+            snapshot.run?.state = saved == 0 ? "complete" : "applying"
+            return snapshot
+        }
         for index in snapshot.items.indices {
             let item = snapshot.items[index]
             guard item.state == "pending", change.map({ $0 == item.id }) ?? (!item.review && !item.blocked) else { continue }
@@ -46,6 +58,7 @@ import TwilDiaryCore
         snapshot.counts["pending"] = snapshot.items.filter { $0.state == "pending" }.count
         snapshot.counts["safe"] = snapshot.items.filter { $0.state == "pending" && !$0.review && !$0.blocked }.count
         snapshot.counts["skipped"] = snapshot.items.filter { $0.state == "skipped" }.count
+        snapshot.counts["applied"] = snapshot.items.filter { $0.state == "applied" }.count
         if snapshot.counts["pending"] == 0 { snapshot.run?.state = "complete" }
         return snapshot
     }

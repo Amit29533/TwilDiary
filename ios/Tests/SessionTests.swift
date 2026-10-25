@@ -40,6 +40,7 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         var delay: TimeInterval = 0
         var gate: ResponseGate? = nil
         var failureCode: URLError.Code? = nil
+        var headers: [String: String] = [:]
         init(_ body: String) { self.init(200, body) }
         init(_ status: Int, _ body: String, contentType: String = "application/json") {
             self.status = status; self.body = body; self.contentType = contentType
@@ -98,7 +99,7 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         guard !stopped else { return }
         if let code = reply.failureCode { client?.urlProtocol(self, didFailWithError: URLError(code)); return }
         let response = HTTPURLResponse(url: request.url!, statusCode: reply.status, httpVersion: nil,
-                                       headerFields: ["Content-Type": reply.contentType])!
+                                       headerFields: ["Content-Type": reply.contentType].merging(reply.headers, uniquingKeysWith: { _, new in new }))!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         guard !stopped else { return }
         client?.urlProtocol(self, didLoad: Data(reply.body.utf8))
@@ -646,6 +647,32 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
         XCTAssertEqual(store.error, "Test storage unavailable")
     }
 
+    func testTraktThrottlePreservesRetryAfterAndNeverRetriesThePostInsideTransport() async throws {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        StubProtocol.state.reset { _ in
+            var reply = StubProtocol.Reply(429, #"{"error":{"code":"trakt_rate_limited","message":"Provider cooldown"}}"#)
+            reply.headers["Retry-After"] = "60"; return reply
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        do {
+            let _: EmptyResponse = try await api(storage, clock: { date }).request("/api/trakt/sync/fixture/apply", method: "POST", body: ["choice": "apply"])
+            XCTFail("Throttle accepted")
+        } catch let error as TraktTransferFailure {
+            XCTAssertEqual(error.status, 429); XCTAssertEqual(error.code, "trakt_rate_limited")
+            XCTAssertEqual(error.retryAt, date.addingTimeInterval(60)); XCTAssertTrue(error.retryable)
+        } catch { XCTFail("Unexpected error: \(error)") }
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+    }
+    func testTraktPostNetworkLossRequiresReconciliationRatherThanBlindTransportReplay() async {
+        StubProtocol.state.reset { _ in var reply = StubProtocol.Reply("{}"); reply.failureCode = .networkConnectionLost; return reply }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        do {
+            let _: EmptyResponse = try await api(storage).request("/api/trakt/sync/fixture/apply", method: "POST", body: ["choice": "apply"])
+            XCTFail("Lost response accepted")
+        } catch let error as TraktTransferFailure { XCTAssertTrue(error.retryable); XCTAssertEqual(error.status, 0) }
+        catch { XCTFail("Unexpected error: \(error)") }
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+    }
     func testWriteQuotaParsesResetWithoutSigningOut() async throws {
         StubProtocol.state.reset { _ in
             .init(503, #"{"error":{"code":"database_write_limit","message":"Quota exhausted","resetAt":"2026-10-24T00:00:00Z"}}"#)

@@ -765,12 +765,14 @@ test('an explicitly throttled history POST can retry after cooldown without beco
     () => applySyncChange(f.db, traktEnv, id, undefined, 'apply', fakeTmdb, limited),
     { code: 'trakt_rate_limited' }
   );
-  const change = (await syncStatus(f.db, id)).items.find((row) => row.kind === 'history')!;
-  assert.equal(change.state, 'failed');
+  const status = await syncStatus(f.db, id);
+  const change = status.items.find((row) => row.kind === 'history')!;
+  assert.equal(change.state, 'pending');
+  assert.ok('safe' in status.counts && status.counts.safe > 0);
   assert.equal(fake.state.history.length, 0);
   // Advance the disposable fixture past the provider cooldown without waiting in real time.
   await f.db.update(traktSyncRuns).set({ leaseUntil: null }).where(eq(traktSyncRuns.id, id));
-  await applySyncChange(f.db, traktEnv, id, change.id, 'apply', fakeTmdb, fake.transport);
+  await applySyncChange(f.db, traktEnv, id, undefined, 'apply', fakeTmdb, fake.transport);
   assert.equal(fake.state.history.length, 1);
   assert.equal(fake.state.posts.filter((row) => row.path === '/sync/history').length, 1);
 });

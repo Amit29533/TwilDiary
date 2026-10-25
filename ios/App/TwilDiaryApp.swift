@@ -160,7 +160,10 @@ struct RootView: View {
                         onAdd: { router.randomPick = nil; router.library("add") }).id(scope.id)
                 }
             }.onChange(of: store.sessionRevision) { _, _ in router.randomPick = nil }
-            .task(id: scenePhase) { if scenePhase == .active { await store.refreshOnForeground() } }
+            .task(id: scenePhase) {
+                if scenePhase == .active { await store.refreshOnForeground(); await store.resumeTraktOnForeground() }
+                else { store.suspendTraktForBackground() }
+            }
     }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {

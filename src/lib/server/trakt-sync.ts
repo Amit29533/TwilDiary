@@ -4,6 +4,7 @@ import {
   traktSyncRuns as runs,
   traktRemoteItems as remote,
   traktSyncChanges as changes,
+  traktSyncChangeCounts as changeCounts,
   traktSyncBaselines as baselines,
   traktConnections,
   titles,
@@ -487,24 +488,17 @@ export async function syncStatus(
         .orderBy(sql`${runs.createdAt} DESC`)
         .get();
   if (!run) return { run: null, items: [], counts: {}, next: null };
-  const counts = await db
-    .select({ state: changes.state, count: sql<number>`count(*)` })
-    .from(changes)
-    .where(eq(changes.runId, run.id))
-    .groupBy(changes.state)
-    .all();
-  const safe = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(changes)
-    .where(and(eq(changes.runId, run.id), eq(changes.state, 'pending'), eq(changes.review, false)))
-    .get();
-  const linked = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(changes)
-    .where(
-      and(eq(changes.runId, run.id), eq(changes.state, 'pending'), eq(changes.direction, 'link'))
-    )
-    .get();
+  // At most5states ×2review flags ×4directions, independent of library size.
+  const buckets = await db.select().from(changeCounts).where(eq(changeCounts.runId, run.id)).all();
+  const counts: Record<string, number> = {};
+  let safe = 0,
+    linked = 0;
+  for (const bucket of buckets) {
+    if (!bucket.amount) continue;
+    counts[bucket.state] = (counts[bucket.state] ?? 0) + bucket.amount;
+    if (bucket.state === 'pending' && !bucket.review) safe += bucket.amount;
+    if (bucket.state === 'pending' && bucket.direction === 'link') linked += bucket.amount;
+  }
   const rows = await db
     .select({
       id: changes.id,
@@ -577,9 +571,9 @@ export async function syncStatus(
       };
     }),
     counts: {
-      ...Object.fromEntries(counts.map((row) => [row.state, Number(row.count)])),
-      safe: Number(safe?.count ?? 0),
-      links: Number(linked?.count ?? 0)
+      ...counts,
+      safe,
+      links: linked
     }
   };
 }
@@ -1582,12 +1576,13 @@ export async function applySyncChange(
           .select()
           .from(changes)
           .where(
-            and(eq(changes.runId, id), eq(changes.state, 'pending'), eq(changes.review, false))
+            and(eq(changes.runId, id), sql`${changes.state}='pending'`, sql`${changes.review}=0`)
           )
           .orderBy(
             sql`CASE WHEN ${changes.kind}='history' AND ${changes.direction}='pull' THEN 0 WHEN ${changes.direction}='link' THEN 1 WHEN ${changes.kind}='rating' THEN 2 ELSE 3 END`,
             asc(changes.id)
           )
+          .limit(1)
           .get();
     const uncertain =
       chosen?.state === 'uncertain' ||
@@ -1596,10 +1591,13 @@ export async function applySyncChange(
     if (!uncertain && choice !== 'skip') await assertSnapshot(db, run, trakt);
     if (!chosen) {
       const remaining = await db
-        .select({ count: sql<number>`count(*)` })
-        .from(changes)
+        .select({ count: sql<number>`coalesce(sum(${changeCounts.amount}),0)` })
+        .from(changeCounts)
         .where(
-          and(eq(changes.runId, id), inArray(changes.state, ['pending', 'failed', 'uncertain']))
+          and(
+            eq(changeCounts.runId, id),
+            inArray(changeCounts.state, ['pending', 'failed', 'uncertain'])
+          )
         )
         .get();
       if (!remaining?.count) {
@@ -1690,6 +1688,16 @@ export async function applySyncChange(
         if (direction === 'push') await updateSnapshot(db, run, trakt);
       } catch (error) {
         const current = await db.select().from(changes).where(eq(changes.id, chosen.id)).get();
+        // A confirmed429 refusal did not apply the operation. Keep it eligible
+        // for the approved bulk job after cooldown. Lost/uncertain sends must
+        // retain their reconciliation guard and never enter that queue again.
+        const throttledBeforeApply =
+          error instanceof TraktError &&
+          error.code === 'trakt_rate_limited' &&
+          current &&
+          !['applied', 'uncertain'].includes(current.state) &&
+          current.payload.sentUnconfirmed !== true &&
+          current.payload.reconcileOnly !== true;
         await db
           .update(changes)
           .set({
@@ -1698,7 +1706,9 @@ export async function applySyncChange(
                 ? 'applied'
                 : current?.state === 'uncertain'
                   ? 'uncertain'
-                  : 'failed',
+                  : throttledBeforeApply
+                    ? 'pending'
+                    : 'failed',
             error:
               error instanceof ApiError
                 ? error.message

@@ -81,6 +81,7 @@ PY
       -only-testing:TwilDiaryUITests/NativeScreensTests/testCollectionGridsKeepEpisodeActionsFoldersAndHistoryEntries \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testTitleMenuRevealsAndScrollsNotesAndLocationsAndCopiesAPath \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testCommunityInformationSheetUsesOverallStatsAndReturnsToTheTitle \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testApprovedLargeTraktImportKeepsRunningAcrossNativeTabsAndOffersPause \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeBackReturnsFromEverySettingsDestination \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeExploreReturnsByBackActiveHomeTabAndFullContentSwipe \
       -only-testing:TwilDiaryUITests/LayoutScreensTests/testEveryThemeIsSelectableAndGlassSearchKeepsOneContainedField \

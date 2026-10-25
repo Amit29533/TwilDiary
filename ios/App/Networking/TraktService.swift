@@ -12,33 +12,49 @@ import TwilDiaryCore
     func disconnect() async throws
 }
 
-@MainActor struct LiveTraktService: TraktServicing {
-    let store: DiaryStore
-    func status() async throws -> TraktStatus { try await store.read("/api/trakt/status") }
+@MainActor final class LiveTraktService: TraktServicing {
+    private weak var owner: DiaryStore?
+    init(store: DiaryStore) { owner = store }
+    private func requireStore() throws -> DiaryStore {
+        guard let owner else { throw CancellationError() }; return owner
+    }
+    func status() async throws -> TraktStatus { try await requireStore().read("/api/trakt/status") }
     func review(kind: TraktKind, query: String, after: String?) async throws -> TraktSync {
-        try await store.read(CatalogTools.apiPath("/api/trakt/sync", query: ["kind": kind.rawValue, "query": query, "after": after ?? ""]))
+        try await requireStore().read(CatalogTools.apiPath("/api/trakt/sync", query: ["kind": kind.rawValue, "query": query, "after": after ?? ""]))
     }
     func start(mode: TraktRatingMode) async throws -> String {
         struct Receipt: Decodable { let id: String }
-        let result: Receipt = try await store.read("/api/trakt/sync", method: "POST", body: ["ratingMode": mode.rawValue])
+        let result: Receipt = try await requireStore().read("/api/trakt/sync", method: "POST", body: ["ratingMode": mode.rawValue])
         return result.id
     }
-    func step(id: String) async throws -> TraktSync { try await store.read("/api/trakt/sync/\(id)/step", method: "POST", body: [:]) }
+    func step(id: String) async throws -> TraktSync { try await requireStore().read("/api/trakt/sync/\(id)/step", method: "POST", body: [:]) }
     func apply(id: String, change: String?, choice: TraktChoice) async throws -> TraktSync {
         var body: [String: Any] = ["choice": choice.rawValue]
         if let change { body["changeId"] = change }
-        return try await store.read("/api/trakt/sync/\(id)/apply", method: "POST", body: body)
+        return try await requireStore().read("/api/trakt/sync/\(id)/apply", method: "POST", body: body)
     }
-    func cancel(id: String) async throws { let _: EmptyResponse = try await store.read("/api/trakt/sync/\(id)/cancel", method: "POST", body: [:]) }
+    func cancel(id: String) async throws { let _: EmptyResponse = try await requireStore().read("/api/trakt/sync/\(id)/cancel", method: "POST", body: [:]) }
     func disconnect() async throws {
+        let store = try requireStore()
         store.invalidateDiscovery()
         defer { store.invalidateDiscovery() }
-        let _: EmptyResponse = try await store.read("/api/trakt/disconnect", method: "POST", body: [:])
+        let _: EmptyResponse = try await requireStore().read("/api/trakt/disconnect", method: "POST", body: [:])
     }
 }
 
 @MainActor @Observable final class TraktController {
     private let service: any TraktServicing
+    private let checkpoint: any TraktApplyCheckpointStoring
+    private let clock: @MainActor () -> Date
+    private let sleep: @MainActor (TimeInterval) async throws -> Void
+    private let onTransferFinished: @MainActor () async -> Void
+    private var operationID = UUID()
+    private(set) var applyingAll = false
+    private var runningTask: Task<Void, Never>?
+    private var runningTaskID = UUID()
+    private(set) var retryAttempt = 0
+    private(set) var retryMessage: String?
+    var approvedRunID: String? { checkpoint.runID }
     private(set) var status: TraktStatus?
     private(set) var sync: TraktSync?
     private(set) var busy = false
@@ -55,7 +71,39 @@ import TwilDiaryCore
     private var changingReview = false
     private var deferredRefresh = false
     private var deferredStatus = false
-    init(service: any TraktServicing) { self.service = service }
+    init(service: any TraktServicing, checkpoint: (any TraktApplyCheckpointStoring)? = nil,
+         clock: @escaping @MainActor () -> Date = { .now },
+         sleep: @escaping @MainActor (TimeInterval) async throws -> Void = { try await Task.sleep(for: .seconds($0)) },
+         onTransferFinished: @escaping @MainActor () async -> Void = {}) {
+        self.service = service; self.checkpoint = checkpoint ?? MemoryTraktApplyCheckpoint()
+        self.clock = clock; self.sleep = sleep; self.onTransferFinished = onTransferFinished
+    }
+    func pauseApplying() { paused = true; checkpoint.runID = nil }
+    func suspendForBackground() { paused = true; runningTask?.cancel() }
+    func finishSuspendingTransfer() async {
+        if let task = runningTask, task.isCancelled { await task.value }
+    }
+    func startApprovedApply() {
+        guard !busy, runningTask == nil else { return }
+        let taskID = UUID(); runningTaskID = taskID
+        runningTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.apply()
+            guard self.runningTaskID == taskID else { return }
+            if !Task.isCancelled { await self.onTransferFinished() }
+            if self.runningTaskID == taskID { self.runningTask = nil }
+        }
+    }
+    func invalidateSession() {
+        operationID = UUID(); refreshID = UUID(); runningTaskID = UUID(); paused = true; checkpoint.runID = nil
+        runningTask?.cancel(); runningTask = nil
+        sync = nil; status = nil; error = nil; retryMessage = nil
+    }
+    func resumeApprovedApply() async {
+        guard !busy, let id = checkpoint.runID, sync?.run?.id == id,
+              status?.connected == true, status?.needsReconnect != true else { return }
+        startApprovedApply()
+    }
     var visibleItems: [TraktChange] { sync?.items.filter { (kind == .all || $0.kind == kind.rawValue) && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)) } ?? [] }
     func refresh() async {
         await refresh(includeStatus: true)
@@ -97,8 +145,10 @@ import TwilDiaryCore
         catch { if request == refreshID, kind == selectedKind, query == search, !Task.isCancelled { self.error = error.localizedDescription } }
     }
     func scan(start: Bool) async {
-        guard !busy, cooldownUntil <= .now else { return }
-        refreshID = UUID(); loading = false; busy = true; changingReview = true; paused = false; error = nil
+        guard !busy else { return }
+        let ticket = UUID(); operationID = ticket
+        refreshID = UUID(); loading = false; busy = true; changingReview = true
+        paused = false; error = nil; retryAttempt = 0
         do {
             var id = sync?.run?.id
             if start || id == nil {
@@ -107,21 +157,38 @@ import TwilDiaryCore
             }
             guard let id else { throw APIError.message("The Trakt scan did not start. Please retry.") }
             var previousStep: String?
-            var steps = 0
-            repeat {
-                try Task.checkCancellation()
-                let result = try await service.step(id: id); accept(result)
-                steps += 1
-                if paused || result.run?.state != "building" || cooldownUntil > .now { break }
-                let signature = "\(result.run?.stage ?? ""):\(result.run?.page ?? 0):\(result.run?.progress ?? 0)"
-                if signature == previousStep || steps >= 100 { paused = true; break }
-                previousStep = signature
-            } while true
+            var reconcile = false
+            while !paused {
+                try await waitForCooldown(ticket)
+                if paused { break }
+                do {
+                    if reconcile {
+                        let saved = try await service.review(kind: .all, query: "", after: nil)
+                        guard operationID == ticket else { throw CancellationError() }
+                        guard saved.run?.id == id else { throw APIError.message("The scan changed. Open the latest review.") }
+                        accept(saved); reconcile = false
+                        if cooldownUntil > clock() { continue }
+                        if saved.run?.state != "building" { break }
+                    }
+                    let result = try await service.step(id: id)
+                    guard operationID == ticket else { throw CancellationError() }
+                    accept(result); retryAttempt = 0; retryMessage = nil
+                    if result.run?.state != "building" { break }
+                    let signature = "\(result.run?.stage ?? ""):\(result.run?.page ?? 0):\(result.run?.progress ?? 0)"
+                    if signature == previousStep { paused = true; break }
+                    previousStep = signature
+                    try await sleep(0.5)
+                } catch is CancellationError { throw CancellationError() }
+                catch { try scheduleRecovery(error, ticket: ticket); reconcile = true }
+            }
         } catch is CancellationError { paused = true }
-        catch { self.error = error.localizedDescription }
-        await finishChangingReview()
+        catch { if operationID == ticket { self.error = error.localizedDescription; paused = true } }
+        retryMessage = nil
+        if operationID == ticket { await finishChangingReview() }
+        else { changingReview = false; busy = false }
     }
     func apply(change: TraktChange? = nil, choice: TraktChoice = .apply) async {
+        if change == nil && choice == .apply { await applyAllReady(); return }
         guard !busy, let current = sync, current.reviewing, let id = current.run?.id, choice == .skip || cooldownUntil <= .now else { return }
         refreshID = UUID(); loading = false; busy = true; changingReview = true; paused = false; error = nil
         do {
@@ -142,13 +209,88 @@ import TwilDiaryCore
         catch { self.error = error.localizedDescription }
         await finishChangingReview()
     }
+    private func applyAllReady() async {
+        guard !busy, let current = sync, current.reviewing, let id = current.run?.id else { return }
+        let ticket = UUID(); operationID = ticket
+        refreshID = UUID(); loading = false; busy = true; changingReview = true
+        paused = false; applyingAll = true; checkpoint.runID = id
+        error = nil; retryAttempt = 0; retryMessage = nil
+        var reconcile = false, stagnant = 0
+        do {
+            while !paused {
+                try Task.checkCancellation()
+                guard operationID == ticket else { throw CancellationError() }
+                try await waitForCooldown(ticket)
+                if paused { break }
+                do {
+                    if reconcile {
+                        let latest = try await service.review(kind: .all, query: "", after: nil)
+                        guard latest.run?.id == id else { throw APIError.message("The review changed. Open the current review before continuing.") }
+                        guard operationID == ticket else { throw CancellationError() }
+                        accept(latest); reconcile = false
+                        if cooldownUntil > clock() { continue }
+                    }
+                    guard let before = sync, before.run?.id == id, before.reviewing else { break }
+                    if (before.counts["safe"] ?? 0) == 0 && before.unresolved > 0 { break }
+                    let result = try await service.apply(id: id, change: nil, choice: .apply)
+                    guard operationID == ticket else { throw CancellationError() }
+                    guard result.run?.id == id else { throw APIError.message("The review changed. Refresh before continuing.") }
+                    accept(result); retryAttempt = 0; retryMessage = nil; error = nil
+                    if !result.reviewing { break }
+                    if result.counts == before.counts { stagnant += 1 } else { stagnant = 0 }
+                    if stagnant >= 2 { throw APIError.message("The server made no further progress. Your completed changes are saved; review the remaining items.") }
+                    // Yield and pace the approved job instead of stopping at100
+                    // requests or hammering a free-plan backend in a tight loop.
+                    try await sleep(1)
+                } catch is CancellationError { throw CancellationError() }
+                catch {
+                    try scheduleRecovery(error, ticket: ticket)
+                    reconcile = true
+                }
+            }
+            if !paused { checkpoint.runID = nil }
+            deferredRefresh = true; deferredStatus = true
+        } catch is CancellationError { paused = true }
+        catch { self.error = error.localizedDescription; paused = true; checkpoint.runID = nil }
+        applyingAll = false; retryMessage = nil
+        if operationID == ticket { await finishChangingReview() }
+        else { changingReview = false; busy = false }
+    }
+    private func waitForCooldown(_ ticket: UUID) async throws {
+        while cooldownUntil > clock() && !paused {
+            let remaining = cooldownUntil.timeIntervalSince(clock())
+            try await sleep(min(remaining > 60 ? 30 : 1, remaining))
+            try Task.checkCancellation()
+            guard operationID == ticket else { throw CancellationError() }
+        }
+        try Task.checkCancellation()
+        guard operationID == ticket else { throw CancellationError() }
+    }
+    private func scheduleRecovery(_ error: Error, ticket: UUID) throws {
+        guard operationID == ticket else { throw CancellationError() }
+        let failure = error as? TraktTransferFailure
+        let reset: Date?
+        let databaseQuota: Bool
+        if case APIError.databaseLimit(let date) = error { databaseQuota = true; reset = date ?? clock().addingTimeInterval(3600) }
+        else { databaseQuota = false; reset = failure?.retryAt }
+        guard failure?.retryable == true || databaseQuota || error is DecodingError else { throw error }
+        retryAttempt += 1
+        guard retryAttempt <= 6 else { throw APIError.message("The connection is still unavailable after six recovery attempts. Completed changes are saved. Resume when the service is available.") }
+        let delay = min(60, pow(2, Double(retryAttempt)))
+        cooldownUntil = max(reset ?? .distantPast, clock().addingTimeInterval(delay))
+        retryMessage = databaseQuota
+            ? "Cloudflare’s daily database allowance is exhausted. Waiting until the reset, then checking saved progress."
+            : "\(failure?.message ?? "The response was incomplete.") Waiting, then checking saved progress (attempt \(retryAttempt) of 6)."
+    }
     func cancel() async {
+        checkpoint.runID = nil
         guard !busy, let id = sync?.run?.id else { return }
         refreshID = UUID(); loading = false; busy = true; changingReview = true
         do { try await service.cancel(id: id); deferredRefresh = true; deferredStatus = true } catch { self.error = error.localizedDescription }
         await finishChangingReview()
     }
     func disconnect() async {
+        checkpoint.runID = nil
         guard !busy else { return }
         refreshID = UUID(); loading = false; busy = true; changingReview = true
         do { try await service.disconnect(); deferredRefresh = true; deferredStatus = true } catch { self.error = error.localizedDescription }
@@ -158,7 +300,11 @@ import TwilDiaryCore
         changingReview = false; busy = false
         let pending = deferredRefresh, includeStatus = deferredStatus
         deferredRefresh = false; deferredStatus = false
-        if pending { await refresh(includeStatus: includeStatus) }
+        if pending {
+            let retainedError = error
+            await refresh(includeStatus: includeStatus)
+            if let retainedError { error = retainedError }
+        }
     }
-    private func accept(_ value: TraktSync) { sync = value; cooldownUntil = .now.addingTimeInterval(Double(value.run?.retryAfter ?? 0)) }
+    private func accept(_ value: TraktSync) { sync = value; cooldownUntil = clock().addingTimeInterval(Double(max(0, min(86_400, value.run?.retryAfter ?? 0)))) }
 }
