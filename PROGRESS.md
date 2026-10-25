@@ -49,8 +49,14 @@ the already-tested saved-title header action, removes the obsolete wrapper and
 extends the retained-search case to verify forward/reverse catalog header states.
 Windows Swift/YAML checks pass;62macOS typing/runtime/resource proof pending.
 
+CI budget audit: GitHub54's8-case repair stage took12m37s on the pinned Intel
+runner; the current17-case gate still has a15-minute stage cap.62sets35minutes
+for that stage only, retaining individual XCTest deadlines. Do not spend a61
+GitHub run on this stale budget; deliver a fully-passed CM61candidate if available,
+then qualify62and promote62with its coherent workflow. No assertion was relaxed.
+
 Next: let61complete all gates; download/verify artifacts and original screenshots.
-Only full exact-SHA acceptance permits promotion of8c95140toios-native/GitHub.
+Only full exact-SHA acceptance permits stable-branch promotion; prefer62after its same-SHA CM pass to include the audited Intel stage budget.
 Commit62locally; push it to the candidate ref only when61has finished. Continue
 remaining source/data-flow/accessibility audit without altering frozen61.
 
