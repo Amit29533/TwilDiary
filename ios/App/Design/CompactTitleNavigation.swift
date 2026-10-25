@@ -6,11 +6,28 @@ import TwilDiaryCore
 struct CompactTitleNavigation: View {
     let name: String
     let poster: String?
+    var visible = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         HStack(spacing: 8) {
             Artwork(path: poster, title: name, initialsOnly: false).frame(width: 28, height: 28).clipShape(RoundedRectangle(cornerRadius: 9))
             Text(name).font(.system(size: 15, weight: .semibold)).lineLimit(1).truncationMode(.tail)
-        }.frame(maxWidth: .infinity).accessibilityElement(children: .ignore).accessibilityLabel(name).accessibilityIdentifier("compact-title-navigation")
+        }.frame(height: 28)
+            .opacity(visible ? 1 : 0)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: visible)
+            .accessibilityElement(children: .ignore).accessibilityLabel(name).accessibilityIdentifier("compact-title-navigation")
+            .accessibilityHidden(!visible)
+    }
+}
+
+/// Ignore the crossing band: toolbar layout and a reversing scroll must not
+/// repeatedly insert/remove the title at the same single-pixel threshold.
+enum CompactHeaderThreshold {
+    static func visibility(nameBottom: CGFloat) -> Bool? {
+        guard nameBottom.isFinite else { return nil }
+        if nameBottom < -16 { return true }
+        if nameBottom > 24 { return false }
+        return nil
     }
 }
 

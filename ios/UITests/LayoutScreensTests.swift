@@ -108,6 +108,7 @@ import XCTest
         XCTAssertLessThanOrEqual(expandedRegion.frame.maxX, app.frame.width - 14)
         XCTAssertLessThan(continuation.frame.minX, 24)
         XCTAssertGreaterThan(continuation.frame.minY, summary.frame.maxY)
+        XCTAssertLessThan(continuation.frame.minY - summary.frame.maxY, 15, "A paragraph continuation must not add a blank section-sized line")
         capture("Lowered title identity and full-width expanded synopsis", app: app)
         let watched = app.buttons["watch-date"]
         for _ in 0..<5 { if watched.isHittable { break }; app.swipeUp() }

@@ -80,3 +80,7 @@ Hosted mutation tests require the owner's explicit authorization. Simulator chec
 - Glance Notes opens at the actual editor.
 
 These are owner-reported real-phone results, not simulator screenshots or full-release acceptance. Next checks: caught-up Trakt watch import/duplicate prevention and delay, episode/range/movie Undo, season boundaries, keyboard/cancelled Back, long synopsis/compact header, offline recovery, Trash restore and navigation-lens gestures.
+
+### Owner feedback batch44 (pending new IPA)
+
+Build40 owner confirms sentiment swipe-down, incoming setting persistence, Glance Notes targeting, watch/Undo/current-season actions, keyboard-safe Back, navigation scrub and offline. New44 needs real-phone verification: slow/reversing scroll across title-header threshold (no stutter, centred identity); push and complete/cancel content Back (bar travels with page, no delayed pop-in); root right-next/left-previous swipes versus horizontal shelves/Glance watch-card swipes/nav scrub/sliders; static initial loading and unchanged content during refresh; Information medium/large/scroll transparency with dark sentiment cards; expanded episode grids without vertical holes; recommendations/cast layout switch at the heading. Simulator passes cannot prove frame pacing/haptics/material rendering on the owner's phone.

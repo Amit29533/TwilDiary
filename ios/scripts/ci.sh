@@ -72,13 +72,15 @@ PY
       2>&1 | tee "$ARTIFACTS/logs/unit-tests.log"
     ;;
   test-repairs)
-    # Reproduce both native40 failures twice before spending time on the full
-    # suite. These are repetitions, never retry-until-pass; any failure stops it.
+    # Exercise this batch's navigation/layout repairs before the long suite.
+    # No retry-until-pass; any failure stops the run and retains its evidence.
     xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 240 \
-      -test-iterations 2 \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testCommunityInformationSheetUsesOverallStatsAndReturnsToTheTitle \
-      -only-testing:TwilDiaryUITests/NativeScreensTests/testIncomingTraktWatchesCanBeEnabledDisabledAndReviewedWithoutAProgressOverlay \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testRootContentSwipesVisitEveryTabWithoutWrappingAndKeepCardGestures \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testTraktComparisonShowsFiniteRecordsAndStopsWithoutPartialApplyActions \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testCollectionGridsKeepEpisodeActionsFoldersAndHistoryEntries \
+      -only-testing:TwilDiaryUITests/LayoutScreensTests/testExpandedSummaryAndWatchDateRemainInsideEveryPhone \
       -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/RepairGate.xcresult" \
       2>&1 | tee "$ARTIFACTS/logs/repair-tests.log"
     ;;

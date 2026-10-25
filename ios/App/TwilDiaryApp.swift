@@ -92,6 +92,7 @@ struct RootView: View {
     @Environment(DiaryStore.self) private var store
     @Environment(AppRouter.self) private var router
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showSignIn = false
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     var body: some View {
@@ -132,14 +133,7 @@ struct RootView: View {
                     Tab("More", systemImage: "ellipsis", value: AppTab.more) { diaryStack(.more) { SettingsView() } }
                 }.toolbar(.hidden, for: .tabBar)
                     .diaryScreenBackground()
-                    .safeAreaInset(edge: .bottom, spacing: 0) {
-                        if showNavigation { navigation.padding(.horizontal, 12).padding(.bottom, 10) }
-                    }.overlay(alignment: .bottom) {
-                        if let label = store.undoLabel {
-                            UndoToast(label: label).padding(.horizontal, 14).padding(.bottom, showNavigation ? 78 : 10)
-                                .transition(.opacity.combined(with: .move(edge: .bottom)))
-                        }
-                    }.overlay(alignment: .top) {
+                    .overlay(alignment: .top) {
                         if let notice = store.mutationRefreshNotice {
                             HStack(alignment: .top, spacing: 12) {
                                 Text(notice).font(.caption).accessibilityIdentifier("confirmed-write-notice")
@@ -164,19 +158,22 @@ struct RootView: View {
             }.onChange(of: store.sessionRevision) { _, _ in router.randomPick = nil }
             .task(id: scenePhase) { if scenePhase == .active { await store.refreshOnForeground() } }
     }
-    private var showNavigation: Bool { !router.detailTabs.contains(router.selectedTab) }
-    private var navigation: some View { DiaryNavigationBar() }
     private func diaryStack<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         NavigationStack(path: Binding(get: { router.paths[tab] ?? NavigationPath() }, set: { router.paths[tab] = $0 })) {
-            content().background(tab == .library && theme != .glass ? Color(webHex: "#0e0d13") : .clear).diaryScreenBackground().toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router)
-                .navigationDestination(for: String.self) { TitleDetailView(id: $0).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
-                .navigationDestination(for: SavedTitleRoute.self) { TitleDetailView(id: $0.id, linkedSeason: $0.season, focusEpisodes: $0.focusEpisodes, focusNotes: $0.focusNotes).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
-                .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
-                .navigationDestination(for: ExploreSectionRoute.self) { ExploreSectionView(route: $0, store: store).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router) }
-                .navigationDestination(for: PersonFilmographyRoute.self) { PersonFilmographyView(route: $0).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router) }
-                .navigationDestination(for: PersonRoute.self) { PersonView(route: $0).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
+            content().background(tab == .library && theme != .glass ? Color(webHex: "#0e0d13") : .clear).diaryScreenBackground().toolbar(.hidden, for: .navigationBar).toolbar(.hidden, for: .tabBar).diaryPageChrome(detail: false).diaryNavigationAppearance(tab: tab, detail: false, router: router)
+                .rootTabSwipes(enabled: router.selectedTab == tab && (router.paths[tab]?.isEmpty ?? true) && router.randomPick == nil) { translation, width in
+                    guard let next = RootTabSwipe.destination(from: tab, translation: translation, width: width) else { return }
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) { router.selectedTab = next }
+                }
+                .navigationDestination(for: String.self) { TitleDetailView(id: $0).toolbar(.hidden, for: .tabBar).diaryPageChrome(detail: true).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
+                .navigationDestination(for: SavedTitleRoute.self) { TitleDetailView(id: $0.id, linkedSeason: $0.season, focusEpisodes: $0.focusEpisodes, focusNotes: $0.focusNotes).toolbar(.hidden, for: .tabBar).diaryPageChrome(detail: true).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
+                .navigationDestination(for: CatalogRoute.self) { CatalogDetailView(route: $0).toolbar(.hidden, for: .tabBar).diaryPageChrome(detail: true).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
+                .navigationDestination(for: ExploreSectionRoute.self) { ExploreSectionView(route: $0, store: store).toolbar(.hidden, for: .tabBar).diaryPageChrome(detail: false).diaryNavigationAppearance(tab: tab, detail: false, router: router) }
+                .navigationDestination(for: PersonFilmographyRoute.self) { PersonFilmographyView(route: $0).toolbar(.hidden, for: .tabBar).diaryPageChrome(detail: false).diaryNavigationAppearance(tab: tab, detail: false, router: router) }
+                .navigationDestination(for: PersonRoute.self) { PersonView(route: $0).toolbar(.hidden, for: .tabBar).diaryPageChrome(detail: true).diaryNavigationAppearance(tab: tab, detail: true, router: router) }
                 .navigationDestination(for: HistoryRoute.self) { route in
-                    HistoryView(initialDay: route.day, initialUnknown: route.unknown).toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router)
+                    HistoryView(initialDay: route.day, initialUnknown: route.unknown).toolbar(.hidden, for: .tabBar).diaryPageChrome(detail: false).diaryNavigationAppearance(tab: tab, detail: false, router: router)
                 }
                 .navigationDestination(for: AppDestination.self) { destination in
                     Group { switch destination {
@@ -189,7 +186,7 @@ struct RootView: View {
                     case .trakt: TraktView(store: store)
                     case .tmdb: TMDBConnectionView()
                     case .about: AboutView()
-                    } }.toolbar(.hidden, for: .tabBar).diaryNavigationAppearance(tab: tab, detail: false, router: router)
+                    } }.toolbar(.hidden, for: .tabBar).diaryPageChrome(detail: false).diaryNavigationAppearance(tab: tab, detail: false, router: router)
                 }
         }.toolbar(.hidden, for: .tabBar)
             .environment(\.diaryBack, DiaryBackAction { router.goBack(tab: tab) })

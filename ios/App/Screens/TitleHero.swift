@@ -31,7 +31,7 @@ struct TitleHero<PersonalRating: View>: View {
                     Text(name).font(.system(size: 24, weight: .bold)).tracking(-1.08).foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
                         .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
                         .accessibilityIdentifier("title-hero-name")
-                        .onGeometryChange(for: Bool.self) { $0.frame(in: .scrollView(axis: .vertical)).maxY < 0 } action: { onNameScrolled?($0) }
+                        .onGeometryChange(for: Bool?.self) { CompactHeaderThreshold.visibility(nameBottom: $0.frame(in: .scrollView(axis: .vertical)).maxY) } action: { if let visible = $0 { onNameScrolled?(visible) } }
                     Text([year.map(String.init) ?? "—", category, runtime.map { series ? "\($0) min per episode" : "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 14.4)).lineSpacing(4.3).foregroundStyle(.secondary).frame(minHeight: 21.6, alignment: .top).padding(.top, 14)
                     InlineFlowLayout {
                         HStack(spacing: 5) { Image(systemName: "star.fill").font(.system(size: 20)).foregroundStyle(.yellow); Text(score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—").foregroundStyle(.yellow); Text("TMDb").font(.system(size: 14.4)).foregroundStyle(.secondary) }.frame(minHeight: 44)
@@ -39,20 +39,22 @@ struct TitleHero<PersonalRating: View>: View {
                     }.font(.system(size: 15.2)).padding(.top, 14)
                 }.frame(maxWidth: .infinity, minHeight: 171, alignment: .bottomLeading)
             }
-            synopsisLead
+            VStack(alignment: .leading, spacing: 6) {
+                synopsisLead
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
                     synopsisWidth = width; measureSynopsis()
                 }
-            if expanded && !synopsisParts.continuation.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(synopsisParts.continuation.trimmingCharacters(in: .whitespacesAndNewlines))
-                        .font(.system(size: 15.04)).lineSpacing(6).foregroundStyle(Color(webHex: "#c5c0cf"))
-                        .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
-                        .accessibilityIdentifier("title-synopsis-continuation")
-                    Button("Less") { setExpanded(false) }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 44)
-                }.frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityElement(children: .contain).accessibilityIdentifier("title-synopsis-expanded")
-                    .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 6)))
+                if expanded && !synopsisParts.continuation.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(synopsisParts.continuation.trimmingCharacters(in: .whitespacesAndNewlines))
+                            .font(.system(size: 15.04)).lineSpacing(6).foregroundStyle(Color(webHex: "#c5c0cf"))
+                            .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("title-synopsis-continuation")
+                        Button("Less") { setExpanded(false) }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 44)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityElement(children: .contain).accessibilityIdentifier("title-synopsis-expanded")
+                        .transition(reduceMotion ? .identity : .opacity.combined(with: .offset(y: 6)))
+                }
             }
         }.padding(.top, 142).onChange(of: synopsisText) { _, _ in measureSynopsis() }
     }

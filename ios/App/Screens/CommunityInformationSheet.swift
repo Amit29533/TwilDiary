@@ -4,6 +4,7 @@ struct CommunityInformationSheet: View {
     let name: String
     let identity: CommunityIdentity?
     @Environment(DiaryStore.self) private var store
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var controller = CommunityInformationController()
     @State private var retryRevision = 0
     @State private var detent = PresentationDetent.large
@@ -28,7 +29,9 @@ struct CommunityInformationSheet: View {
                                 VStack(alignment: .leading, spacing: 16) {
                                     ForEach(Array(sentiments.good.enumerated()), id: \.offset) { index, text in opinion(text, positive: true).accessibilityIdentifier("community-positive-\(index)") }
                                     ForEach(Array(sentiments.bad.enumerated()), id: \.offset) { index, text in opinion(text, positive: false).accessibilityIdentifier("community-negative-\(index)") }
-                                }.frame(maxWidth: .infinity, alignment: .leading).diaryPanel()
+                                }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                                    .background(Color(webHex: "#101013"), in: RoundedRectangle(cornerRadius: 22))
+                                    .accessibilityIdentifier("community-sentiment-card")
                                 Text("Trakt’s community summary · \(sentiments.commentCount.formatted()) comments · Updated \(sentiments.analyzedAt.prefix(10))")
                                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                             } else { notice(value.sentimentsState, sentiment: true) }
@@ -37,13 +40,16 @@ struct CommunityInformationSheet: View {
                             Button("Retry community information") { retryRevision += 1 }.buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(controller.loading)
                         }
                     }
-                    if controller.loading { ProgressView(controller.value == nil ? "Loading community information…" : "Updating community information…").frame(maxWidth: .infinity, alignment: .leading) }
+                    if controller.loading && controller.value == nil { DiaryLoadingPlaceholder(height: 300, label: "Loading community information") }
                     if let error = controller.error { RetryNotice(message: error) { retryRevision += 1 } }
                     Text("Community information from Trakt. These are overall activity and comment summaries, independent of your personal rating.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }.padding(20).padding(.bottom, 20)
-            }.navigationTitle("Information").navigationBarTitleDisplayMode(.inline)
+            }.scrollContentBackground(.hidden).background(.clear)
+                .navigationTitle("Information").navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(.hidden, for: .navigationBar)
         }.presentationDetents([.medium, .large], selection: $detent).presentationDragIndicator(.visible)
+            .presentationBackground(reduceTransparency ? AnyShapeStyle(Color(webHex: "#1c1c1e")) : AnyShapeStyle(Material.ultraThin))
             .task(id: TaskIdentity(identity: identity, session: store.sessionRevision, retry: retryRevision)) {
                 await controller.load(identity, retry: retryRevision > 0) { identity, retry in try await store.communityInformation(identity, retry: retry) }
             }

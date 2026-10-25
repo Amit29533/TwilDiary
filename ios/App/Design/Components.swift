@@ -336,6 +336,7 @@ struct ProgressCard: View {
                 let mark = drag > 80; if drag > 22 { suppressNavigationUntil = .now.addingTimeInterval(0.35) }; withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.8)) { drag = 0 }
                 if mark { Task { await markWatch() } }
             })
+            .reservesHorizontalSwipe(!compact)
             .task(id: store.cardRevision(title.id)) { await loadCard() }
             .sensoryFeedback(.success, trigger: watchFeedback)
     }

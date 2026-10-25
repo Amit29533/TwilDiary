@@ -24,7 +24,7 @@ import TwilDiaryCore
                 if controller.status?.connected == true {
                     preferences
                     incomingWatches
-                    if controller.busy || controller.sync?.run?.state == "building" { scanProgress }
+                    if controller.sync?.run?.state == "building" { scanProgress }
                     if let sync = controller.sync, sync.run != nil { review(sync) }
                 }
                 if let error = controller.error { VStack(alignment: .leading, spacing: 8) { Text(error).font(.subheadline).foregroundStyle(.secondary); Button("Retry") { Task { await controller.refresh() } }.disabled(controller.busy) }.diaryPanel().accessibilityIdentifier("trakt-error") }
@@ -114,18 +114,41 @@ import TwilDiaryCore
     }
     private var scanProgress: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(controller.sync?.run.map { "\($0.stage.replacingOccurrences(of: "-", with: " ")) · page \($0.page)" } ?? "Sync in progress…").font(.subheadline)
+            if let run = controller.sync?.run {
+                let progress = TraktScanProgress(run: run)
+                Text(progress.title).font(.subheadline.weight(.semibold))
+                Text(progress.detail).font(.subheadline).foregroundStyle(.secondary).accessibilityIdentifier("trakt-scan-progress-detail")
+            }
+            Text("Manual full-library comparison. Nothing is applied until the review is ready. Automatic incoming watches pause during this scan and review.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if controller.busy { Button(controller.paused ? "Pausing…" : "Pause after this step") { controller.paused = true }.disabled(controller.paused) }
-            else { Button("Continue scan") { Task { await controller.scan(start: false) } }.disabled(coolingDown) }
+            else {
+                HStack {
+                    Button("Continue scan") { Task { await controller.scan(start: false) } }.buttonStyle(.borderedProminent).disabled(coolingDown)
+                    Button("Stop without applying") { Task { await controller.cancel() } }.buttonStyle(.bordered).accessibilityIdentifier("trakt-stop-manual-scan")
+                }
+                Text("Stopping keeps your existing diary unchanged and lets automatic incoming watches resume.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
         }.diaryPanel()
     }
     private func review(_ sync: TraktSync) -> some View {
         @Bindable var controller = controller
         return VStack(alignment: .leading, spacing: 14) {
-            HStack { Text("Review changes").font(.title2.bold()); Spacer(); CollectionLayoutToggle(grid: $grid, collection: "trakt-review"); Text("\(sync.pendingChanges) remaining").font(.caption).foregroundStyle(.secondary) }
+            HStack {
+                Text(sync.run?.state == "building" ? "Preparing review" : "Review changes").font(.title2.bold())
+                Spacer()
+                if sync.run?.state != "building" { CollectionLayoutToggle(grid: $grid, collection: "trakt-review") }
+                Text(sync.run?.state == "building" ? "\(sync.discoveredChanges.formatted()) found so far" : "\(sync.pendingChanges) remaining").font(.caption).foregroundStyle(.secondary)
+            }
             Text("\(sync.run?.progress ?? 0) Trakt items scanned. Nothing is saved until you apply it.").font(.subheadline).foregroundStyle(.secondary)
             if let error = sync.run?.error { Text(error).font(.caption).foregroundStyle(.secondary) }
-            if sync.run?.state == "complete" { Label((sync.counts["skipped"] ?? 0) > 0 ? "Finished with skipped items" : "You’re up to date", systemImage: "checkmark.circle").diaryPanel() }
+            if sync.run?.state == "building" {
+                Text("Apply, Skip and conflict choices become available after the comparison finishes. Pause and stop above if you only want automatic incoming watches.")
+                    .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("trakt-review-preparing")
+            }
+            else if sync.run?.state == "complete" { Label((sync.counts["skipped"] ?? 0) > 0 ? "Finished with skipped items" : "You’re up to date", systemImage: "checkmark.circle").diaryPanel() }
             else if sync.run?.state == "cancelled" { Text("Scan stopped. Scan again when you’re ready to continue.").font(.subheadline).diaryPanel() }
             else {
                 SearchField(placeholder: "Find a title in this review…", text: $controller.query, label: "Search Trakt changes")

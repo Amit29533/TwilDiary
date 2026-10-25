@@ -38,7 +38,7 @@ struct PersonView: View {
                                 .overlay(LinearGradient(stops: [.init(color: .black.opacity(2.0 / 15), location: 0), .init(color: .black.opacity(7.0 / 15), location: 0.55), .init(color: .black, location: 1)], startPoint: .top, endPoint: .bottom)).offset(y: -geometry.safeAreaInsets.top).allowsHitTesting(false).accessibilityHidden(true)
                         }
                 } else if let failure { RetryNotice(message: failure) { Task { await load() } }.padding(14) }
-                else { ProgressView("Loading person…").frame(maxWidth: .infinity).padding(40) }
+                else { DiaryLoadingPlaceholder(height: 310, label: "Loading person").padding(14) }
             }.scrollClipDisabled().diaryScreenBackground().navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
                 .task(id: route.id) { if person == nil { await load() } }
         }
@@ -129,10 +129,10 @@ private struct PersonCreditShelf: View {
 struct PersonFilmographyView: View {
     let route: PersonFilmographyRoute
     @Environment(DiaryStore.self) private var store
+    @AppStorage("catalogGrid") private var grid = true
     @State private var person: PersonDetails?
     @State private var failure: String?
     @State private var filters: PersonFilmographyFilters
-    @State private var open = false
     @State private var showSearch = false
     @State private var shown = 40
     init(route: PersonFilmographyRoute) { self.route = route; _filters = State(initialValue: PersonFilmographyFilters(section: route.section, onServer: route.onServer)) }
@@ -141,36 +141,29 @@ struct PersonFilmographyView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
-                    HStack { Text(person.map { filters.heading(person: $0, section: route.section) } ?? route.section.label).font(.system(size: 26, weight: .semibold)); Spacer(minLength: 0); Button { open.toggle() } label: { DiaryIcon(name: "sliders-horizontal", size: 18).frame(width: 44, height: 44) }.buttonStyle(.plain).accessibilityLabel("Filmography filters").accessibilityIdentifier("person-filters") }
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(person.map { filters.heading(person: $0, section: route.section) } ?? route.section.label)
+                            .font(.system(size: 22, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("person-filmography-heading")
+                        Spacer(minLength: 0)
+                        CollectionLayoutToggle(grid: $grid, collection: "catalog")
+                    }
                     if let person {
-                        if open { filterForm(person) }
                         if let error = filters.error { Text(error).font(.system(size: 13)).foregroundStyle(.secondary) }
                         else {
                             let items = filters.applying(person: person, workspace: store.workspace, section: route.section)
                             Text("\(items.count) \(items.count == 1 ? "title" : "titles")" + (filters.onServer ? " · On your server" : "")).font(.system(size: 12)).foregroundStyle(.secondary).accessibilityIdentifier("person-result-count")
                             if items.isEmpty { ContentUnavailableView("No titles in this mix", systemImage: "film", description: Text("Try another genre, year, rating or collection.")) }
-                            else { CatalogGrid(items: Array(items.prefix(shown))) }
+                            else { CatalogGrid(items: Array(items.prefix(shown)), showsLayoutToggle: false) }
                             if shown < items.count { Button("Load more") { shown += 40 }.buttonStyle(.bordered).frame(maxWidth: .infinity) }
                         }
                     } else if let failure { RetryNotice(message: failure) { Task { await load() } } }
-                    else { ProgressView("Loading filmography…").frame(maxWidth: .infinity).padding(24) }
+                    else { DiaryLoadingPlaceholder(height: 240, label: "Loading filmography").padding(14) }
                 }.padding(.horizontal, 14).padding(.bottom, 100)
-            }
+            }.scrollDismissesKeyboard(.interactively)
         }.diaryScreenBackground().navigationTitle("Explore").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showSearch.toggle() } label: { DiaryIcon(name: "search", size: 22) }.accessibilityLabel("Search").accessibilityIdentifier("search-person-filmography") } }
             .task(id: route) { await load() }.onChange(of: filters) { _, _ in shown = 40 }
-    }
-    private func filterForm(_ person: PersonDetails) -> some View {
-        let genres = Set(filters.credits(person: person, workspace: store.workspace, section: route.section).flatMap { $0.genres ?? [] }).sorted()
-        return LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)], spacing: 10) {
-            Picker("Sort filmography", selection: $filters.sort) { Text("Newest releases").tag("newest"); Text("Most popular").tag("popular"); Text("Highest rated").tag("rating"); Text("Title A–Z").tag("title") }
-            Picker("Filmography genre", selection: $filters.genre) { Text("All genres").tag(""); ForEach(genres, id: \.self) { Text($0).tag($0) } }
-            TextField("Any year", text: $filters.year).keyboardType(.numberPad).textFieldStyle(.roundedBorder).accessibilityLabel("Filmography year")
-            Picker("Filmography rating", selection: $filters.minimum) { Text("Any rating").tag("0"); ForEach([6, 7, 8, 9], id: \.self) { Text("\($0)+").tag(String($0)) } }.accessibilityIdentifier("person-minimum")
-            SearchField(placeholder: "Find a title…", text: $filters.query, label: "Search filmography")
-            Picker("Filmography collection", selection: $filters.onServer) { Text("All credits").tag(false); Text("On your server").tag(true) }.accessibilityIdentifier("person-collection")
-            Button("Reset") { filters = PersonFilmographyFilters(section: route.section) }.frame(minHeight: 44).accessibilityIdentifier("person-reset")
-        }.pickerStyle(.menu).font(.system(size: 13)).padding(12).background(Color(webHex: "#111115"), in: RoundedRectangle(cornerRadius: 13)).overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.13)))
     }
     private func load() async {
         failure = nil

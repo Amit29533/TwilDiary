@@ -18,6 +18,10 @@ import TwilDiaryCore
             snapshot.run = nil; snapshot.items = []; snapshot.counts = [:]
         } else if scenario == "reconnect" { connection = TraktStatus(configured: true, connected: true, username: "reference-user", needsReconnect: true) }
         else if scenario == "scanning" { snapshot.run?.state = "building" }
+        else if scenario == "comparing" {
+            snapshot.run = try! JSONDecoder().decode(TraktSync.Run.self, from: Data(#"{"id":"fixture-comparing","state":"building","stage":"plan-remote-batch","page":481,"progress":2185,"retryAfter":0}"#.utf8))
+            snapshot.counts = ["pending": 720, "links": 2]
+        }
     }
     func status() async throws -> TraktStatus { if unavailable { throw APIError.message("The connection is temporarily unavailable. Try again.") }; return connection }
     func review(kind: TraktKind, query: String, after: String?) async throws -> TraktSync {

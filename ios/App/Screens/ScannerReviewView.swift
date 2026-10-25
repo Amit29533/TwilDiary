@@ -22,8 +22,8 @@ struct ScannerReviewView: View {
                     if let failure { RetryNotice(message: failure) { Task { await load() } } }
                     if let message { Label(message, systemImage: "checkmark").font(.subheadline).diaryPanel() }
                     CollectionLayout(grid: grid) { ForEach(items) { scan in scanRow(scan) } }
-                    if loading { ProgressView("Loading…") }
-                    else if items.isEmpty && failure == nil { ContentUnavailableView("No unmatched scans", systemImage: "folder.badge.questionmark", description: Text("New unresolved folders will appear here.")) }
+                    if loading && items.isEmpty { DiaryLoadingPlaceholder(label: "Loading unmatched scans") }
+                    else if !loading && items.isEmpty && failure == nil { ContentUnavailableView("No unmatched scans", systemImage: "folder.badge.questionmark", description: Text("New unresolved folders will appear here.")) }
                     if next != nil { Button("Show more") { Task { await load(more: true) } }.buttonStyle(.bordered).disabled(loading) }
                 }.padding(14)
             }.refreshable { await load() }

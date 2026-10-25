@@ -93,7 +93,7 @@ struct TitleDetailView: View {
                             .toolbarBackground(compactHeader ? .visible : .hidden, for: .navigationBar)
                             .toolbar {
                                 ToolbarItem(placement: .principal) {
-                                    if compactHeader { CompactTitleNavigation(name: title.name, poster: title.poster) }
+                                    CompactTitleNavigation(name: title.name, poster: title.poster, visible: compactHeader)
                                 }
                                 ToolbarItemGroup(placement: .topBarTrailing) {
                                     if compactHeader { TitleShareAction(name: title.name, kind: title.isSeries ? .tv : .movie, id: title.tmdbId) }
@@ -263,7 +263,7 @@ struct TitleDetailView: View {
                     }
                 }
                 if showRating { ratingPanel(title).padding(.top, 10) }
-            } else { ProgressView("Loading progress…") }
+            } else { DiaryLoadingPlaceholder(height: title.isSeries ? 290 : 210, label: "Loading watch progress") }
         }.diaryPanel(padding: 15, radius: 24, accentBorder: true)
     }
     private func episodeSlider(_ title: MediaTitle, card: WatchCard) -> some View {
@@ -303,11 +303,9 @@ struct TitleDetailView: View {
             }
             HStack { Spacer(); CollectionLayoutToggle(grid: $episodesGrid, collection: "episodes") }
             if !seasonCanEdit(title) { Button("Load season episodes") { Task { await store.loadSeason(title, number: season); await loadCard(title) } }.buttonStyle(.bordered).disabled(store.writesBlocked) }
-            if preparingSeason { ProgressView("Loading season…").font(.caption) }
             if let seasonLoadError { RetryNotice(message: seasonLoadError) { Task { await prepareSeason(title, force: true) } } }
-            if episodeDetails.isLoading(season) { ProgressView("Loading episode details…").font(.caption) }
             if let episodeError = episodeDetails.error(for: season) { Text(episodeError).font(.caption).foregroundStyle(.secondary); Button("Retry episode details") { Task { await revealSeason(title) } } }
-            CollectionLayout(grid: episodesGrid, spacing: 10) { ForEach(visibleEpisodes) { episode in episodeRow(title, episode: episode) } }
+            CollectionLayout(grid: episodesGrid, spacing: 8) { ForEach(visibleEpisodes) { episode in episodeRow(title, episode: episode) } }
             if episodes.isEmpty { Text("No episode metadata yet").font(.subheadline).foregroundStyle(.secondary) }
             if episodes.count > 4 { Button(showAllEpisodes ? "Back to next episode" : "Show all \(episodes.count) episodes") { showAllEpisodes.toggle() }.frame(maxWidth: .infinity).frame(minHeight: 44) }
             if let pending = store.pendingSeasonAdjustments[title.id + ":" + String(season)] { Button("Retry progress to episode \(pending.count)") { Task { await store.setSeasonProgress(title, season: season, count: pending.count, watchedAt: watchInstant); await loadCard(title) } }.disabled(store.writesBlocked) }
@@ -322,20 +320,20 @@ struct TitleDetailView: View {
                     layout {
                         episodeArtwork(episode).frame(width: episodesGrid ? nil : 96, height: episodesGrid ? 96 : 54).frame(maxWidth: episodesGrid ? .infinity : nil).clipShape(RoundedRectangle(cornerRadius: 10))
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("\(episode.number) · \(episodeName(episode))").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).multilineTextAlignment(.leading)
+                            Text("\(episode.number) · \(episodeName(episode))").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).multilineTextAlignment(.leading).accessibilityIdentifier("episode-caption-\(episode.number)")
                             InlineFlowLayout {
                                 Text(isWatched ? "Watched" : next ? "Up next" : hasAired(episode) ? "Not watched" : "Not aired yet").foregroundStyle(next ? theme.accent : Color.secondary)
                                 if let score = episodeDetails.episodes[episode.id]?.communityScore ?? episode.communityScore, score > 0 { Text("★ " + score.formatted(.number.precision(.fractionLength(1))) + " TMDb").foregroundStyle(.yellow) }
                             }.font(.system(size: 11))
                         }
-                        Spacer(minLength: 0)
+                        if !episodesGrid { Spacer(minLength: 0) }
                     }
                 }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) details").accessibilityValue(episodeName(episode)).accessibilityIdentifier("title-episode-\(episode.number)")
                 Button { Task { if isWatched { await store.unwatchEpisode(episode) } else { await store.recordViewing(title, episode: episode, watchedAt: watchInstant) }; await loadCard(title) } } label: { Image(systemName: isWatched ? "checkmark.circle.fill" : "circle").font(.system(size: 24)).foregroundStyle(isWatched ? theme.accent : Color.secondary).frame(width: 44, height: 44) }
                     .buttonStyle(.plain).disabled(store.writesBlocked || (!isWatched && !hasAired(episode))).accessibilityLabel("Mark episode \(episode.number) \(isWatched ? "unwatched" : "watched")")
             }
-            if expandedEpisodes.contains(episode.id) { Text(episodeSummary(episode)).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 4) }
-        }.padding(.vertical, 10).frame(minHeight: 78).background(next ? theme.accent.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 18))
+            if expandedEpisodes.contains(episode.id) { Text(episodeSummary(episode)).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("episode-summary-\(episode.number)") }
+        }.padding(.vertical, 8).frame(minHeight: 72).background(next ? theme.accent.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 18))
     }
     @ViewBuilder private func episodeArtwork(_ episode: Episode) -> some View {
         if isHidden(episode) { Color(webHex: "#211d2d").overlay { DiaryIcon(name: "eye-off", size: 23).foregroundStyle(.secondary) } }

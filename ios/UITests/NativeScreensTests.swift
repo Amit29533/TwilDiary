@@ -68,6 +68,57 @@ import UIKit
         app.buttons["tab-more"].tap()
         XCTAssertTrue(app.staticTexts["Appearance & region"].waitForExistence(timeout: 5)); capture("More")
     }
+    func testRootContentSwipesVisitEveryTabWithoutWrappingAndKeepCardGestures() {
+        let app = launch(mutations: true)
+        app.buttons["tab-home"].tap()
+        func swipe(_ right: Bool) {
+            let logo = app.buttons["random-pick-logo"]
+            XCTAssertTrue(logo.waitForExistence(timeout: 5))
+            let y = logo.frame.midY
+            let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: app.frame.width * (right ? 0.25 : 0.75), dy: y))
+            let end = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: app.frame.width * (right ? 0.75 : 0.25), dy: y))
+            start.press(forDuration: 0.05, thenDragTo: end)
+        }
+        swipe(false); XCTAssertTrue(app.buttons["tab-home"].isSelected)
+        for tab in ["library", "glance", "stats", "more"] {
+            swipe(true)
+            wait(for: [expectation(for: NSPredicate(format: "selected == true"), evaluatedWith: app.buttons["tab-" + tab])], timeout: 5)
+        }
+        swipe(true); XCTAssertTrue(app.buttons["tab-more"].isSelected)
+        for tab in ["stats", "glance", "library", "home"] {
+            swipe(false)
+            wait(for: [expectation(for: NSPredicate(format: "selected == true"), evaluatedWith: app.buttons["tab-" + tab])], timeout: 5)
+        }
+        capture("Root tabs swiped both directions without wrapping")
+        app.buttons["tab-glance"].tap()
+        let count = app.staticTexts["watch-count-again"]
+        wait(for: [expectation(for: NSPredicate(format: "label == '8'"), evaluatedWith: count)], timeout: 5)
+        let title = app.buttons["progress-title-again"]
+        let start = title.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 110, dy: 0)))
+        wait(for: [expectation(for: NSPredicate(format: "label == '9'"), evaluatedWith: count)], timeout: 8)
+        XCTAssertTrue(app.buttons["tab-glance"].isSelected, "A reserved watch-card swipe must not change tabs")
+        app.buttons["Undo"].tap()
+        wait(for: [expectation(for: NSPredicate(format: "label == '8'"), evaluatedWith: count)], timeout: 8)
+        capture("Glance card swipe and Undo retain their original ownership")
+    }
+    func testTraktComparisonShowsFiniteRecordsAndStopsWithoutPartialApplyActions() {
+        let app = launch(traktScenario: "comparing")
+        app.buttons["tab-more"].tap(); app.buttons["settings-trakt-summary"].tap()
+        let progress = app.staticTexts["trakt-scan-progress-detail"]
+        for _ in 0..<6 { if progress.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(progress.exists); XCTAssertEqual(progress.label, "480 of 2,185 records compared")
+        let stop = app.buttons["trakt-stop-manual-scan"]
+        for _ in 0..<5 { if stop.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(stop.isEnabled)
+        XCTAssertFalse(app.buttons["trakt-apply-ready"].exists)
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'trakt-skip-' OR identifier BEGINSWITH 'trakt-apply-' ")).count, 0)
+        capture("Manual comparison counts records instead of pages")
+        stop.tap()
+        let stopped = app.staticTexts["Scan stopped. Scan again when you’re ready to continue."]
+        for _ in 0..<6 { if stopped.exists { break }; app.swipeUp() }
+        XCTAssertTrue(stopped.waitForExistence(timeout: 5)); capture("Manual comparison stopped without applying")
+    }
     func testCommunityInformationSheetUsesOverallStatsAndReturnsToTheTitle() {
         let app = launch(titleMetadata: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
         let information = app.buttons["title-information"]
@@ -699,7 +750,7 @@ import UIKit
         app.buttons["Undo"].tap()
         XCTAssertTrue(app.buttons["Log a watch"].waitForExistence(timeout: 5)); capture("Movie watch undone")
     }
-    func testPersonShelvesOpenFilteredFilmographyAndPreserveReturnNavigation() {
+    func testPersonShelvesOpenFilmographyLayoutsAndPreserveReturnNavigation() {
         let app = launch(); app.buttons["tab-home"].tap(); app.buttons["search-twildiary"].tap()
         let search = app.textFields["Search library and online"]
         XCTAssertTrue(search.waitForExistence(timeout: 5)); search.typeText("Clockmaker\n")
@@ -727,11 +778,14 @@ import UIKit
         let firstCredit = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'catalog-tv:' OR identifier BEGINSWITH 'catalog-movie:'")).firstMatch
         XCTAssertTrue(firstCredit.exists); XCTAssertGreaterThan(firstCredit.frame.width, app.frame.width * 0.8)
         capture("Person filmography list"); layout.tap()
-        app.buttons["person-filters"].tap(); app.buttons["person-minimum"].tap(); app.buttons["9+"].tap()
-        XCTAssertTrue(app.staticTexts["No titles in this mix"].waitForExistence(timeout: 5)); capture("Person filtered empty")
-        app.buttons["person-reset"].tap(); app.buttons["person-collection"].tap(); app.buttons["On your server"].tap()
-        XCTAssertTrue(app.staticTexts["No titles in this mix"].waitForExistence(timeout: 5)); XCTAssertEqual(count.label, "0 titles · On your server")
-        capture("Person server filmography empty")
+        XCTAssertEqual(app.buttons.matching(identifier: "catalog-layout").count, 1)
+        XCTAssertFalse(app.buttons["person-filters"].exists); XCTAssertFalse(app.buttons["person-reset"].exists)
+        XCTAssertFalse(app.textFields["Search filmography"].exists)
+        let heading = app.staticTexts["person-filmography-heading"]
+        XCTAssertTrue(heading.exists); XCTAssertGreaterThan(layout.frame.minX, heading.frame.minX)
+        XCTAssertLessThan(abs(layout.frame.minY - heading.frame.minY), 8)
+        XCTAssertEqual(count.label, "16 titles")
+        capture("Person layout control replaces filters beside heading")
         XCTAssertFalse(app.buttons["person-filmography-done"].exists)
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.buttons["person-more-shows"].waitForExistence(timeout: 5))
@@ -1054,7 +1108,27 @@ import UIKit
         XCTAssertTrue(eighth.exists); XCTAssertTrue(ninth.exists)
         XCTAssertLessThan(eighth.frame.minX, ninth.frame.minX)
         XCTAssertTrue(app.buttons["Mark episode 9 watched"].exists); capture("Episode grid retains spoiler and watched controls")
-        episodes.tap(); app.navigationBars.buttons.element(boundBy: 0).tap(); glance.tap()
+        eighth.tap(); ninth.tap()
+        for number in [8, 9] {
+            let summary = app.staticTexts["episode-summary-\(number)"]
+            XCTAssertTrue(summary.waitForExistence(timeout: 5))
+            let details = app.buttons["title-episode-\(number)"]
+            let watch = app.buttons["Mark episode \(number) " + (number == 8 ? "unwatched" : "watched")]
+            XCTAssertTrue(watch.exists)
+            XCTAssertLessThan(details.frame.height, 210, "The artwork/caption button must not grow a vertical Spacer when its summary expands")
+            XCTAssertLessThan(watch.frame.minY - details.frame.maxY, 24)
+            XCTAssertLessThan(summary.frame.minY - watch.frame.maxY, 30)
+        }
+        capture("Expanded episode grid keeps captions watch controls and summaries together")
+        eighth.tap(); ninth.tap()
+        episodes.tap()
+        let recommendations = app.staticTexts["You might like"], recommendationLayout = app.buttons["catalog-layout"]
+        for _ in 0..<10 { if recommendationLayout.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(recommendations.exists); XCTAssertTrue(recommendationLayout.isHittable)
+        XCTAssertEqual(recommendations.frame.midY, recommendationLayout.frame.midY, accuracy: 2)
+        XCTAssertEqual(app.buttons.matching(identifier: "catalog-layout").count, 1)
+        capture("Recommendations layout control shares the heading row")
+        app.navigationBars.buttons.element(boundBy: 0).tap(); glance.tap()
         app.buttons["tab-more"].tap(); app.buttons["settings-files"].tap()
         let files = app.buttons["files-layout"]
         for _ in 0..<5 { if files.isHittable { break }; app.swipeUp() }

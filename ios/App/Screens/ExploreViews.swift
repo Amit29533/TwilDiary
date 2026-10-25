@@ -85,7 +85,7 @@ private struct DiscoveryShelfView: View {
         VStack(alignment: .leading, spacing: 10) {
             ExploreHeading(section: section)
             DiscoveryTrack(items: results.items)
-            if results.loading { ProgressView("Loading titles…").font(.system(size: 13)) }
+            if results.loading && results.items.isEmpty { DiaryLoadingPlaceholder(height: 210, label: "Loading titles") }
             if let error = results.error { DiscoveryNotice(text: error) { Task { await load() } } }
             else if !results.loading && results.items.isEmpty { DiscoveryNotice(text: "No titles available.") }
         }.task { if results.page == 0 { await load() } }
@@ -129,10 +129,10 @@ private struct RecommendedDiscoveryView: View {
         VStack(alignment: .leading, spacing: 10) {
             ExploreHeading(section: .recommended)
             DiscoveryTrack(items: results.items)
-            if results.loading { ProgressView(results.items.isEmpty ? "Loading recommendations…" : "Updating recommendations…").font(.system(size: 13)) }
-            else if let error = results.error { DiscoveryNotice(text: error) { Task { await results.load(refresh: true) } } }
-            else if !results.connected { DiscoveryNotice(text: "Trakt not connected.") }
-            else if results.items.isEmpty { DiscoveryNotice(text: "No recommendations yet.") }
+            if results.loading && results.items.isEmpty { DiaryLoadingPlaceholder(height: 210, label: "Loading recommendations") }
+            if let error = results.error { DiscoveryNotice(text: error) { Task { await results.load(refresh: true) } } }
+            else if !results.loading && !results.connected { DiscoveryNotice(text: "Trakt not connected.") }
+            else if !results.loading && results.items.isEmpty { DiscoveryNotice(text: "No recommendations yet.") }
         }.task(id: store.discoveryRevision) { await results.load(limit: section ? 24 : 8) }
     }
 }
@@ -220,7 +220,7 @@ private struct DiscoveryBrowser: View {
                 Text("\(section.source == "tmdb" ? displayed.count : local.count) titles").font(.system(size: 12)).foregroundStyle(.secondary)
                 CatalogGrid(items: displayed)
             }
-            if busy { ProgressView("Loading titles…").frame(maxWidth: .infinity).padding(.vertical, 24) }
+            if busy && displayed.isEmpty { DiaryLoadingPlaceholder(height: 240, label: "Loading titles") }
             if let error = section == .recommended ? recommendations.error : results.error {
                 DiscoveryNotice(text: error) { Task { if section == .recommended { await recommendations.load(limit: 24, refresh: true) } else { await results.load(filters.query(section: section), more: results.page > 0) } } }
             } else if !busy && displayed.isEmpty {

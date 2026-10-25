@@ -6,9 +6,10 @@ struct CatalogGrid: View {
     @Environment(DiaryStore.self) private var store
     @AppStorage("catalogGrid") private var grid = true
     let items: [CatalogItem]
+    var showsLayoutToggle = true
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack { Spacer(); CollectionLayoutToggle(grid: $grid, collection: "catalog") }
+            if showsLayoutToggle { HStack { Spacer(); CollectionLayoutToggle(grid: $grid, collection: "catalog") } }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: grid ? 3 : 1), alignment: .leading, spacing: grid ? 20 : 10) {
                 ForEach(items, id: \.displayKey) { item in
                     Group {
@@ -93,7 +94,7 @@ struct CatalogSearchView: View {
                 if localMatches.count > libraryLimit { Button("More library matches") { libraryLimit += 20 }.font(.system(size: 13)).frame(minHeight: 44) }
                 if localMatches.isEmpty { Text("No library matches").font(.system(size: 13)).foregroundStyle(.secondary) }
                 Text("Not In Library · TMDB").font(.system(size: 15, weight: .semibold))
-                if loading { ProgressView("Searching…") }
+                if loading && results.isEmpty { DiaryLoadingPlaceholder(label: "Searching online") }
                 if let failure { HStack { Text(failure).font(.system(size: 13)).foregroundStyle(.secondary); Spacer(minLength: 0); Button("Retry") { requestPage(page) }.font(.system(size: 13)) } }
                 CollectionLayout(grid: grid) { ForEach(results, id: \.key) { item in
                     Button { chooseCatalog(item.route) } label: { onlineRow(item) }
@@ -199,7 +200,7 @@ struct CatalogDetailView: View {
                         }
                         if route.kind == .tv { CatalogSeasonPreview(route: route, details: details.details, store: store) }
                         CastAndRelated(route: route, sourceTitle: details.details.name)
-                    } else if loading { ProgressView("Loading title…").frame(maxWidth: .infinity).padding(40) }
+                    } else if loading { DiaryLoadingPlaceholder(height: 320, label: "Loading title").padding(16) }
                     if let failure { RetryNotice(message: failure) { Task { await load() } } }
                 }.padding(.horizontal, 14).padding(.bottom, 32)
                     .background(alignment: .top) {
@@ -209,7 +210,7 @@ struct CatalogDetailView: View {
                 .toolbarBackground(.ultraThinMaterial, for: .navigationBar).toolbarBackground(compactHeader ? .visible : .hidden, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .principal) {
-                        if compactHeader, let details { CompactTitleNavigation(name: details.details.name, poster: CatalogTools.image(details.details.posterPath)) }
+                        if let details { CompactTitleNavigation(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), visible: compactHeader) }
                     }
                     ToolbarItemGroup(placement: .topBarTrailing) {
                         if compactHeader { TitleShareAction(name: details?.details.name ?? "Title", kind: route.kind, id: route.id) }
@@ -276,7 +277,7 @@ private struct CatalogSeasonPreview: View {
                         ForEach(details.seasons ?? [], id: \.number) { season in Text(season.number == 0 ? "Specials" : "Season \(season.number)").tag(season.number) }
                     }.pickerStyle(.menu).accessibilityIdentifier("catalog-season")
                 }
-                if controller.loading { ProgressView("Loading season…") }
+                if controller.loading && controller.items.isEmpty { DiaryLoadingPlaceholder(label: "Loading season") }
                 if let error = controller.error { RetryNotice(message: error) { Task { await controller.load(selected, reveal: !hideSpoilers || controller.revealed, force: true) } } }
                 if controller.items.isEmpty && !controller.loading && controller.error == nil { ContentUnavailableView("No episode metadata yet", systemImage: "film", description: Text("No episodes are available for this season yet.")) }
                 HStack { Spacer(); CollectionLayoutToggle(grid: $episodesGrid, collection: "catalog-episodes") }
@@ -309,7 +310,7 @@ private struct CatalogSeasonPreview: View {
                             if let score = episode.communityScore, score > 0 { Text("★ " + score.formatted(.number.precision(.fractionLength(1))) + " TMDb").foregroundStyle(.yellow) }
                         }.font(.system(size: 11))
                     }
-                    Spacer(minLength: 0)
+                    if !episodesGrid { Spacer(minLength: 0) }
                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()).foregroundStyle(.primary)
             }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) details").accessibilityValue(expanded.contains(episode.number) ? "Expanded" : "Collapsed").accessibilityIdentifier("catalog-episode-\(episode.number)")
             if expanded.contains(episode.number) { Text(controller.loading ? "Loading episode…" : episode.overview.isEmpty ? "No synopsis available yet." : episode.overview).font(.system(size: 13)).foregroundStyle(.secondary).lineSpacing(4) }
@@ -321,6 +322,7 @@ struct CastAndRelated: View {
     let route: CatalogRoute
     var sourceTitle: String? = nil
     @Environment(DiaryStore.self) private var store
+    @AppStorage("catalogGrid") private var grid = true
     @State private var cast: [CastPerson] = []
     @State private var related: [CatalogItem] = []
     @State private var failure: String?
@@ -342,7 +344,16 @@ struct CastAndRelated: View {
                     }
                 }.scrollIndicators(.hidden)
             }
-            if !related.isEmpty { Text("You might like").font(.system(size: 20, weight: .semibold)); CatalogGrid(items: Array(related.prefix(6))) }
+            if !related.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("You might like").font(.system(size: 20, weight: .semibold))
+                        Spacer(minLength: 8)
+                        CollectionLayoutToggle(grid: $grid, collection: "catalog")
+                    }
+                    CatalogGrid(items: Array(related.prefix(6)), showsLayoutToggle: false)
+                }
+            }
             if let failure { RetryNotice(message: failure) { Task { await load() } } }
         }.task(id: route) { await load() }
     }

@@ -3,6 +3,25 @@ import SwiftUI
 @testable import TwilDiary
 
 @MainActor final class NativeNavigationAndSynopsisTests: XCTestCase {
+    func testRootTabSwipeUsesTheRequestedDirectionAndStopsAtEitherEnd() {
+        let right = CGSize(width: 150, height: 10), left = CGSize(width: -150, height: 10)
+        for (index, tab) in AppTab.allCases.enumerated() {
+            XCTAssertEqual(RootTabSwipe.destination(from: tab, translation: right, width: 390), index < 4 ? AppTab.allCases[index + 1] : nil)
+            XCTAssertEqual(RootTabSwipe.destination(from: tab, translation: left, width: 390), index > 0 ? AppTab.allCases[index - 1] : nil)
+        }
+    }
+    func testRootTabSwipeRejectsShortVerticalAndInvalidDrags() {
+        for drag in [CGSize(width: 40, height: 0), CGSize(width: 100, height: 200), CGSize(width: .infinity, height: 0), CGSize(width: 150, height: .nan)] {
+            XCTAssertNil(RootTabSwipe.destination(from: .library, translation: drag, width: 390))
+        }
+        XCTAssertNil(RootTabSwipe.destination(from: .library, translation: CGSize(width: 200, height: 0), width: 0))
+    }
+    func testCompactHeaderRetainsItsStateAcrossTheCrossingBand() {
+        XCTAssertEqual(CompactHeaderThreshold.visibility(nameBottom: -17), true)
+        for position in [CGFloat(-16), -2, 0, 16, 24] { XCTAssertNil(CompactHeaderThreshold.visibility(nameBottom: position)) }
+        XCTAssertEqual(CompactHeaderThreshold.visibility(nameBottom: 25), false)
+        XCTAssertNil(CompactHeaderThreshold.visibility(nameBottom: .nan))
+    }
     func testDonePopsOnlyTheOwningStackAndKeepsOtherTabHistory() {
         let router = AppRouter()
         router.paths[.home] = NavigationPath([AppDestination.explore, AppDestination.history])
