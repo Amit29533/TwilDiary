@@ -344,12 +344,17 @@ import UIKit
             } else { app.swipeUp() }
         }
         XCTAssertTrue(episode.isHittable); XCTAssertGreaterThan(episode.frame.minY, 120); XCTAssertLessThan(episode.frame.maxY, app.frame.maxY - 40)
-        capture("Fully visible watched episode rewatch target")
-        episode.press(forDuration: 0.8)
-        let rewatch = app.buttons["Log rewatch"]
-        let menuAppeared = rewatch.waitForExistence(timeout: 5)
-        if !menuAppeared { capture("Episode rewatch menu failure"); print("Episode rewatch hierarchy: " + String(app.debugDescription.prefix(12000))) }
-        XCTAssertTrue(menuAppeared); rewatch.tap()
+        episode.tap()
+        XCTAssertTrue(app.staticTexts["episode-summary-8"].waitForExistence(timeout: 5))
+        let rewatch = app.buttons["episode-rewatch-8"]
+        XCTAssertTrue(rewatch.waitForExistence(timeout: 5))
+        for _ in 0..<4 {
+            if rewatch.isHittable, rewatch.frame.maxY < app.frame.maxY - 40 { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(rewatch.isHittable); XCTAssertLessThan(rewatch.frame.maxY, app.frame.maxY - 40)
+        capture("Visible watched episode rewatch action")
+        rewatch.tap()
         XCTAssertTrue(app.buttons["undo-action"].waitForExistence(timeout: 5))
         tapVisibleUndo(app)
         wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.buttons["undo-action"])], timeout: 8)

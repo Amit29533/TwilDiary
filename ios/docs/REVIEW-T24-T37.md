@@ -48,3 +48,16 @@ identity can still exist in XCTest's tree. Tests must wait for the visible
 compact state, not use existence of that retained node as proof of scrolling.
 Keep the assertions for share availability, header containment, and return
 navigation; do not remove them or label a failed run accepted.
+
+
+## Current native54 review update
+
+The native53 diagnostic IPA compiles for the physical iPhone with zero warnings
+and passes the stronger fixture/test-support exclusion gate. Native53 simulator
+compilation is also warning-free,188native cases pass, and7of8focused UI cases
+pass. The episode rewatch long press intermittently activates the row's ordinary
+summary tap instead.54 therefore exposes a rounded Log rewatch action in the
+expanded watched-episode details and removes the competing hidden gesture.
+Its unchanged Undo/original-watch/History-count requirements still need54runtime
+proof. No stable release is claimed. The source/provenance/hash of the owner
+phone-test artifact are recorded in releases/native53-device-diagnostic.json.

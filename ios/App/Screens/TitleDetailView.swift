@@ -329,17 +329,21 @@ struct TitleDetailView: View {
                         if !episodesGrid { Spacer(minLength: 0) }
                     }
                 }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) details").accessibilityValue(episodeName(episode)).accessibilityIdentifier("title-episode-\(episode.number)")
-                    .contextMenu {
-                        if isWatched {
-                            Button("Log rewatch", systemImage: "arrow.counterclockwise") {
-                                Task { await store.recordViewing(title, episode: episode, rewatch: true, watchedAt: watchInstant); await loadCard(title) }
-                            }.disabled(store.writesBlocked || !hasAired(episode))
-                        }
-                    }
                 Button { Task { if isWatched { await store.unwatchEpisode(episode) } else { await store.recordViewing(title, episode: episode, watchedAt: watchInstant) }; await loadCard(title) } } label: { Image(systemName: isWatched ? "checkmark.circle.fill" : "circle").font(.system(size: 24)).foregroundStyle(isWatched ? theme.accent : Color.secondary).frame(width: 44, height: 44) }
                     .buttonStyle(.plain).disabled(store.writesBlocked || (!isWatched && !hasAired(episode))).accessibilityLabel("Mark episode \(episode.number) \(isWatched ? "unwatched" : "watched")")
             }
-            if expandedEpisodes.contains(episode.id) { Text(episodeSummary(episode)).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("episode-summary-\(episode.number)") }
+            if expandedEpisodes.contains(episode.id) {
+                Text(episodeSummary(episode)).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("episode-summary-\(episode.number)")
+                if isWatched {
+                    Button {
+                        Task { await store.recordViewing(title, episode: episode, rewatch: true, watchedAt: watchInstant); await loadCard(title) }
+                    } label: {
+                        Label("Log rewatch", systemImage: "arrow.counterclockwise").font(.system(size: 13, weight: .semibold)).frame(minHeight: 32)
+                    }.buttonStyle(.bordered).buttonBorderShape(.capsule).tint(theme.accent)
+                        .disabled(store.writesBlocked || !hasAired(episode))
+                        .accessibilityIdentifier("episode-rewatch-\(episode.number)")
+                }
+            }
         }.padding(.vertical, 8).frame(minHeight: 72).background(next ? theme.accent.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 18))
     }
     @ViewBuilder private func episodeArtwork(_ episode: Episode) -> some View {
