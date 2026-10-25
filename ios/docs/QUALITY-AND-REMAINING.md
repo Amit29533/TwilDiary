@@ -7,7 +7,36 @@ projections, shared caching, navigation and CI, combined with T24–T37 claim
 verification. It is not a fresh runtime test of every screen or a real-device
 performance certification. Windows has not compiled Swift.
 
-## Latest acceptance update
+## Current checkpoint — native54 running; native55 isolated draft
+
+At 11:41 UTC, complete Codemagic54/run6adde71f4a72334e32e4fa14 is testing
+frozen d59f55e. Compilation is warning-free,188native tests, all8focused UI and
+all10early navigation/progress checks pass. The repaired visible episode
+rewatch action retains real Undo and exactly8original History watches. The
+51primary/all-phone/Release/final artifact gates are not yet accepted. The
+stable branch remains8c9f163; its independent GitHub47 regression failed.
+
+Native53's separate physical-device diagnostic passed zero-warning Release
+compilation and actual fixture exclusion; its verified test IPA is available
+to the owner. It is not a complete regression or stable release. Full53 failed
+only the intermittent hidden rewatch gesture, which54 replaces with the
+visible details action rather than another timing-only retry.
+
+| Reviewed concern | Evidence now | Remaining |
+| --- | --- | --- |
+| HTTP status/quota/retry/session isolation | Native54's188tests pass, including JSON403,304, sibling quota ordering, expired reset, cancellation, bounded GET retry and no automatic POST retry. | Same-source full/independent provider acceptance. |
+| Explicit episode rewatch/Undo | Native54 focused case passes visible action, Undo, original checked state and exact8-history count. | Full suite and physical interaction feedback. |
+| Persistent Library, sign-in policy, release fixture/tool metadata | Native54 relaunch test passes; native53 actual physical bundle excludes Core workspace/test-support JSON and compiles without metadata warnings. | Real provider2FA and final full54 Release artifact. |
+| Cache write responsiveness | Native55 local draft moves validation/JSON/AES into a detached worker and fences cancellation/newer saves/sign-out. Six new interleaving/boundary tests; total194native source cases. | Swift compilation/runtime and new scale measurements. Cold reads and atomic protected commit remain synchronous. |
+| Images, indexing, first Home/Stats projection | Existing bounded caches/memoization verified; native52 measured10k-event index25.47ms and cache load56.28ms. | Profile cold paths and artwork decode on phone; no blanket uncached-image claim. |
+| Privacy/accessibility/device polish | Existing chart bucket labels/actions, reduced-motion/transparency paths and owner40feedback. | Required-reason manifest audit, optional all-window privacy cover, VoiceOver/large text and owner53header/swipe feedback. |
+| Incoming Trakt | Prior backend46hardening38focused/391full tests and deployed source recorded in PROGRESS. | Owner manual review still fences automatic imports; real import latency/Free-plan CPU not proven. Never discard the review to manufacture a result. |
+
+The following entries retain earlier evidence and hypotheses chronologically.
+They do not override this current checkpoint or imply an unfinished feature is
+absent merely because its old acceptance checkbox is unchecked.
+
+## Historical acceptance updates
 
 Codemagic47 fully passed (173native/49primary/all-phone/zero warnings), but
 independent GitHub47 failed its retained-search content-Back case, so no stable
@@ -52,7 +81,7 @@ index25.47ms (1,000:8.59/3.63/5.20ms). This supports prioritizing off-main cache
 I/O while retaining owner/session/sign-out fences. It does not establish phone
 frame rate or justify a rushed concurrency rewrite during UI stabilization.
 
-## Actual current evidence
+## Earlier native47 checkpoint evidence
 
 * Codemagic47 `6addaa674a72334e32e4ed86` checked out exact
   `8c9f16376389a4b8d162b7cd7b12e96d4fffb7b6`. Native173 units, the4 focused

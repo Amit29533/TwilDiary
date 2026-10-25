@@ -6,6 +6,33 @@ DiaryStore is main-actor isolated. URLSession uses a restricted HTTPS backend an
 
 ProtectedWorkspaceCache saves complete owner-scoped snapshots using AES-GCM and a random 256-bit device-only Keychain key. Files use complete iOS data protection, atomic replacement and backup exclusion. The cache partition hashes the backend plus issuer/subject from an already saved Access session (falling back to a token digest); these claims are never used as authentication. The server remains the only authorization authority. Expired/missing credentials cannot open cached UI. The cached-state notice includes the last confirmed refresh time; a failed network read preserves this snapshot. Corrupt, wrong-key or wrong-owner data fails closed without partial publication. Sign-out removes the snapshots and credentials. No tokens are written into the cache. Tests use temporary directories and injected keys, never the real app cache or owner library.
 
+### Prepared native55 cache write boundary (macOS validation pending)
+
+The measured native52 10,000-watch synchronous save took66.66ms on its M2
+simulator. The next isolated draft moves identity validation, JSON encoding and
+AES-GCM sealing into a utility detached task. Immutable Workspace, date, scope,
+size bound and CryptoKit key are its only inputs; no store or UI state crosses
+the boundary. Apple documents SymmetricKey as Sendable:
+[CryptoKit SymmetricKey](https://developer.apple.com/documentation/cryptokit/symmetrickey).
+
+Cancellation reaches the worker. After preparation, the main-actor cache checks
+both task cancellation and its write-generation ticket before atomically
+committing the protected file, with no suspension between that check and disk
+replacement. A newer sync/async save or removeAll invalidates an older ticket.
+The store also checks its session and snapshot revision after awaiting cache
+work, so sign-out cannot publish stale warnings or restore old data. Cache
+failure remains optional read-cache failure, rather than turning a confirmed
+network snapshot into a failed mutation.
+
+This intentionally retains synchronous cold-load/key lookup and the short
+protected-file commit on the main actor. It does not claim all disk I/O is
+asynchronous. Encrypted format, owner authentication, bounds, backup exclusion
+and the no-offline-write policy remain unchanged. Gated interleaving tests cover
+off-main preparation, sign-out removal, newer-save wins, cancellation preserving
+the prior cache and over-limit preservation; the scale diagnostic separately
+prints total asynchronous latency, synchronous load and index cost. Native55
+performance/runtime acceptance remains pending until macOS runs them.
+
 TwilDiaryCore contains Codable API projections, calendar/progress calculations and catalog identities. Movie and TV provider IDs remain distinct. Public TMDB/Trakt ratings never fall back to personal ratings. Catalog screens review before import, and production requests use authenticated server routes.
 
 AppRouter owns tab selection and independent navigation paths. The custom capsule navigation, opaque headers and Lucide vector PDF assets are derived from the web source. Assets are cached with NSCache. SwiftUI AsyncImage handles remote images. Remaining-time shadow is limited to the remaining-time text. Undo is an overlay above the capsule and does not change the content safe-area height. Series progress pieces follow episode identities; movies keep continuous progress. Range planning and authenticated transactions are implemented; full mutation UI coverage remains on the parity checklist.

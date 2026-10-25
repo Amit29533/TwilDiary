@@ -5,7 +5,7 @@ import TwilDiaryTestSupport
 @testable import TwilDiary
 
 @MainActor final class WorkspaceScaleTests: XCTestCase {
-    func testLargeProtectedSnapshotsRoundTripAndRecordCacheAndIndexCosts() throws {
+    func testLargeProtectedSnapshotsRoundTripAndRecordCacheAndIndexCosts() async throws {
         let directory = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }
         let cache = ProtectedWorkspaceCache(directory: directory, key: SymmetricKey(size: .bits256))
@@ -25,6 +25,9 @@ import TwilDiaryTestSupport
             let saveStart = Date.timeIntervalSinceReferenceDate
             try cache.save(workspace, scope: "synthetic-scale-owner", at: savedAt)
             let saveMS = (Date.timeIntervalSinceReferenceDate - saveStart) * 1_000
+            let asyncStart = Date.timeIntervalSinceReferenceDate
+            try await cache.saveAsynchronously(workspace, scope: "synthetic-scale-owner", at: savedAt)
+            let asyncMS = (Date.timeIntervalSinceReferenceDate - asyncStart) * 1_000
             let loadStart = Date.timeIntervalSinceReferenceDate
             let restored = try XCTUnwrap(cache.load(scope: "synthetic-scale-owner"))
             let loadMS = (Date.timeIntervalSinceReferenceDate - loadStart) * 1_000
@@ -36,7 +39,7 @@ import TwilDiaryTestSupport
             XCTAssertEqual(store.workspace.events.count, count)
             XCTAssertEqual(store.title(template.titleId)?.id, template.titleId)
             XCTAssertNil(cache.load(scope: "a-different-owner"))
-            print(String(format: "Workspace scale diagnostic: %d events; protected save %.2f ms, load %.2f ms, index %.2f ms. Simulator diagnostic only, no device timing guarantee.", count, saveMS, loadMS, indexMS))
+            print(String(format: "Workspace scale diagnostic: %d events; synchronous save %.2f ms, asynchronous save total %.2f ms, synchronous load %.2f ms, index %.2f ms. Total asynchronous latency is not main-thread blocking time. Simulator diagnostic only, no device timing guarantee.", count, saveMS, asyncMS, loadMS, indexMS))
         }
     }
 }

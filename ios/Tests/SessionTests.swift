@@ -1,4 +1,5 @@
 import XCTest
+import CryptoKit
 import TwilDiaryCore
 @testable import TwilDiary
 
@@ -454,6 +455,26 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
         XCTAssertTrue(store.needsSignIn)
         XCTAssertFalse(store.hasLoadedWorkspace)
         XCTAssertNil(storage.credential)
+    }
+
+    func testSignOutDuringDetachedCachePreparationCannotRestoreACacheOrOldWarning() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let directory = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let gate = CachePreparationGate()
+        let cache = ProtectedWorkspaceCache(directory: directory, key: SymmetricKey(size: .bits256), beforePrepare: { try gate.holdFirst() })
+        StubProtocol.state.reset { _ in .init(#"{"items":[],"next":null}"#) }
+        let store = DiaryStore(api: api(storage), cache: cache)
+        let refresh = Task { await store.refresh() }
+        guard await waitForRegressionCondition({ gate.hasStarted }) else {
+            refresh.cancel(); gate.resume(); await refresh.value; XCTFail("Cache preparation never started"); return
+        }
+        store.signOut(); gate.resume(); await refresh.value
+        XCTAssertTrue(store.needsSignIn); XCTAssertFalse(store.hasLoadedWorkspace)
+        XCTAssertTrue(store.workspace.titles.isEmpty); XCTAssertFalse(store.loading)
+        XCTAssertNil(store.error); XCTAssertNil(store.cacheWarning)
+        XCTAssertNil(cache.load(scope: credential.cacheScope))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
     }
     func testLibraryPresentationIndexReconcilesHistoryLocationsAndSignOutWithTheWorkspace() throws {
         let storage = MemorySessionStorage(); storage.credential = credential

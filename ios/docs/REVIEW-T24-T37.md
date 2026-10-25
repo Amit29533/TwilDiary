@@ -61,3 +61,12 @@ expanded watched-episode details and removes the competing hidden gesture.
 Its unchanged Undo/original-watch/History-count requirements still need54runtime
 proof. No stable release is claimed. The source/provenance/hash of the owner
 phone-test artifact are recorded in releases/native53-device-diagnostic.json.
+
+Native54 update:188native tests and all8focused UI checks passed, including the
+new visible rewatch action, real Undo and exactly8original History watches. All
+10early navigation/progress checks also passed. The51primary/all-phone/Release
+gates remain running; this is not complete54acceptance or stable promotion.
+
+Native55 is a separate unpromoted cache-preparation draft with six additional
+interleaving/boundary tests, not a rewrite of the proven networking or watch
+rules. Local syntax checks do not establish Swift type checking or performance.

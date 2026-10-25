@@ -3,7 +3,7 @@ import CryptoKit
 import Security
 import TwilDiaryCore
 
-struct CachedWorkspace: Codable {
+struct CachedWorkspace: Codable, Sendable {
     let schema: Int
     let scope: String
     let savedAt: Date
@@ -13,7 +13,14 @@ struct CachedWorkspace: Codable {
 @MainActor protocol WorkspaceCaching {
     func load(scope: String) -> CachedWorkspace?
     func save(_ workspace: Workspace, scope: String, at date: Date) throws
+    func saveAsynchronously(_ workspace: Workspace, scope: String, at date: Date) async throws
     func removeAll() throws
+}
+
+extension WorkspaceCaching {
+    func saveAsynchronously(_ workspace: Workspace, scope: String, at date: Date) async throws {
+        try save(workspace, scope: scope, at: date)
+    }
 }
 
 @MainActor final class MemoryWorkspaceCache: WorkspaceCaching {
@@ -30,10 +37,14 @@ struct CachedWorkspace: Codable {
     private let directory: URL
     private let testKey: SymmetricKey?
     private let maximumBytes: Int
-    init(directory: URL? = nil, key: SymmetricKey? = nil, maximumBytes: Int = 50 * 1_024 * 1_024) {
+    private let beforePrepare: (@Sendable () throws -> Void)?
+    private var writeGeneration = UUID()
+    init(directory: URL? = nil, key: SymmetricKey? = nil, maximumBytes: Int = 50 * 1_024 * 1_024,
+         beforePrepare: (@Sendable () throws -> Void)? = nil) {
         self.directory = directory ?? URL.applicationSupportDirectory.appendingPathComponent("PrivateDiary", isDirectory: true)
         testKey = key
         self.maximumBytes = max(0, maximumBytes)
+        self.beforePrepare = beforePrepare
     }
     func load(scope: String) -> CachedWorkspace? {
         do {
@@ -49,21 +60,34 @@ struct CachedWorkspace: Codable {
         } catch { return nil }
     }
     func save(_ workspace: Workspace, scope: String, at date: Date) throws {
-        let snapshot = CachedWorkspace(schema: 1, scope: scope, savedAt: date, workspace: try workspace.validatingIdentities())
-        let plaintext = try JSONEncoder().encode(snapshot)
-        guard plaintext.count <= maximumBytes else { throw APIError.message("The diary is too large for the protected offline cache.") }
-        guard let encrypted = try AES.GCM.seal(plaintext, using: key(create: true), authenticating: Data(scope.utf8)).combined else {
-            throw APIError.message("Could not protect the offline diary.")
+        writeGeneration = UUID()
+        let encrypted = try WorkspaceCacheCodec.prepare(workspace, scope: scope, at: date, key: key(create: true), maximumBytes: maximumBytes)
+        try commit(encrypted, scope: scope)
+    }
+    func saveAsynchronously(_ workspace: Workspace, scope: String, at date: Date) async throws {
+        let ticket = UUID(); writeGeneration = ticket
+        let currentKey = try key(create: true), maximum = maximumBytes, prepare = beforePrepare
+        let work = Task.detached(priority: .utility) {
+            try Task.checkCancellation()
+            try prepare?()
+            try Task.checkCancellation()
+            return try WorkspaceCacheCodec.prepare(workspace, scope: scope, at: date, key: currentKey, maximumBytes: maximum)
         }
-        // The reader bounds the entire sealed file, including nonce/tag. Never
-        // replace a good cache with a new file that this same client cannot load.
-        guard encrypted.count <= maximumBytes else { throw APIError.message("The diary is too large for the protected offline cache.") }
+        let encrypted = try await withTaskCancellationHandler(operation: { try await work.value }, onCancel: { work.cancel() })
+        try Task.checkCancellation()
+        // The commit and invalidation stay on one actor. A preparation finishing
+        // after sign-out or a newer save can never recreate/replace that file.
+        guard ticket == writeGeneration else { throw CancellationError() }
+        try commit(encrypted, scope: scope)
+    }
+    private func commit(_ encrypted: Data, scope: String) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var values = URLResourceValues(); values.isExcludedFromBackup = true
         var folder = directory; try folder.setResourceValues(values)
         try encrypted.write(to: file(scope), options: [.atomic, .completeFileProtection])
     }
     func removeAll() throws {
+        writeGeneration = UUID()
         if FileManager.default.fileExists(atPath: directory.path) { try FileManager.default.removeItem(at: directory) }
     }
     private func file(_ scope: String) -> URL {
@@ -86,6 +110,23 @@ struct CachedWorkspace: Codable {
         add[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         guard SecItemAdd(add as CFDictionary, nil) == errSecSuccess else { throw APIError.message("Could not protect the offline diary.") }
         return key
+    }
+}
+
+private enum WorkspaceCacheCodec {
+    static func prepare(_ workspace: Workspace, scope: String, at date: Date, key: SymmetricKey, maximumBytes: Int) throws -> Data {
+        try Task.checkCancellation()
+        let snapshot = CachedWorkspace(schema: 1, scope: scope, savedAt: date, workspace: try workspace.validatingIdentities())
+        let plaintext = try JSONEncoder().encode(snapshot)
+        try Task.checkCancellation()
+        guard plaintext.count <= maximumBytes else { throw APIError.message("The diary is too large for the protected offline cache.") }
+        guard let encrypted = try AES.GCM.seal(plaintext, using: key, authenticating: Data(scope.utf8)).combined else {
+            throw APIError.message("Could not protect the offline diary.")
+        }
+        try Task.checkCancellation()
+        // Include nonce/tag, as the reader bounds the entire sealed file.
+        guard encrypted.count <= maximumBytes else { throw APIError.message("The diary is too large for the protected offline cache.") }
+        return encrypted
     }
 }
 

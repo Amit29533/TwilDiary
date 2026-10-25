@@ -213,8 +213,13 @@ import TwilDiaryCore
         workspace = snapshot; hasLoadedWorkspace = true; showingCachedSnapshot = false; lastRefreshedAt = .now
         needsMutationRefresh = false
         if let scope = api.credential?.cacheScope {
-            do { try cache.save(snapshot, scope: scope, at: .now); cacheWarning = nil }
-            catch { cacheWarning = "Your diary is loaded, but its protected offline copy could not be updated." }
+            var cacheFailure: Error?
+            do { try await cache.saveAsynchronously(snapshot, scope: scope, at: .now) }
+            catch { cacheFailure = error }
+            guard session == sessionGeneration, revision == snapshotGeneration, !needsSignIn else { throw CancellationError() }
+            if let cacheFailure {
+                if !(cacheFailure is CancellationError) { cacheWarning = "Your diary is loaded, but its protected offline copy could not be updated." }
+            } else { cacheWarning = nil }
         }
     }
     private func restoreCachedWorkspace() {
