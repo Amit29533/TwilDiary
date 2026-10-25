@@ -11,7 +11,7 @@ import SwiftUI
         }
     }
     func testRootTabSwipeRejectsShortVerticalAndInvalidDrags() {
-        for drag in [CGSize(width: 40, height: 0), CGSize(width: 100, height: 200), CGSize(width: .infinity, height: 0), CGSize(width: 150, height: .nan)] {
+        for drag in [CGSize(width: 40, height: 0), CGSize(width: 100, height: 200), CGSize(width: CGFloat.infinity, height: 0), CGSize(width: 150, height: CGFloat.nan)] {
             XCTAssertNil(RootTabSwipe.destination(from: .library, translation: drag, width: 390))
         }
         XCTAssertNil(RootTabSwipe.destination(from: .library, translation: CGSize(width: 200, height: 0), width: 0))

@@ -1,5 +1,10 @@
 # Native TwilDiary progress
 
+## Native44 compiler stop;45 corrects explicit test scalar types
+
+Codemagic44/run6add88d04a72334e32e4e863 checks out exact621e1968e8338eff68ae3c2ee729c41dd4bf4b92 and stops in native test compilation: NativeNavigationAndSynopsisTests.swift14 ambiguous infinity because CGSize has CGFloat/Double overloads.45 uses explicit CGFloat.infinity and CGFloat.nan, no behavior/assertion relaxation. This was a conservative-review miss in new test source. No44 native/UI/runtime pass or IPA claim; focused/full/all-phone gates did not execute. Existing production source reached test compilation; retain the failed run rather than relabel it. Browser IPA43 downloadMedia also timed out and no local file appeared; no verified43 local artifact claim. GitHub43 remains independent, do not cancel. Next: push45 validation ref, run compilation then same5focused/49primary/all-phone gates; capture and inspect actual screenshot/recording evidence.
+
+
 ### Native44 dispatched
 
 Committed621e1968e8338eff68ae3c2ee729c41dd4bf4b92 and pushed only codex/ios-ci-next. Codemagic44/run6add88d04a72334e32e4e863 queued at https://codemagic.io/app/6adcc927390bc3069c9e5490/build/6add88d04a72334e32e4e863 . Saved .local/codemagic-build44-start.png. Checkout SHA, compiler and all gates still require inspection. No canonical push/cancel while GitHub43 is active.
