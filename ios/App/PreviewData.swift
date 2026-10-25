@@ -7,6 +7,16 @@ enum PreviewData {
         return try! JSONDecoder().decode(Workspace.self, from: Data(contentsOf: url))
     }
     #if DEBUG
+    static var longSynopsisWorkspace: Workspace {
+        var object = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace)) as! [String: Any]
+        var titles = object["titles"] as! [[String: Any]]
+        if let index = titles.firstIndex(where: { $0["id"] as? String == "frieren" }) {
+            let opening = titles[index]["overview"] as? String ?? ""
+            titles[index]["overview"] = opening + String(repeating: " A longer fixture passage verifies that expanded text continues below the original opening lines on every phone width.", count: 4)
+        }
+        object["titles"] = titles
+        return try! JSONDecoder().decode(Workspace.self, from: JSONSerialization.data(withJSONObject: object))
+    }
     static var upcomingWorkspace: Workspace {
         var object = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace)) as! [String: Any]
         var titles = object["titles"] as! [[String: Any]], episodes = object["episodes"] as! [[String: Any]]

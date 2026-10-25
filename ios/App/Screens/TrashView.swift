@@ -51,7 +51,7 @@ struct TrashView: View {
                     DiaryEmptyState(title: archived.isEmpty ? "Trash is clear" : "No removed titles in this category", description: archived.isEmpty ? "Removed titles and their history will appear here." : "Choose another category to see your removed titles.")
                         .padding(.top, 16)
                 }
-            }.padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 28)
+            }.padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 100)
         }.background(theme == .glass ? .clear : Color(webHex: "#0e0d13")).diaryScreenBackground()
             .navigationTitle("Trash").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .toolbar {
@@ -100,9 +100,9 @@ struct TrashView: View {
                     Spacer(minLength: 0)
                     Button("Delete permanently", systemImage: "trash", role: .destructive) { review = CollectionReview(titles: [title], change: .purge) }
                         .labelStyle(.iconOnly).accessibilityIdentifier("trash-delete-" + title.id)
-                }.font(.caption.weight(.semibold)).buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(store.writesBlocked)
+                }.font(.caption.weight(.semibold)).buttonStyle(.bordered).buttonBorderShape(.capsule).controlSize(.large).disabled(store.writesBlocked)
             }
-        }.accessibilityIdentifier("archived-title-" + title.id)
+        }.accessibilityElement(children: .contain).accessibilityIdentifier("archived-title-" + title.id)
     }
     @ViewBuilder private func card(_ title: MediaTitle) -> some View {
         if grid { PosterCard(title: title, archived: true) }

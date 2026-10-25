@@ -69,7 +69,7 @@ import UIKit
         XCTAssertTrue(app.staticTexts["Appearance & region"].waitForExistence(timeout: 5)); capture("More")
     }
     func testCommunityInformationSheetUsesOverallStatsAndReturnsToTheTitle() {
-        let app = launch(); app.buttons["tab-library"].tap(); app.buttons["title-frieren"].tap()
+        let app = launch(titleMetadata: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
         let information = app.buttons["title-information"]
         XCTAssertTrue(information.waitForExistence(timeout: 5)); information.tap()
         XCTAssertTrue(app.staticTexts["Community stats"].waitForExistence(timeout: 5))
@@ -82,7 +82,7 @@ import UIKit
         capture("Trakt community information fixture")
         for _ in 0..<3 { if !app.navigationBars["Information"].exists { break }; app.swipeDown() }
         XCTAssertTrue(information.waitForExistence(timeout: 5)); XCTAssertTrue(information.isHittable)
-        XCTAssertEqual(app.sliders["episode-progress"].value as? String, "12 of 28 episodes watched")
+        XCTAssertEqual(app.sliders["episode-progress"].value as? String, "8 of 16 episodes watched")
         app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["title-quiet-orbit"].tap()
         app.buttons["title-information"].tap()
         XCTAssertTrue(app.staticTexts["Match this title to TMDB to see its community information."].waitForExistence(timeout: 5))
@@ -90,7 +90,7 @@ import UIKit
         capture("Community information unmatched title")
     }
     func testCommunityUnavailableOffersRetryWithoutInventingCountsOrSentiments() {
-        let app = launch(communityUnavailable: true); app.buttons["tab-library"].tap(); app.buttons["title-frieren"].tap()
+        let app = launch(titleMetadata: true, communityUnavailable: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
         app.buttons["title-information"].tap()
         XCTAssertTrue(app.staticTexts["Trakt’s community stats are temporarily unavailable."].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Trakt’s community sentiment summary is temporarily unavailable."].exists)
@@ -169,6 +169,8 @@ import UIKit
         app.descendants(matching: .any)["random-pick-dialog"].swipeDown()
         XCTAssertFalse(app.buttons["Close random pick"].exists)
         let logo = app.buttons["random-pick-logo"]
+        wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: dialog)], timeout: 5)
+        wait(for: [expectation(for: NSPredicate(format: "hittable == true"), evaluatedWith: logo)], timeout: 5)
         logo.tap(withNumberOfTaps: 3, numberOfTouches: 1)
         XCTAssertTrue(name.waitForExistence(timeout: 5)); let previous = name.label
         let again = app.buttons["random-pick-again"]
@@ -376,6 +378,7 @@ import UIKit
         for _ in 0..<6 { if season.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(season.isHittable)
         let first = app.buttons["catalog-episode-1"]
+        for _ in 0..<6 { if first.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(first.waitForExistence(timeout: 5)); capture("Catalog spoiler-safe episodes")
         first.tap(); XCTAssertTrue(app.staticTexts["Reference episode summary."].waitForExistence(timeout: 5)); capture("Catalog revealed episode")
         season.tap(); app.buttons["Season 2"].tap()
@@ -546,7 +549,11 @@ import UIKit
         XCTAssertFalse(app.buttons["library-status"].exists, "Trash is an independent recovery page, not an archived Library filter")
         app.buttons["empty-trash"].tap(); XCTAssertTrue(app.buttons["Cancel"].waitForExistence(timeout: 5)); app.buttons["Cancel"].tap()
         capture("Trash populated")
-        app.buttons["Restore"].tap(); XCTAssertTrue(confirm.waitForExistence(timeout: 5)); confirm.tap()
+        let restore = app.buttons["trash-restore-again"]
+        for _ in 0..<6 { if restore.isHittable && restore.frame.maxY < app.buttons["tab-library"].frame.minY - 8 { break }; app.swipeUp() }
+        XCTAssertTrue(restore.isHittable)
+        XCTAssertLessThan(restore.frame.maxY, app.buttons["tab-library"].frame.minY - 8)
+        restore.tap(); XCTAssertTrue(confirm.waitForExistence(timeout: 5)); confirm.tap()
         XCTAssertTrue(app.staticTexts["Trash is clear"].waitForExistence(timeout: 5))
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.buttons["title-again"].waitForExistence(timeout: 5))
@@ -601,7 +608,7 @@ import UIKit
             app.buttons["Close search"].tap()
             XCTAssertFalse(field.exists)
         }
-        app.buttons["settings-files"].tap(); app.buttons["search-files & drives"].tap()
+        app.buttons["settings-files"].tap(); app.buttons["search-files"].tap()
         let field = app.textFields["Search library and online"]
         XCTAssertTrue(field.waitForExistence(timeout: 5)); field.typeText("Frieren\n")
         XCTAssertTrue(app.buttons["search-library-frieren"].waitForExistence(timeout: 5)); capture("Inline search Files")

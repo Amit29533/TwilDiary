@@ -1,5 +1,10 @@
 # Verification of the second native review
 
+## Prepared native40 incoming sync and remaining slider finding
+
+Incoming watch controls/foreground refresh and five slider interleaving tests are prepared, not yet compiled. EpisodeRangeInput now owns a real drag session: ordinary same-scope parent changes cannot set its value, semantic scope/range/disable/removal cancels, late end cannot commit into a new season, and deferred cancellation has a ticket so it cannot clear a newer draft. Native event cancellation/VoiceOver remain functional. This addresses the verified unguarded-setValue source issue; actual macOS unit/UI/runtime acceptance remains pending. Backend27-focused/full380 tests pass and the incoming Worker is undeployed; its Free10ms CPU still requires real Cloudflare measurement after approval.
+
+
 ## Current scoped evidence — build36
 
 Codemagic34/source6d4c21c passes Core64/native135;36/source7f166a7 passes Core64/native139 and9/10 early UI cases. Both overall runs fail and are not accepted releases. The eight VersionedField Core scenarios now execute successfully, and the actual Notes/Favorite/save/reopen UI regression passes36; editor field-conflict handling is no longer merely local source. Shared owner/account-scoped discovery cache, coalescing, stale refresh, status revalidation and concurrent recommendation tests pass34 (seven cache/two controller cases). Four dominant-artwork/URL safety tests pass36. Actual36 hero/header screenshots are in ios/docs/screenshots/step-10/build-36-diagnostic with honest scope. These results supersede the earlier prepared-only notes below. Access-browser recovery, active-slider external updates, broader derived/JSON/encrypted-cache performance, existing-item Keychain policy and release fixture hygiene remain open; source test passes do not erase those findings or establish physical smoothness.

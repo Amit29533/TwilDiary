@@ -10,6 +10,7 @@ import UIKit
     let label: String
     let valueText: String
     let identifier: String
+    let scope: String
     let onChange: @MainActor (Double) -> Void
     let onCommit: @MainActor (Double) -> Void
     let onCancel: @MainActor () -> Void
@@ -28,12 +29,22 @@ import UIKit
         return control
     }
     func updateUIView(_ control: TrackSlider, context: Context) {
-        control.maximumValue = Float(max(1, maximum)); control.isEnabled = enabled
-        control.setValue(Float(value), animated: false)
+        control.present(value: Float(value), maximum: Float(max(1, maximum)), enabled: enabled, scope: scope)
         control.accessibilityLabel = label; control.accessibilityValue = valueText; control.accessibilityIdentifier = identifier
         control.changed = onChange; control.committed = onCommit; control.cancelled = onCancel
     }
     final class TrackSlider: UISlider {
+        private(set) var dragActive = false
+        private var presentedScope: String?
+        private var cancelNotification: UUID?
+        func present(value: Float, maximum: Float, enabled: Bool, scope: String) {
+            let reset = presentedScope != scope || maximumValue != maximum || !enabled
+            if reset { cancelDrag(deferNotification: true) }
+            presentedScope = scope; maximumValue = maximum; isEnabled = enabled
+            // A SwiftUI parent update must not move the finger's active draft.
+            // A new title/season/range or disabled control cancels that draft.
+            if !dragActive { setValue(value, animated: false) }
+        }
         private weak var popGesture: UIGestureRecognizer?
         private var popWasEnabled = false
         private func protectTracking() {
@@ -47,22 +58,42 @@ import UIKit
             }
         }
         private func restoreNavigation() { popGesture?.isEnabled = popWasEnabled; popGesture = nil }
-        override func didMoveToWindow() { super.didMoveToWindow(); if window == nil { restoreNavigation() } }
+        override func didMoveToWindow() { super.didMoveToWindow(); if window == nil { cancelDrag(deferNotification: true); restoreNavigation() } }
         var changed: (@MainActor (Double) -> Void)?
         var committed: (@MainActor (Double) -> Void)?
         var cancelled: (@MainActor () -> Void)?
         override var intrinsicContentSize: CGSize { CGSize(width: UIView.noIntrinsicMetric, height: 44) }
         override func beginTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
-            guard isEnabled else { return false }; protectTracking(); updateCount(at: touch.location(in: self)); return true
+            beginDrag(at: touch.location(in: self))
+        }
+        @discardableResult func beginDrag(at point: CGPoint) -> Bool {
+            guard isEnabled else { return false }
+            cancelNotification = nil; dragActive = true; protectTracking(); updateCount(at: point); return true
         }
         override func continueTracking(_ touch: UITouch, with event: UIEvent?) -> Bool {
+            guard dragActive, isEnabled else { return false }
             updateCount(at: touch.location(in: self)); return true
         }
         override func endTracking(_ touch: UITouch?, with event: UIEvent?) {
+            guard dragActive, isEnabled else { restoreNavigation(); return }
             if let touch { updateCount(at: touch.location(in: self)) }
-            restoreNavigation(); committed?(Double(value))
+            dragActive = false; restoreNavigation(); committed?(Double(value))
         }
-        override func cancelTracking(with event: UIEvent?) { restoreNavigation(); cancelled?() }
+        func cancelDrag(deferNotification: Bool = false) {
+            guard dragActive else { return }
+            dragActive = false; restoreNavigation()
+            guard deferNotification else { cancelled?(); return }
+            // updateUIView must not synchronously mutate a SwiftUI State value.
+            // A fresh finger interaction invalidates this old cancellation.
+            let ticket = UUID(), action = cancelled
+            cancelNotification = ticket
+            Task { @MainActor [weak self] in
+                await Task.yield()
+                guard let self, self.cancelNotification == ticket, !self.dragActive else { return }
+                self.cancelNotification = nil; action?()
+            }
+        }
+        override func cancelTracking(with event: UIEvent?) { cancelDrag() }
         override func accessibilityIncrement() { adjust(by: 1) }
         override func accessibilityDecrement() { adjust(by: -1) }
         private func updateCount(at point: CGPoint) {

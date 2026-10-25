@@ -3,8 +3,9 @@ import XCTest
 /// Reused by the pinned base, compact and large simulator destinations.
 @MainActor final class LayoutScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch() -> XCUIApplication {
+    private func launch(longSynopsis: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
+        if longSynopsis { app.launchArguments.append("--ui-long-synopsis") }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"; app.launch()
         XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
     }
@@ -79,7 +80,7 @@ import XCTest
         XCTAssertTrue(twilight.isHittable); twilight.tap(); XCTAssertTrue(twilight.isSelected)
     }
     func testExpandedSummaryAndWatchDateRemainInsideEveryPhone() {
-        let app = launch(); app.buttons["tab-library"].tap(); app.buttons["title-frieren"].tap()
+        let app = launch(longSynopsis: true); app.buttons["tab-library"].tap(); app.buttons["title-frieren"].tap()
         let summary = app.staticTexts["title-synopsis-text"]
         XCTAssertTrue(app.buttons["More"].waitForExistence(timeout: 5))
         let leadingFrame = summary.frame

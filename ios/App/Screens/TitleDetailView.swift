@@ -224,7 +224,7 @@ struct TitleDetailView: View {
                         .accessibilityIdentifier("movie-progress")
                         .frame(height: 44)
                         .overlay {
-                            EpisodeRangeInput(value: Double(percent) / 100, maximum: 1, enabled: !store.busy && store.canMutate, label: "Movie watched", valueText: percent > 0 ? "Watched" : "Not watched", identifier: "movie-watch-input", onChange: { _ in }, onCommit: { value in
+                            EpisodeRangeInput(value: Double(percent) / 100, maximum: 1, enabled: !store.busy && store.canMutate, label: "Movie watched", valueText: percent > 0 ? "Watched" : "Not watched", identifier: "movie-watch-input", scope: title.id + ":movie", onChange: { _ in }, onCommit: { value in
                                 Task {
                                     if value < 1, let previous = card.previous { await store.removeLatest(title, expected: previous) }
                                     else if value >= 1, card.progress.watched == 0 { await store.recordViewing(title, watchedAt: watchInstant) }
@@ -272,7 +272,7 @@ struct TitleDetailView: View {
         return ZStack {
             EpisodeProgressTrack(segments: states, season: season).accessibilityHidden(true).allowsHitTesting(false)
             if !episodes.isEmpty {
-                EpisodeRangeInput(value: sliderDraft ?? Double(card.progress.watched), maximum: episodes.count, enabled: !store.busy && store.canMutate && seasonCanEdit(title), label: "Season \(season) episodes watched", valueText: "\(displayedWatched) of \(card.progress.total) episodes watched", identifier: "episode-progress", onChange: { sliderDraft = $0 }, onCommit: { count in
+                EpisodeRangeInput(value: sliderDraft ?? Double(card.progress.watched), maximum: episodes.count, enabled: !store.busy && store.canMutate && seasonCanEdit(title), label: "Season \(season) episodes watched", valueText: "\(displayedWatched) of \(card.progress.total) episodes watched", identifier: "episode-progress", scope: title.id + ":season:\(season)", onChange: { sliderDraft = $0 }, onCommit: { count in
                     Task { await store.setSeasonProgress(title, season: season, count: Int(count), watchedAt: watchInstant); sliderDraft = nil; await loadCard(title) }
                 }, onCancel: { sliderDraft = nil })
             }

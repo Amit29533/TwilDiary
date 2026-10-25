@@ -94,6 +94,7 @@ import TwilDiaryCore
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--ui-empty") { workspace = Workspace() }
             if ProcessInfo.processInfo.arguments.contains("--ui-title-metadata") { workspace = PreviewData.metadataWorkspace }
+            if ProcessInfo.processInfo.arguments.contains("--ui-long-synopsis") { workspace = PreviewData.longSynopsisWorkspace }
             if ProcessInfo.processInfo.arguments.contains("--ui-upcoming") { workspace = PreviewData.upcomingWorkspace }
             if ProcessInfo.processInfo.arguments.contains("--ui-cached-snapshot") {
                 showingCachedSnapshot = true; lastRefreshedAt = now.addingTimeInterval(-600)
