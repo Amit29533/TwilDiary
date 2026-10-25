@@ -154,6 +154,15 @@ are also accepted via GET without replaying a lost final receipt, clearing the
 persisted approval and showing the confirmed completed state. Its regression
 requires zero apply requests.
 
+## Owner feedback hold before the next build
+
+Owner tested the previous fully passed Codemagic build: native62 (50134fc / CM
+6ade49474a72334e32e515c7). They report issues but have not described them yet;
+an asynchronous question asks for affected screens/reproduction steps. **Do not
+start native64 while this feedback is pending. Notify the owner before starting
+the next build.** Native63was already running before this request;62independent
+GHA also continues. No new build has been started since the owner asked.
+
 ## Exact next work
 
 1. Monitor GHA62and CM63. Do not restart a failing run unchanged. Read concrete
