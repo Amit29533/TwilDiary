@@ -41,7 +41,8 @@ struct AccessCredential: Codable {
     }
     static func save(_ value: AccessCredential) throws {
         let data = try JSONEncoder().encode(value)
-        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        let updates: [String: Any] = [kSecValueData as String: data, kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly]
+        let status = SecItemUpdate(query as CFDictionary, updates as CFDictionary)
         if status == errSecSuccess { return }
         guard status == errSecItemNotFound else { throw APIError.message("Could not save your private session securely.") }
         var q = query; q[kSecValueData as String] = data

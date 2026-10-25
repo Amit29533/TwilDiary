@@ -51,3 +51,10 @@ Hosted mutation tests require the owner's explicit authorization. Simulator chec
 - Scroll saved and online long titles into compact poster/name/Back/Share and back; verify top art bleed, contrast over bright artwork, no title clipping/jump and native cancelled/completed Back.
 - Pushed History/Files/Appearance/Scanner/TMDB/Trakt/About and Explore use native Back/content swipe. Done is retained only for modal editing. Re-enter each and check query/scroll restoration and slider gesture protection.
 - In Glass, assess the blurred artwork/dominant backdrop through panels and the bottom navigation bar, all five hold/slide/release targets, Reduce Motion/Transparency and a large library. Screenshots cannot prove physical stutter, haptics or battery performance.
+
+## Access recovery and native transition checks — prepared build38
+
+- Perform the real Cloudflare login/2FA without rushing. Cancel during login and immediately reopen; a late callback from the cancelled browser must not reconnect or close the new browser.
+- After a network failure or WebKit process interruption, the inline Try again action should create a fresh ephemeral sign-in page; normal redirect cancellations must not show an error. Verify delayed cookie completion and missing-cookie retry without shortening the person's 2FA time.
+- Confirm an existing installation retains secure Keychain access after the policy update, and genuine server validation still precedes credential persistence. No Access/binding-cookie configuration is changed automatically.
+- Reselect Home from Explore and let the native transition settle. Reopen and complete/cancel content Back; query/scroll ownership and slider protection remain intact. A transition-time accessibility node is not a completed-navigation failure.

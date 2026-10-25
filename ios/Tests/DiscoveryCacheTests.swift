@@ -109,6 +109,10 @@ import TwilDiaryCore
         XCTAssertNotNil(cache.cached("16", scope: scope, personal: false))
         _ = try await cache.page("16", scope: scope, personal: false) { try await loader.page() }
         XCTAssertEqual(loader.calls, 17)
+        _ = try await cache.page("16", scope: scope, personal: false, refresh: true) { try await loader.page() }
+        XCTAssertNotNil(cache.cached("1", scope: scope, personal: false), "Replacing one cached page must not evict an unrelated page")
+        _ = try await cache.page("1", scope: scope, personal: false) { try await loader.page() }
+        XCTAssertEqual(loader.calls, 18)
     }
     func testConnectionChecksCoalesceButAreRevalidatedAfterCompletion() async throws {
         let cache = DiscoveryCache(), scope = UUID(), loader = DiscoveryCacheLoader()

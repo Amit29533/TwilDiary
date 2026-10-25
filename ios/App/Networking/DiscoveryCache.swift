@@ -66,7 +66,7 @@ import TwilDiaryCore
             let value = try await fetch()
             try Task.checkCancellation()
             guard epoch == self.generation, !personal || personalEpoch == self.personalGeneration else { throw CancellationError() }
-            if self.pages.count >= 16, let oldest = self.pages.min(by: { $0.value.at < $1.value.at })?.key { self.pages.removeValue(forKey: oldest) }
+            if self.pages.count >= 16, self.pages[key] == nil, let oldest = self.pages.min(by: { $0.value.at < $1.value.at })?.key { self.pages.removeValue(forKey: oldest) }
             self.pages[key] = Entry(at: self.now(), page: value)
             return value
         }

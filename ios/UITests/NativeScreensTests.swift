@@ -799,7 +799,7 @@ import UIKit
         XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5))
         explore.tap(); XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: 5))
         app.buttons["tab-home"].tap()
-        XCTAssertFalse(app.navigationBars["Explore"].exists)
+        wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.navigationBars["Explore"])], timeout: 5)
         explore.tap(); XCTAssertTrue(app.navigationBars["Explore"].waitForExistence(timeout: 5))
         completeContentBack(app, beside: app.staticTexts["Recommendation of the day"])
         wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.navigationBars["Explore"])], timeout: 5)

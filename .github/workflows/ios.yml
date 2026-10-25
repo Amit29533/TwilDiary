@@ -67,6 +67,7 @@ jobs:
         timeout-minutes: 15
         run: bash ios/scripts/ci.sh boot
       - name: Run native unit tests before UI regressions
+        id: unit
         timeout-minutes: 20
         run: bash ios/scripts/ci.sh test-unit
       - name: Verify progress, navigation and recent device regressions before Release
@@ -99,10 +100,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Run complete primary iPhone UI regression
+        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.unit.outcome == 'success' }}
         timeout-minutes: 100
         run: bash ios/scripts/ci.sh test
       - name: Run compact and large iPhone layout regression
-        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.progress.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.unit.outcome == 'success' }}
         timeout-minutes: 40
         run: bash ios/scripts/ci.sh test-layouts
       - name: Save compiled native targets
