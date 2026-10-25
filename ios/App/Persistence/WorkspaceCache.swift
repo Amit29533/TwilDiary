@@ -29,15 +29,17 @@ struct CachedWorkspace: Codable {
 @MainActor final class ProtectedWorkspaceCache: WorkspaceCaching {
     private let directory: URL
     private let testKey: SymmetricKey?
-    init(directory: URL? = nil, key: SymmetricKey? = nil) {
+    private let maximumBytes: Int
+    init(directory: URL? = nil, key: SymmetricKey? = nil, maximumBytes: Int = 50 * 1_024 * 1_024) {
         self.directory = directory ?? URL.applicationSupportDirectory.appendingPathComponent("PrivateDiary", isDirectory: true)
         testKey = key
+        self.maximumBytes = max(0, maximumBytes)
     }
     func load(scope: String) -> CachedWorkspace? {
         do {
             let url = file(scope)
             let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-            guard size > 0 && size <= 50 * 1_024 * 1_024 else { return nil }
+            guard size > 0 && size <= maximumBytes else { return nil }
             let encrypted = try Data(contentsOf: url)
             let plaintext = try AES.GCM.open(AES.GCM.SealedBox(combined: encrypted), using: key(create: false), authenticating: Data(scope.utf8))
             let value = try JSONDecoder().decode(CachedWorkspace.self, from: plaintext)
@@ -49,9 +51,13 @@ struct CachedWorkspace: Codable {
     func save(_ workspace: Workspace, scope: String, at date: Date) throws {
         let snapshot = CachedWorkspace(schema: 1, scope: scope, savedAt: date, workspace: try workspace.validatingIdentities())
         let plaintext = try JSONEncoder().encode(snapshot)
+        guard plaintext.count <= maximumBytes else { throw APIError.message("The diary is too large for the protected offline cache.") }
         guard let encrypted = try AES.GCM.seal(plaintext, using: key(create: true), authenticating: Data(scope.utf8)).combined else {
             throw APIError.message("Could not protect the offline diary.")
         }
+        // The reader bounds the entire sealed file, including nonce/tag. Never
+        // replace a good cache with a new file that this same client cannot load.
+        guard encrypted.count <= maximumBytes else { throw APIError.message("The diary is too large for the protected offline cache.") }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         var values = URLResourceValues(); values.isExcludedFromBackup = true
         var folder = directory; try folder.setResourceValues(values)

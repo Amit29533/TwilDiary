@@ -4,6 +4,26 @@ import TwilDiaryCore
 @testable import TwilDiary
 
 @MainActor final class WorkspaceCacheTests: XCTestCase {
+    func testOversizedSnapshotCannotReplaceALoadableCacheAndTheExactLimitLoads() throws {
+        let directory = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let key = SymmetricKey(size: .bits256), scope = "synthetic-owner", date = Date(timeIntervalSince1970: 0)
+        let original = ProtectedWorkspaceCache(directory: directory, key: key)
+        try original.save(Workspace(), scope: scope, at: date)
+        let file = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).first)
+        let exactLimit = try Data(contentsOf: file).count
+        let bounded = ProtectedWorkspaceCache(directory: directory, key: key, maximumBytes: exactLimit)
+        try bounded.save(Workspace(), scope: scope, at: date)
+        let good = try Data(contentsOf: file)
+        XCTAssertEqual(good.count, exactLimit)
+        XCTAssertNotNil(bounded.load(scope: scope))
+        XCTAssertThrowsError(try bounded.save(SampleWorkspace.make(), scope: scope, at: date))
+        XCTAssertEqual(try Data(contentsOf: file), good, "An over-limit write must preserve the previous valid encrypted snapshot")
+        XCTAssertEqual(bounded.load(scope: scope)?.workspace.titles.count, 0)
+        // Simulate an older writer having saved a larger, correctly sealed file.
+        try original.save(SampleWorkspace.make(), scope: scope, at: date)
+        XCTAssertNil(bounded.load(scope: scope))
+    }
     func testProtectedSnapshotSurvivesRelaunchButNeverCrossesOwners() throws {
         let directory = URL.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: directory) }

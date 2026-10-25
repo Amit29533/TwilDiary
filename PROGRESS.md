@@ -1,5 +1,21 @@
 # Native TwilDiary progress
 
+## Quality/optimization pass — review draft remains unpromoted
+
+Owner requested a current remaining-work/code-quality review. ios/docs/QUALITY-AND-REMAINING.md records source-backed gaps, existing safeguards, measured diagnostic cost and remaining acceptance, without turning historical unchecked roadmap boxes into missing screens. Candidate47/source8c9f163 on Codemagic6addaa674a72334e32e4ed86 passes173native/4focused/10early; the full primary and extra-phone/final-summary gates remain pending. Cold1000-event Home+Stats diagnostic72.08ms, warm pair0.02ms; not phone frame-rate proof. No newer source pushed to ios-native.
+
+New confirmed cache-size defect: ProtectedWorkspaceCache allowed oversized writes while rejecting loads above50MiB, potentially replacing a useful offline copy with an unreadable one. Prepared common read/write limit (including sealed overhead) and an exact-bound/oversize/old-file-preservation XCTest. Default limit unchanged; local syntax/YAML/Bash pass.184native is draft inventory, not new runtime passes. No untested claim of runtime optimization.
+
+Also confirmed a release hygiene gap: production Core package includes Sources/TwilDiaryCore/Fixtures/workspace.json; downloaded verified43 IPA actually contains TwilDiaryCore_TwilDiaryCore.bundle/workspace.json. Existing Release gate patterns miss that name. No demonstrated production fallback uses it, but test support/resources should move outside the production target and the gate should reject it before final release. Still OPEN; do not claim all synthetic fixtures are absent. Synchronous main-actor JSON/AES/disk operations, cold projections/index rebuild/full reload after each edit, remote-artwork downsampling and final device/privacy/a11y audit remain measured follow-up work. A broad rewrite is not justified by current warm-cache timings.
+
+Next: retain this private review/cache checkpoint, continue47 full-result verification in the stability worktree. After the baseline is accepted, combine verified review fixes and the small cache repair into a coherent Codemagic-only candidate; do not sneak any draft into stable promotion. No hosted changes in this quality review.
+
+
+## Active candidate resume pointer
+
+Stability work is now at C:/Users/Amit Singh/Documents/ChatGPT/Track Everything/TwilDiary-native-stability, branch codex/ios-stability, candidate47/source8c9f16376389a4b8d162b7cd7b12e96d4fffb7b6. Codemagic run6addaa674a72334e32e4ed86 is building and its checkout log confirms that exact SHA. codex/ios-ci-next points there; ios-native remains66d625e, with no new promotion. New feature draft5064856 stays local on this codex/ios-review-pending branch. Read active worktree PROGRESS.md first. Candidate/stable policy is implemented in47, including the official same-SHA Codemagic check and success-only GitHub stable IPA. Local3promotion tests and syntax/YAML/Bash pass; no47native/runtime acceptance yet. Only one new candidate was dispatched. Preserve GitHub46diagnostics; do not re-run or promote red46.
+
+
 ## Delivery correction — stabilize before promoting new features
 
 Owner25Oct explicitly assigns Codemagic to candidate builds and GitHub Actions to the stable track. New features must pass the complete Codemagic regression before the exact source commit is promoted to ios-native/GitHub; GitHub must independently pass before its IPA is called stable. Do not push experimental source to ios-native or call diagnostic artifacts stable. Preserve the active GitHub46 run rather than cancelling it. Separate local branch codex/ios-review-pending parks the new review fixes while a clean66d625e stability worktree addresses current regressions first.
