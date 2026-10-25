@@ -7,7 +7,18 @@ projections, shared caching, navigation and CI, combined with T24–T37 claim
 verification. It is not a fresh runtime test of every screen or a real-device
 performance certification. Windows has not compiled Swift.
 
-## Current checkpoint — native54 running; native55 isolated draft
+## Native54 completed;55candidate running
+
+Complete CM54 d59f55e passed0warnings/188native/8focused/10early/51primary
+and3layout cases on each extra phone. Original passed screenshots and their
+scope are in screenshots/step-10/build-54-codemagic-passed. Its verified
+arm64iPhoneOS IPA is delivered. Independent GitHub54/run40192486938 is running
+on that exact promoted SHA; no stable-publication claim yet. CM55 is now testing
+only the detached cache-preparation batch, sourceae2cfdc. Native56carousel is a
+separate local draft. PRIVACY-AUDIT.md records actual required-reason API and
+data-flow findings without claiming zero collection or a packaged manifest.
+
+## Historical checkpoint — native54 running; native55 isolated draft
 
 At 11:41 UTC, complete Codemagic54/run6adde71f4a72334e32e4fa14 is testing
 frozen d59f55e. Compilation is warning-free,188native tests, all8focused UI and
