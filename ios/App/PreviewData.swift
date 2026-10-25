@@ -1,6 +1,7 @@
 import Foundation
 import TwilDiaryCore
 
+#if DEBUG
 enum PreviewData {
     static var workspace: Workspace {
         let url = Bundle.main.url(forResource: "reference-workspace", withExtension: "json")!
@@ -58,3 +59,4 @@ enum PreviewData {
         return try! JSONDecoder().decode(WatchCard.self, from: JSONSerialization.data(withJSONObject: body))
     }
 }
+#endif

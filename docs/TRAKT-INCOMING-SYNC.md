@@ -6,8 +6,9 @@ Connecting Trakt still enables nothing automatically.
 
 ## Flow
 
-Infuse submits a completed play → Trakt → minute activity check → bounded incoming
-history import → existing D1 → existing diary API when iOS opens/resumes. This is
+Trakt → minute activity check → bounded incoming history import → existing D1 →
+existing diary API when iOS opens/resumes. The upstream playback application is
+outside this implementation; it only consumes Trakt's recorded history. This is
 completed-watch sync, not live playback position. Ratings, watchlists, conflicts,
 deletions and old bulk history retain the reviewed two-way sync.
 
@@ -17,8 +18,8 @@ each minute. Unchanged activity avoids history requests, except an hourly overla
 rescan. New activity interrupts older pagination; recent watches take priority
 over old backlog. An unfamiliar title needs a title-metadata tick, then a selected
 season tick for series, then its viewing. Mapped watches normally need the next
-successful tick; cold metadata can need two additional ticks. Infuse's submission
-delay, scheduling, provider errors, quota and backlog prevent a hard 60-second SLA.
+successful tick; cold metadata can need two additional ticks. Trakt availability,
+scheduling, provider errors, quota and backlog prevent a hard 60-second SLA.
 
 History uses a fixed seven-day overlapping window and durable remote IDs. A new
 backdated play would be missed by a naive `watched_at > last_check` cursor. Run
@@ -47,7 +48,8 @@ larger batches need manual sync.
   index amplification. Fixed lease/checkpoint overhead is separate. Failed
   attempts can conservatively consume units. Reset at midnight UTC.
 - Trakt responses capped at 32 KB here, TMDB at 100 KB; manual clients retain
-  their 2 MB cap. Honor Retry-After, otherwise exponential backoff up to an hour.
+  their 2 MB cap. Honor Retry-After, otherwise exponential backoff up to an hour
+  with positive jitter for rate limits that omit a valid Retry-After header.
   D1 quota backoff persists until UTC reset if D1 still permits that write. If
   exhausted D1 refuses it too, later ticks can only fail safely and retry.
 - Enumerated log outcomes only; no raw exceptions, SQL/parameters, provider

@@ -13,9 +13,10 @@ struct HomeView: View {
     @AppStorage("upcomingGrid") private var upcomingGrid = false
     var body: some View {
         let now = store.isPreview ? store.now : clock
-        let overview = HomeOverview(workspace: store.workspace, now: now)
-        let watching = store.workspace.activeTitles.filter { $0.status == "watching" }
-        let recent = HistoryQuery().entries(in: store.workspace).prefix(4)
+        let projection = store.homeProjection(at: now)
+        let overview = projection.overview
+        let watching = projection.watching
+        let recent = projection.recent
         VStack(spacing: 0) {
             PageHeader(name: "TwilDiary", onSearch: { showSearch.toggle() })
             ScrollView {

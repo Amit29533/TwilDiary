@@ -27,7 +27,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.amit29533.TwilDiary
         MARKETING_VERSION: '2.0.0'
-        CURRENT_PROJECT_VERSION: '40'
+        CURRENT_PROJECT_VERSION: '41'
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: TwilDiary
@@ -35,6 +35,9 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         TARGETED_DEVICE_FAMILY: '1'
+      configs:
+        Release:
+          EXCLUDED_SOURCE_FILE_NAMES: 'catalog-*.json trakt-*.json reference-workspace.json'
   TwilDiaryTests:
     type: bundle.unit-test
     platform: iOS

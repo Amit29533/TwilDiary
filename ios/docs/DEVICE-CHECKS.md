@@ -62,7 +62,13 @@ Hosted mutation tests require the owner's explicit authorization. Simulator chec
 
 ## Incoming watches (prepared native40, backend deployment pending approval)
 
-- After approved setup, finish a real Infuse episode; measure time to Trakt, scheduled D1 import, then iOS open/resume. Verify progress without relaunching or pulling to refresh.
+- After approved setup, record one completed episode in Trakt; measure time from its appearance in Trakt to scheduled D1 import, then iOS open/resume. The upstream player is outside this scope. Verify progress without relaunching or pulling to refresh.
 - Repeat on a cold title/season, expired OAuth refresh and a provider cooldown. Check Cloudflare idle/watch/refresh/metadata CPU against the Free10ms limit and actual D1 row metrics before claiming a one-minute guarantee.
 - Toggle off/disconnect while an import is in flight; verify no late writes. Review manual sync while incoming is enabled and see its paused state. Undo a play/Trash/purge a title and confirm polling does not revive it.
 - Briefly interrupt with Control Center or switch apps during a write; verify no duplicate play, draft loss, keyboard jump or blocked resume. Repeated rapid scene changes must not issue full refresh loops.
+
+## Performance and packaged resources — prepared native41
+
+- With a large real library, compare cold launch/resume and warm Home/Stats/theme/tab changes. Workspace JSON now decodes outside the main actor, but cold projection and protected cache work still need profiling; CI benchmark timings do not establish real-phone frame rate or battery cost.
+- Sign out during a large read and immediately reconnect. Old decoded pages must never appear in the new session. Interrupt a resume repeatedly and verify the next genuine resume still refreshes.
+- Install the unsigned Release through the owner's chosen container/signing route. Confirm it uses authenticated live APIs and genuine demo artwork as appropriate; disposable simulator fixture JSON must be absent under the CI package gate.

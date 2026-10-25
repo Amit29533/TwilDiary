@@ -335,9 +335,18 @@ export async function tickIncoming(
         ? nextUTC(clock()) - clock()
         : quota
           ? quota.retryAfter * 1000
-          : error instanceof TraktError && error.retryAfter
+          : error instanceof TraktError && error.retryAfterPresent && error.retryAfter
             ? error.retryAfter * 1000
-            : Math.min(3_600_000, 60_000 * 2 ** Math.min(current.failures, 6));
+            : Math.min(
+                3_600_000,
+                Math.ceil(
+                  60_000 *
+                    2 ** Math.min(current.failures, 6) *
+                    (error instanceof TraktError && error.status === 429
+                      ? 1 + Math.random() * 0.2
+                      : 1)
+                )
+              );
     // Do not log raw exceptions: D1 errors can embed SQL parameters/history/tokens.
     // If D1 itself refuses writes this cannot persist; the next minute safely retries.
     try {

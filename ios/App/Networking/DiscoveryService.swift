@@ -29,7 +29,9 @@ extension DiscoveryServing {
         let revision = store.discoveryRevision
         let key = CatalogTools.apiPath("/api/discovery", query: query)
         let result = try await store.discoveryCache.page(key, scope: revision, personal: query["source"] == "trakt", refresh: refresh) { [store] in
+            #if DEBUG
             if store.isPreview { return PreviewCatalog.discovery(query) }
+            #endif
             return try await store.read(key)
         }
         guard revision == store.discoveryRevision, !store.needsSignIn else { throw CancellationError() }

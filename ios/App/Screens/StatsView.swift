@@ -17,7 +17,7 @@ struct StatsView: View {
     @AppStorage("backlogGrid") private var grid = false
     @State private var clock = Date.now
     var body: some View {
-        let data = StatsOverview(workspace: store.workspace, period: period, year: year, now: clock)
+        let data = store.statsProjection(period: period, year: year, at: clock)
         VStack(spacing: 0) {
             PageHeader(name: "Stats", onSearch: { showSearch.toggle() })
             ScrollView {

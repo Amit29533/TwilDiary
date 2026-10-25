@@ -539,3 +539,21 @@ test('status derivation constrains episode watches to the title progress index',
   assert.match(details, /SEARCH w USING.*watch_title_progress/);
   assert.doesNotMatch(details, /SCAN w\b/);
 });
+
+test('rate limits without Retry-After use increasing jittered cooldowns instead of polling every minute', async (t) => {
+  const f = await fixture(t);
+  await configureIncoming(f.db, traktEnv, true, f.now());
+  const transport: typeof fetch = async () => new Response('{}', { status: 429 });
+  await tickIncoming(f.binding, traktEnv, { now: f.now, transport });
+  const first =
+    Number(f.sqlite.prepare('SELECT next_at FROM trakt_incoming').get()!.next_at) - f.now();
+  assert.ok(first >= 60_000 && first <= 72_000);
+  f.advance(73_000);
+  await tickIncoming(f.binding, traktEnv, { now: f.now, transport });
+  const second =
+    Number(f.sqlite.prepare('SELECT next_at FROM trakt_incoming').get()!.next_at) - f.now();
+  assert.ok(second >= 120_000 && second <= 144_000);
+  f.advance();
+  assert.equal((await f.tick()).state, 'idle');
+  assert.equal(f.requests.length, 0);
+});

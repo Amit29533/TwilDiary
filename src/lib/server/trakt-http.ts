@@ -1,9 +1,17 @@
 import { ApiError } from './api.ts';
 export class TraktError extends ApiError {
   retryAfter: number;
-  constructor(status: number, code: string, message: string, retryAfter = 0) {
+  retryAfterPresent: boolean;
+  constructor(
+    status: number,
+    code: string,
+    message: string,
+    retryAfter = 0,
+    retryAfterPresent = retryAfter > 0
+  ) {
     super(status, code, message);
     this.retryAfter = retryAfter;
+    this.retryAfterPresent = retryAfterPresent;
   }
 }
 export async function traktRequest(
@@ -49,7 +57,8 @@ export async function traktRequest(
       429,
       'trakt_rate_limited',
       'Trakt is busy. Try again after the cooldown.',
-      Number.isFinite(raw) && raw > 0 ? Math.ceil(raw) : 60
+      Number.isFinite(raw) && raw > 0 ? Math.ceil(raw) : 60,
+      Number.isFinite(raw) && raw > 0
     );
   }
   if (response.status === 401)

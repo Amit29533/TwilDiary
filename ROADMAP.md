@@ -132,6 +132,7 @@ Goal: reproduce every mobile management view and reviewed synchronization safely
 - [ ] TMDB/Trakt connection states and native-safe credential setup boundaries.
 - [ ] Trakt PKCE, direction/type settings, scan/review/apply/cancel/conflicts/retry; exclude demo data from exports.
 - [ ] API/fixture UI coverage for all one-way/two-way combinations; no real account writes.
+- [ ] Incoming-only Trakt → D1 → app-resume sync: bounded minute scheduler, opt-in/health, idempotence/account/review/quota fences. Local 28 focused/381 full tests pass; native40 CI and approved hosted CPU/rollout verification remain pending. No player integration belongs to this scope.
 
 Screens/files: `ios/Features/Locations`, `ios/Features/Settings`, `ios/Features/Trakt`, `ios/docs/IOS-PARITY.md`.
 
@@ -145,6 +146,7 @@ Goal: release a verified native client with an honest parity and device checklis
   - Next batch pending: confirmed mutation versus failed refresh acknowledgement, retained Undo, stale-write gating and explicit reconciliation; four transport regressions and one isolated UI recovery flow.
 - [ ] Full screen/state screenshot regression on SE/390/Pro Max; long text, keyboard, accessibility, reduced motion/transparency.
 - [ ] Animations/haptics, memory/network/image performance, app icon/launch screen and zero warnings.
+  - Native41 prepared: off-main paginated workspace decoding with cancellation/session fences, bounded Home/Stats projections invalidated by snapshot/day/zone, and DEBUG-only disposable fixture source/resources. Seven new native tests plus Release bundle-resource gate await macOS validation; encrypted disk caching and cold-projection cost remain open audit items.
 - [ ] Complete `IOS-PARITY.md`, `DEVICE-CHECKS.md`, release checklist, artifact checksums and installation guide.
 - [ ] One final clean build/test/download/visual pass across all prior steps.
 

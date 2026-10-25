@@ -118,6 +118,10 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
         credential = nil
     }
     func request<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil, timeout: TimeInterval? = nil) async throws -> T {
+        let data = try await responseData(path, method: method, body: body, timeout: timeout)
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+    private func responseData(_ path: String, method: String = "GET", body: [String: Any]? = nil, timeout: TimeInterval? = nil) async throws -> Data {
         let generation = sessionGeneration
         guard path.hasPrefix("/api/"), let url = URL(string: path, relativeTo: AppConfiguration.backend)?.absoluteURL,
               BackendEndpoint.isPrivateAPI(url) else { throw APIError.message("Invalid diary request.") }
@@ -149,14 +153,26 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
             throw APIError.rejected(http.statusCode, envelope?.error.message ?? fallback)
         }
         guard isJSON else { throw APIError.message("The diary returned an unexpected response. Please try again.") }
-        return try JSONDecoder().decode(T.self, from: data)
+        return data
     }
     func allPages<T: Decodable & Sendable>(_ section: String, as: T.Type) async throws -> [T] {
+        let generation = sessionGeneration
         var result: [T] = []; var after: String?; var visited = Set<String>()
         repeat {
+            try Task.checkCancellation()
+            guard generation == sessionGeneration else { throw CancellationError() }
             var query = URLComponents(); query.queryItems = [URLQueryItem(name: "section", value: section)]
             if let after { query.queryItems?.append(URLQueryItem(name: "after", value: after)) }
-            let page: WorkspacePage<T> = try await request("/api/workspace?" + (query.percentEncodedQuery ?? ""))
+            let data = try await responseData("/api/workspace?" + (query.percentEncodedQuery ?? ""))
+            let decoding = Task.detached(priority: .userInitiated) {
+                try Task.checkCancellation()
+                let page = try JSONDecoder().decode(WorkspacePage<T>.self, from: data)
+                try Task.checkCancellation()
+                return page
+            }
+            let page = try await withTaskCancellationHandler(operation: { try await decoding.value }, onCancel: { decoding.cancel() })
+            try Task.checkCancellation()
+            guard generation == sessionGeneration else { throw CancellationError() }
             result.append(contentsOf: page.items); after = page.next
             if let after, !visited.insert(after).inserted { throw APIError.message("The diary returned a repeated page. Please refresh.") }
         } while after != nil

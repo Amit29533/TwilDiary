@@ -4,36 +4,40 @@ import TwilDiaryCore
 extension DiaryStore {
     func searchDiary(_ query: String, page: Int = 1) async throws -> DiarySearchPage {
         guard DiarySearchTools.ready(query), (1...500).contains(page) else { throw APIError.message("Enter a title or IMDb ID (2–200 characters)") }
+        #if DEBUG
         if isPreview {
             let result = PreviewCatalog.page(query: query, page: page)
             return DiarySearchPage(library: [], online: result.items, page: result.page, totalPages: result.totalPages)
         }
+        #endif
         return try await read(CatalogTools.apiPath("/api/search", query: ["q": query, "scope": "online", "page": String(page)]))
     }
     func browse(_ route: CatalogRoute) async throws -> CatalogBrowse {
+        #if DEBUG
         if isPreview {
             let value = PreviewCatalog.browse(route)
             let saved = workspace.titles.first { $0.tmdbId == route.id && $0.isSeries == (route.kind == .tv) }
             return CatalogBrowse(details: value.details, libraryTitle: saved.map { CatalogBrowse.Saved(id: $0.id, trashed: $0.deletedAt != nil) })
         }
+        #endif
         return try await read(CatalogTools.apiPath("/api/metadata/browse", query: ["type": route.kind.rawValue, "id": String(route.id)]))
     }
     func cast(_ route: CatalogRoute) async throws -> CastResponse {
+        #if DEBUG
         if isPreview {
-            #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--ui-slow-metadata") { try await Task.sleep(for: .milliseconds(700)) }
-            #endif
             return PreviewCatalog.cast
         }
+        #endif
         return try await read(CatalogTools.apiPath("/api/metadata/cast", query: ["type": route.kind.rawValue, "id": String(route.id)]))
     }
     func related(_ route: CatalogRoute) async throws -> RelatedResponse {
+        #if DEBUG
         if isPreview {
-            #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--ui-slow-metadata") { try await Task.sleep(for: .milliseconds(700)) }
-            #endif
             return PreviewCatalog.related
         }
+        #endif
         return try await read(CatalogTools.apiPath("/api/metadata/related", query: ["type": route.kind.rawValue, "id": String(route.id)]))
     }
     func person(_ id: Int) async throws -> PersonResponse {
@@ -41,8 +45,12 @@ extension DiaryStore {
         if let saved = cachedPeople[id], Date.now.timeIntervalSince(saved.at) < 900 { return saved.value }
         let revision = sessionRevision
         let response: PersonResponse
+        #if DEBUG
         if isPreview { response = PreviewCatalog.person }
         else { response = try await read(CatalogTools.apiPath("/api/metadata/person", query: ["id": String(id)])) }
+        #else
+        response = try await read(CatalogTools.apiPath("/api/metadata/person", query: ["id": String(id)]))
+        #endif
         try Task.checkCancellation()
         guard revision == sessionRevision, !needsSignIn else { throw CancellationError() }
         cachedPeople.removeValue(forKey: id)

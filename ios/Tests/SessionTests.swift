@@ -87,12 +87,78 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
     override func stopLoading() {}
 }
 
+private final class WorkspaceDecodeGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private let release = DispatchSemaphore(value: 0)
+    private var started = false
+    var hasStarted: Bool { lock.lock(); defer { lock.unlock() }; return started }
+    func pause() -> Bool {
+        lock.lock(); started = true; lock.unlock()
+        return release.wait(timeout: .now() + 3) == .success
+    }
+    func resume() { release.signal() }
+}
+private final class WorkspaceDecodeState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var gate: WorkspaceDecodeGate?
+    func set(_ value: WorkspaceDecodeGate?) { lock.lock(); gate = value; lock.unlock() }
+    func get() -> WorkspaceDecodeGate? { lock.lock(); defer { lock.unlock() }; return gate }
+}
+private struct WorkspaceDecodeProbe: Decodable, Sendable {
+    static let state = WorkspaceDecodeState()
+    let value: Int
+    let decodedOnMainThread: Bool
+    enum CodingKeys: String, CodingKey { case value }
+    init(from decoder: Decoder) throws {
+        value = try decoder.container(keyedBy: CodingKeys.self).decode(Int.self, forKey: .value)
+        decodedOnMainThread = Thread.isMainThread
+        if let gate = Self.state.get(), !gate.pause() { throw APIError.message("Synthetic decoder gate timed out") }
+    }
+}
+
 @MainActor final class SessionTests: XCTestCase {
     private let credential = AccessCredential(token: "synthetic-test-session", expires: .distantFuture)
     private func api(_ storage: MemorySessionStorage) -> DiaryAPI {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubProtocol.self]
         return DiaryAPI(configuration: configuration, storage: storage)
+    }
+
+    func testWorkspacePagesDecodeOutsideTheMainThread() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        WorkspaceDecodeProbe.state.set(nil)
+        StubProtocol.state.reset { _ in .init(#"{"items":[{"value":1}],"next":null}"#) }
+        let values = try await api(storage).allPages("titles", as: WorkspaceDecodeProbe.self)
+        XCTAssertEqual(values.count, 1); XCTAssertEqual(values.first?.value, 1)
+        XCTAssertEqual(values.first?.decodedOnMainThread, false)
+    }
+    func testSignOutDuringBackgroundDecodeRejectsTheOldPage() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let network = api(storage), gate = WorkspaceDecodeGate()
+        WorkspaceDecodeProbe.state.set(gate); defer { gate.resume(); WorkspaceDecodeProbe.state.set(nil) }
+        StubProtocol.state.reset { _ in .init(#"{"items":[{"value":1}],"next":null}"#) }
+        let pending = Task { try await network.allPages("titles", as: WorkspaceDecodeProbe.self) }
+        guard await waitForRegressionCondition({ gate.hasStarted }) else {
+            pending.cancel(); gate.resume(); _ = try? await pending.value; XCTFail("Background decode never started"); return
+        }
+        network.signOut(); gate.resume()
+        do { _ = try await pending.value; XCTFail("A decoded old-session page must not return") }
+        catch is CancellationError { }
+        catch { XCTFail("Expected cancellation after sign-out") }
+    }
+    func testCancellingAWorkspaceReadAlsoCancelsItsBackgroundDecode() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let network = api(storage), gate = WorkspaceDecodeGate()
+        WorkspaceDecodeProbe.state.set(gate); defer { gate.resume(); WorkspaceDecodeProbe.state.set(nil) }
+        StubProtocol.state.reset { _ in .init(#"{"items":[{"value":1}],"next":null}"#) }
+        let pending = Task { try await network.allPages("titles", as: WorkspaceDecodeProbe.self) }
+        guard await waitForRegressionCondition({ gate.hasStarted }) else {
+            pending.cancel(); gate.resume(); _ = try? await pending.value; XCTFail("Background decode never started"); return
+        }
+        pending.cancel(); gate.resume()
+        do { _ = try await pending.value; XCTFail("A cancelled decode must not return a page") }
+        catch is CancellationError { }
+        catch { XCTFail("Expected cancellation after read cancellation") }
     }
 
     func testForegroundRefreshReadsTheLatestDiaryAndCoalescesRapidSceneChanges() async {

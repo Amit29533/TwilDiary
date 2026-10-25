@@ -2,6 +2,7 @@ import Foundation
 import TwilDiaryCore
 
 /// Disposable UI-test responses only. Release navigation always uses authenticated APIs.
+#if DEBUG
 enum PreviewCatalog {
     private static func decode<T: Decodable>(_ name: String) -> T {
         let url = Bundle.main.url(forResource: name, withExtension: "json")!
@@ -34,3 +35,4 @@ enum PreviewCatalog {
     static var related: RelatedResponse { decode("catalog-related") }
     static var person: PersonResponse { decode("catalog-person") }
 }
+#endif

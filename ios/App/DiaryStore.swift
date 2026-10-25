@@ -1,7 +1,15 @@
 import SwiftUI
+import Observation
 import TwilDiaryCore
 
 @MainActor @Observable final class DiaryStore {
+    struct HomeProjection {
+        let overview: HomeOverview
+        let watching: [MediaTitle]
+        let recent: [HistoryEntry]
+    }
+    @ObservationIgnored private var cachedHome: (day: Date, calendar: Calendar, value: HomeProjection)?
+    @ObservationIgnored private var cachedStats: (day: String, zone: String, period: Period, year: Int?, value: StatsOverview)?
     var workspace = Workspace() { didSet { indexWorkspace() } }
     private var titleIndex: [String: MediaTitle] = [:]
     private var progressIndex: [String: Double] = [:]
@@ -89,9 +97,9 @@ import TwilDiaryCore
         #else
         isPreview = false
         #endif
+        #if DEBUG
         if isPreview {
             workspace = PreviewData.workspace; needsSignIn = false; hasLoadedWorkspace = true
-            #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--ui-empty") { workspace = Workspace() }
             if ProcessInfo.processInfo.arguments.contains("--ui-title-metadata") { workspace = PreviewData.metadataWorkspace }
             if ProcessInfo.processInfo.arguments.contains("--ui-long-synopsis") { workspace = PreviewData.longSynopsisWorkspace }
@@ -100,12 +108,10 @@ import TwilDiaryCore
                 showingCachedSnapshot = true; lastRefreshedAt = now.addingTimeInterval(-600)
                 cacheWarning = "Your diary is loaded, but its protected offline copy could not be updated."
             }
-            #endif
-            #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--ui-mutations") { fixture = FixtureDiaryBackend(workspace: workspace, scanner: ProcessInfo.processInfo.arguments.contains("--ui-scanner")) }
-            #endif
         }
-        else {
+        #endif
+        if !isPreview {
             needsSignIn = self.api.credential == nil
             restoreCachedWorkspace()
         }
@@ -216,6 +222,7 @@ import TwilDiaryCore
         showingCachedSnapshot = true; lastRefreshedAt = snapshot.savedAt
     }
     private func indexWorkspace() {
+        cachedHome = nil; cachedStats = nil
         titleIndex = Dictionary(workspace.titles.map { ($0.id, $0) }, uniquingKeysWith: { _, latest in latest })
         let events = Dictionary(grouping: workspace.activeEvents, by: \.titleId)
         let episodes = Dictionary(grouping: workspace.episodes, by: \.titleId)
@@ -237,6 +244,23 @@ import TwilDiaryCore
         presentTitleIDs = Set(workspace.locations.filter { $0.evidence == "present" }.map(\.titleId))
     }
     func title(_ id: String) -> MediaTitle? { titleIndex[id] }
+    func homeProjection(at date: Date, calendar: Calendar = DiaryDate.calendar()) -> HomeProjection {
+        // Reading the observed workspace keeps the view subscribed even on a
+        // cache hit. Internal cache writes do not trigger another body pass.
+        let snapshot = workspace, day = calendar.startOfDay(for: date)
+        if let saved = cachedHome, saved.day == day, saved.calendar == calendar { return saved.value }
+        let value = HomeProjection(overview: HomeOverview(workspace: snapshot, now: date, calendar: calendar),
+            watching: snapshot.activeTitles.filter { $0.status == "watching" },
+            recent: Array(HistoryQuery().entries(in: snapshot, timeZone: calendar.timeZone).prefix(4)))
+        cachedHome = (day, calendar, value); return value
+    }
+    func statsProjection(period: Period, year: Int?, at date: Date, timeZone: TimeZone = .current) -> StatsOverview {
+        let snapshot = workspace, day = DiaryDate.day(date, timeZone: timeZone)
+        if let saved = cachedStats, saved.day == day, saved.zone == timeZone.identifier,
+           saved.period == period, saved.year == year { return saved.value }
+        let value = StatsOverview(workspace: snapshot, period: period, year: year, now: date, timeZone: timeZone)
+        cachedStats = (day, timeZone.identifier, period, year, value); return value
+    }
     func seasonProgress(_ title: MediaTitle, season: Int) -> SeasonProgress {
         seasonProgressIndex[title.id]?[season] ?? SeasonProgress.calculate(title: title, workspace: workspace, season: season)
     }
@@ -328,7 +352,9 @@ import TwilDiaryCore
         if !fresh, let existing = cardReads[key] { flight = existing }
         else {
             flight = (UUID(), Task {
+                #if DEBUG
                 if self.isPreview { return PreviewData.card(title, workspace: self.workspace, season: season) }
+                #endif
                 var query = "?day=\(key.day)"
                 if let season { query += "&season=\(season)" }
                 return try await self.read("/api/glance/\(title.id)" + query)
