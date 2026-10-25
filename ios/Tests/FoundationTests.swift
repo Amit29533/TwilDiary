@@ -2,6 +2,9 @@ import XCTest
 @testable import TwilDiary
 
 final class FoundationTests: XCTestCase {
+    func testT36GeneratedAppMetadataDeclaresOnlySystemProvidedEncryption() {
+        XCTAssertEqual(Bundle.main.object(forInfoDictionaryKey: "ITSAppUsesNonExemptEncryption") as? Bool, false)
+    }
     func testCredentialDestinationIsRestrictedToThePrivateHTTPSAPI() throws {
         XCTAssertTrue(BackendEndpoint.isPrivateAPI(try XCTUnwrap(URL(string: "https://twildiary-v2.amit29533.workers.dev/api/session"))))
         for value in [

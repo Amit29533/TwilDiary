@@ -322,6 +322,30 @@ import UIKit
         XCTAssertTrue(app.buttons["List layout"].exists); XCTAssertFalse(app.buttons["Grid layout"].exists)
         capture("Library filters cleared")
     }
+    func testT31LibraryLayoutAndSortSurviveAProcessRelaunch() {
+        let app = launch(); app.buttons["tab-library"].tap()
+        app.buttons["List layout"].tap()
+        app.buttons["library-order"].tap(); app.buttons["Highest TMDB rating"].tap()
+        XCTAssertTrue(app.buttons["Grid layout"].exists)
+        app.launchArguments.append("--ui-keep-library-preferences")
+        app.terminate(); app.launch()
+        XCTAssertTrue(app.buttons["tab-library"].waitForExistence(timeout: 15)); app.buttons["tab-library"].tap()
+        XCTAssertTrue(app.buttons["Grid layout"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Highest TMDB rating"].exists)
+        capture("Library persisted list layout and typed rating order after relaunch")
+    }
+    func testT35WatchedEpisodeOffersRewatchAndUndoKeepsItsOriginalWatch() {
+        let app = launch(mutations: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
+        let episode = app.buttons["title-episode-8"]
+        for _ in 0..<7 { if episode.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(episode.isHittable); episode.press(forDuration: 0.8)
+        let rewatch = app.buttons["Log rewatch"]
+        XCTAssertTrue(rewatch.waitForExistence(timeout: 5)); rewatch.tap()
+        XCTAssertTrue(app.buttons["undo-action"].waitForExistence(timeout: 5))
+        tapVisibleUndo(app)
+        XCTAssertTrue(app.buttons["Mark episode 8 unwatched"].exists, "Undoing the rewatch must keep the original watch")
+        capture("Episode rewatch Undo preserves the original viewing")
+    }
 
     func testLibraryCommunityRatingPreferenceNeverDisplaysPersonalScores() {
         let app = launch()
@@ -737,21 +761,23 @@ import UIKit
         let mark = app.buttons["mark-title-watch"]
         if !mark.isHittable { app.swipeUp() }
         mark.tap()
-        waitForProgress("9 of 16 episodes watched", slider: progress)
+        // Intel XCTest's value snapshots consumed most of the real4.5s window.
+        // Exercise Undo first; verify the intermediate value in a separate edit.
         tapVisibleUndo(app)
         waitForProgress("8 of 16 episodes watched", slider: progress)
-        let start = progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        mark.tap(); waitForProgress("9 of 16 episodes watched", slider: progress)
+        let start = progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5625, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
-        XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 10), "A range edit must produce a real Undo receipt, not only a draft value")
-        waitForProgress("10 of 16 episodes watched", slider: progress)
         tapVisibleUndo(app)
-        waitForProgress("8 of 16 episodes watched", slider: progress)
+        waitForProgress("9 of 16 episodes watched", slider: progress)
+        progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5625, dy: 0.5)).press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
+        waitForProgress("10 of 16 episodes watched", slider: progress)
         app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["title-quiet-orbit"].tap()
         let movieMark = app.buttons["mark-title-watch"]
         XCTAssertTrue(movieMark.waitForExistence(timeout: 5)); movieMark.tap()
-        XCTAssertTrue(app.buttons["Log a rewatch"].waitForExistence(timeout: 5))
-        app.buttons["Undo"].tap()
+        tapVisibleUndo(app)
         XCTAssertTrue(app.buttons["Log a watch"].waitForExistence(timeout: 5)); capture("Movie watch undone")
+        movieMark.tap(); XCTAssertTrue(app.buttons["Log a rewatch"].waitForExistence(timeout: 5))
     }
     func testPersonShelvesOpenFilmographyLayoutsAndPreserveReturnNavigation() {
         let app = launch(); app.buttons["tab-home"].tap(); app.buttons["search-twildiary"].tap()

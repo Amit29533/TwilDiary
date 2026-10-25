@@ -6,17 +6,22 @@ struct LibraryView: View {
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     @Environment(AppRouter.self) private var router
     @AppStorage("publicRatingSource") private var ratingSource = PublicRatingSource.tmdb
-    @State private var category = LibraryCategory.all
-    @State private var status = "all"
-    @State private var genre = ""
-    @State private var drive = ""
+    @SceneStorage("library.category") private var categoryRaw = LibraryCategory.all.rawValue
+    @SceneStorage("library.status") private var status = "all"
+    @SceneStorage("library.genre") private var genre = ""
+    @SceneStorage("library.drive") private var drive = ""
     @State private var showSearch = false
     @State private var showAdd = false
     @State private var addedTitle: String?
     @State private var addedCatalog: CatalogRoute?
-    @State private var list = false
-    @State private var genreRows = false
-    @State private var sort = "library"
+    @AppStorage("library.list") private var list = false
+    @AppStorage("library.genreRows") private var genreRows = false
+    @AppStorage("library.sort") private var sort = LibraryQuery.Sort.library
+    @State private var initializedStorage = false
+    private var category: LibraryCategory {
+        get { LibraryCategory(rawValue: categoryRaw) ?? .all }
+        nonmutating set { categoryRaw = newValue.rawValue }
+    }
     @State private var appliedShortcutRevision = 0
     @State private var selecting = false
     @State private var selected = Set<String>()
@@ -27,7 +32,7 @@ struct LibraryView: View {
             if showSearch {
                 ScrollView { CatalogSearchView(onClose: { showSearch = false }).padding(.top, 2) }
             } else {
-                CategoryPicker(selection: $category)
+                CategoryPicker(selection: Binding(get: { category }, set: { category = $0 }))
                 filterBar
                 if hasFilters {
                     HStack(spacing: 12) { Text("\(filtered.count) \(filtered.count == 1 ? "title" : "titles")").foregroundStyle(.secondary); Button("Clear filters") { category = .all; status = "all"; genre = ""; drive = "" }; Spacer(minLength: 0) }.font(.system(size: 13)).padding(.horizontal, 14).padding(.bottom, 8)
@@ -47,7 +52,7 @@ struct LibraryView: View {
         }.background(theme == .glass ? .clear : Color(webHex: "#0e0d13")).diaryScreenBackground()
             .task(id: collection.map(\.id).sorted().joined(separator: ",") + ratingSource.rawValue) { await store.loadPublicRatings(collection, source: ratingSource) }
             .onChange(of: router.libraryRevision) { _, _ in applyShortcut() }
-            .onAppear { applyShortcut() }
+            .onAppear { initializeStorage(); applyShortcut() }
             .onChange(of: filterScope) { _, _ in selecting = false; selected = [] }
             .onChange(of: filtered.map(\.id)) { _, ids in selected.formIntersection(ids) }
             .sheet(isPresented: $showAdd, onDismiss: {
@@ -101,8 +106,8 @@ struct LibraryView: View {
                     .foregroundStyle(.secondary).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
                 Menu {
                     Picker("Order", selection: $sort) {
-                        Text("Library order").tag("library"); Text("Title A–Z").tag("name")
-                        Text("Newest year").tag("year"); Text("Highest " + ratingSource.label + " rating").tag("rating")
+                        Text("Library order").tag(LibraryQuery.Sort.library); Text("Title A–Z").tag(LibraryQuery.Sort.title)
+                        Text("Newest year").tag(LibraryQuery.Sort.year); Text("Highest " + ratingSource.label + " rating").tag(LibraryQuery.Sort.score)
                     }
                 } label: {
                     HStack(spacing: 5) {
@@ -128,7 +133,7 @@ struct LibraryView: View {
         }.frame(height: 46).padding(.horizontal, 14).padding(.bottom, 12)
     }
     private var sortLabel: String {
-        switch sort { case "name": "Title A–Z"; case "year": "Newest year"; case "rating": "Highest " + ratingSource.label + " rating"; default: "Library order" }
+        switch sort { case .title: "Title A–Z"; case .year: "Newest year"; case .score: "Highest " + ratingSource.label + " rating"; case .library: "Library order" }
     }
     private var collectionContent: some View {
         ScrollView {
@@ -171,7 +176,7 @@ struct LibraryView: View {
     }
     @ViewBuilder private func cardContent(_ title: MediaTitle, row: Bool) -> some View { if row { LibraryTitleRow(title: title) } else { PosterCard(title: title).contentShape(Rectangle()) } }
     private func prepareReview(_ change: CollectionChange) { let titles = filtered.filter { selected.contains($0.id) }; if !titles.isEmpty { review = CollectionReview(titles: titles, change: change) } }
-    private var filterScope: String { [category.rawValue, status, genre, drive, sort].joined(separator: "\n") }
+    private var filterScope: String { [category.rawValue, status, genre, drive, sort.rawValue].joined(separator: "\n") }
     private var collection: [MediaTitle] { store.workspace.activeTitles }
     private var trashChip: some View { HStack(spacing: 6) { DiaryIcon(name: "trash-2", size: 15); Text("Trash") }.font(.system(size: 14, weight: .semibold)).padding(.horizontal, 14).frame(height: 40).background { DiaryControlSurface(shape: Capsule()) } }
     private func filterChip(_ label: String, selected: Bool) -> some View {
@@ -194,8 +199,18 @@ struct LibraryView: View {
         query.category = category == .movies ? "movie" : category == .shows ? "show" : category == .anime ? "anime" : "all"
         query.status = status == "queue" ? "all" : status; query.queued = status == "queue"; query.genre = genre
         query.disk = drive.isEmpty ? "all" : ["mapped", "unmapped"].contains(drive) || drive.hasPrefix("[") || drive.hasPrefix("drive:") ? drive : "drive:" + drive.uppercased()
-        query.sort = sort == "name" ? .title : sort == "rating" ? .score : sort == "year" ? .year : .library
+        query.sort = sort
         return query.titles(in: store.workspace) { store.publicScore($0, source: ratingSource) }
+    }
+    private func initializeStorage() {
+        guard !initializedStorage else { return }
+        initializedStorage = true
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("--ui-testing") && !arguments.contains("--ui-keep-library-preferences") {
+            categoryRaw = LibraryCategory.all.rawValue; status = "all"; genre = ""; drive = ""
+        }
+        #endif
     }
 }
 

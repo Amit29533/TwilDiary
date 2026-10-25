@@ -38,6 +38,7 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         let body: String
         var delay: TimeInterval = 0
         var gate: ResponseGate? = nil
+        var failureCode: URLError.Code? = nil
         init(_ body: String) { self.init(200, body) }
         init(_ status: Int, _ body: String, contentType: String = "application/json") {
             self.status = status; self.body = body; self.contentType = contentType
@@ -78,6 +79,7 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         } else { deliver(reply) }
     }
     private func deliver(_ reply: Reply) {
+        if let code = reply.failureCode { client?.urlProtocol(self, didFailWithError: URLError(code)); return }
         let response = HTTPURLResponse(url: request.url!, statusCode: reply.status, httpVersion: nil,
                                        headerFields: ["Content-Type": reply.contentType])!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
@@ -118,10 +120,85 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
 
 @MainActor final class SessionTests: XCTestCase {
     private let credential = AccessCredential(token: "synthetic-test-session", expires: .distantFuture)
-    private func api(_ storage: MemorySessionStorage) -> DiaryAPI {
+    private func api(_ storage: MemorySessionStorage, clock: @escaping @MainActor () -> Date = { .now }) -> DiaryAPI {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubProtocol.self]
-        return DiaryAPI(configuration: configuration, storage: storage)
+        return DiaryAPI(configuration: configuration, storage: storage, clock: clock)
+    }
+    func testT29DroppedGETRetriesOnceAndPOSTDoesNotRetry() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        for method in ["GET", "POST"] {
+            StubProtocol.state.reset { _ in
+                if StubProtocol.state.recorded().count == 1 { var reply = StubProtocol.Reply("{}"); reply.failureCode = .networkConnectionLost; return reply }
+                return .init("{}")
+            }
+            do {
+                let _: EmptyResponse = try await api(storage).request("/api/glance/again", method: method)
+                XCTAssertEqual(method, "GET")
+            } catch { XCTAssertEqual(method, "POST"); XCTAssertTrue(error.localizedDescription.contains("connection dropped")) }
+            XCTAssertEqual(StubProtocol.state.recorded().count, method == "GET" ? 2 : 1)
+        }
+    }
+    func testT29OfflineTimeoutAndCancellationDoNotRetryOrSignOut() async {
+        for code in [URLError.notConnectedToInternet, .timedOut, .cancelled] {
+            StubProtocol.state.reset { _ in var reply = StubProtocol.Reply("{}"); reply.failureCode = code; return reply }
+            let storage = MemorySessionStorage(); storage.credential = credential
+            let store = DiaryStore(api: api(storage))
+            do {
+                let _: EmptyResponse = try await store.read("/api/glance/again")
+                XCTFail("Expected transport failure")
+            } catch is CancellationError { XCTAssertEqual(code, .cancelled) }
+            catch { XCTAssertFalse(error.localizedDescription.contains("NSURLErrorDomain")) }
+            XCTAssertFalse(store.needsSignIn); XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+        }
+    }
+    func testT27QuotaStopsFurtherReadsAndForegroundButExplicitRefreshCanRecover() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let start = Date(timeIntervalSince1970: 1_792_886_400)
+        let network = api(storage, clock: { start })
+        // Use the same transport instance for the store and its quota state.
+        let blockedStore = DiaryStore(api: network)
+        StubProtocol.state.reset { _ in .init(503, #"{"error":{"code":"database_read_limit","message":"Quota","resetAt":"2999-01-01T00:00:00Z"}}"#) }
+        let _: EmptyResponse? = try? await blockedStore.read("/api/glance/again")
+        XCTAssertNotNil(blockedStore.quotaBlockedUntil)
+        let before = StubProtocol.state.recorded().count
+        let _: EmptyResponse? = try? await blockedStore.read("/api/glance/other")
+        await blockedStore.refreshOnForeground(at: start)
+        XCTAssertEqual(StubProtocol.state.recorded().count, before)
+        StubProtocol.state.reset { _ in .init(#"{"items":[],"next":null}"#) }
+        await blockedStore.refresh()
+        XCTAssertEqual(StubProtocol.state.recorded().count, 4)
+        XCTAssertNil(blockedStore.quotaBlockedUntil); XCTAssertTrue(blockedStore.hasLoadedWorkspace)
+        XCTAssertFalse(blockedStore.needsSignIn)
+    }
+    func testT27QuotaExpiresByTheInjectedClockAndMissingResetUsesUTCMidnight() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        var time = try XCTUnwrap(DiaryDate.parse("2026-10-25T23:30:00Z"))
+        let network = api(storage, clock: { time })
+        StubProtocol.state.reset { _ in .init(503, #"{"error":{"code":"database_write_limit","message":"Quota"}}"#) }
+        let _: EmptyResponse? = try? await network.request("/api/glance/again")
+        XCTAssertEqual(network.quotaBlockedUntil, DiaryDate.parse("2026-10-26T00:00:00Z"))
+        time = try XCTUnwrap(DiaryDate.parse("2026-10-26T00:00:01Z"))
+        StubProtocol.state.reset { _ in .init("{}") }
+        let _: EmptyResponse = try await network.request("/api/glance/again")
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1); XCTAssertNil(network.quotaBlockedUntil)
+    }
+    func testT27AnOlderSuccessfulReadCannotEraseANewerQuotaOrAnExplicitRetry() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let network = api(storage), gate = StubProtocol.ResponseGate()
+        StubProtocol.state.reset { request in
+            if request.url?.path == "/api/glance/slow" { var reply = StubProtocol.Reply("{}"); reply.gate = gate; return reply }
+            return .init(503, #"{"error":{"code":"database_read_limit","message":"Quota","resetAt":"2999-01-01T00:00:00Z"}}"#)
+        }
+        let old = Task { let _: EmptyResponse = try await network.request("/api/glance/slow") }
+        guard await waitForRegressionCondition({ StubProtocol.state.recorded().count == 1 }) else {
+            old.cancel(); gate.release(); _ = try? await old.value; XCTFail("Held read never started"); return
+        }
+        let _: EmptyResponse? = try? await network.request("/api/glance/quota")
+        XCTAssertTrue(network.isQuotaBlocked)
+        gate.release(); _ = try await old.value
+        XCTAssertTrue(network.isQuotaBlocked, "The older success must not clear the newer circuit breaker")
+        network.retryQuota(); XCTAssertFalse(network.isQuotaBlocked)
     }
 
     func testWorkspacePagesDecodeOutsideTheMainThread() async throws {
@@ -480,6 +557,32 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
             XCTAssertEqual(reset, ISO8601DateFormatter().date(from: "2026-10-24T00:00:00Z"))
         } catch { XCTFail("Unexpected error: \(error)") }
     }
+    func testT26JSONForbiddenIsAnApplicationRejectionAndKeepsTheSession() async {
+        StubProtocol.state.reset { _ in .init(403, #"{"error":{"message":"Not allowed"}}"#) }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage))
+        do {
+            let _: EmptyResponse = try await store.read("/api/workspace")
+            XCTFail("Expected application rejection")
+        } catch APIError.rejected(let status, let message) {
+            XCTAssertEqual(status, 403); XCTAssertEqual(message, "Not allowed")
+        } catch { XCTFail("Unexpected error: \(error)") }
+        XCTAssertFalse(store.needsSignIn); XCTAssertNotNil(storage.credential)
+    }
+    func testT26HTMLForbiddenRequiresSignInButNotModifiedDoesNot() async {
+        for status in [304, 403] {
+            StubProtocol.state.reset { _ in .init(status, "", contentType: "text/html") }
+            let storage = MemorySessionStorage(); storage.credential = credential
+            let store = DiaryStore(api: api(storage))
+            do {
+                let _: EmptyResponse = try await store.read("/api/workspace")
+                XCTFail("Expected typed status")
+            } catch APIError.notModified { XCTAssertEqual(status, 304) }
+            catch APIError.signIn { XCTAssertEqual(status, 403) }
+            catch { XCTFail("Unexpected error: \(error)") }
+            XCTAssertEqual(store.needsSignIn, status == 403)
+        }
+    }
 
     func testUnexpectedSuccessfulHTMLIsNotReportedAsExpiredSession() async {
         StubProtocol.state.reset { _ in .init(200, "<html>Unavailable</html>", contentType: "text/html") }
@@ -633,6 +736,23 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
         XCTAssertEqual(firstBody["operationId"] as? String, secondBody["operationId"] as? String)
         XCTAssertEqual(firstBody["watchedAt"] as? String, secondBody["watchedAt"] as? String)
         XCTAssertEqual(secondBody["rewatch"] as? Bool, true)
+    }
+    func testT35NormalWatchAndRewatchUseDifferentStablePendingOperations() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let store = DiaryStore(api: api(storage)); store.workspace = PreviewData.workspace
+        let title = try XCTUnwrap(store.workspace.titles.first { !$0.isSeries })
+        StubProtocol.state.reset { _ in .init(503, #"{"error":{"message":"Uncertain response"}}"#) }
+        _ = await store.recordViewing(title, rewatch: false, watchedAt: .now)
+        _ = await store.recordViewing(title, rewatch: true, watchedAt: .now)
+        _ = await store.recordViewing(title, rewatch: true, watchedAt: .now.addingTimeInterval(-1))
+        let writes = StubProtocol.state.recorded().filter { $0.httpMethod == "POST" }
+        XCTAssertEqual(writes.count, 3)
+        guard writes.count == 3 else { return }
+        let normal = try bodyObject(writes[0]), rewatch = try bodyObject(writes[1]), retry = try bodyObject(writes[2])
+        XCTAssertEqual(normal["rewatch"] as? Bool, false); XCTAssertEqual(rewatch["rewatch"] as? Bool, true)
+        XCTAssertNotEqual(normal["operationId"] as? String, rewatch["operationId"] as? String)
+        XCTAssertEqual(rewatch["operationId"] as? String, retry["operationId"] as? String)
+        XCTAssertEqual(rewatch["watchedAt"] as? String, retry["watchedAt"] as? String)
     }
     func testConfirmedRewatchRefreshFailureAcknowledgesSaveAndBlocksAnotherWriteUntilReconciled() async throws {
         let workspace = PreviewData.workspace

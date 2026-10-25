@@ -35,7 +35,7 @@ jobs:
         uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ios/.derived
-          key: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/App/**', 'ios/Tests/**', 'ios/UITests/**', 'ios/Packages/**/Sources/**', 'ios/Packages/**/Tests/**', 'ios/Packages/**/Package.swift', 'ios/project.yml', 'ios/scripts/ci.sh') }}
+          key: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/App/**', 'ios/Tests/**', 'ios/UITests/**', 'ios/Packages/**/Sources/**', 'ios/Packages/**/Tests/**', 'ios/Packages/**/Package.swift', 'ios/project.yml', 'ios/scripts/ci.sh', 'ios/scripts/xcodegen.sh') }}
           restore-keys: native-macos26-${{ runner.arch }}-xcode26.6-
       - name: Restore core regression build
         id: core-cache
@@ -45,12 +45,7 @@ jobs:
           key: core-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/Packages/TwilDiaryCore/Package.swift', 'ios/Packages/TwilDiaryCore/Sources/**', 'ios/Packages/TwilDiaryCore/Tests/**') }}
           restore-keys: core-macos26-${{ runner.arch }}-xcode26.6-
       - name: Generate Xcode project
-        run: |
-          xcodegen_archive="$RUNNER_TEMP/xcodegen-2.46.0.zip"
-          curl --fail --location --retry 3 --retry-all-errors --connect-timeout 20 --max-time 120 --silent --show-error https://github.com/yonaskolb/XcodeGen/releases/download/2.46.0/xcodegen.zip --output "$xcodegen_archive"
-          printf '%s  %s\n' 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806 "$xcodegen_archive" | shasum -a 256 --check -
-          unzip -q "$xcodegen_archive" -d "$RUNNER_TEMP/twildiary-tools"
-          "$RUNNER_TEMP/twildiary-tools/xcodegen/bin/xcodegen" generate --spec ios/project.yml
+        run: bash ios/scripts/xcodegen.sh
       - name: Test core calculations and catalog contracts
         timeout-minutes: 20
         run: swift test --package-path ios/Packages/TwilDiaryCore 2>&1 | tee ios/.artifacts/logs/core-tests.log
@@ -116,7 +111,7 @@ jobs:
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ios/.derived
-          key: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/App/**', 'ios/Tests/**', 'ios/UITests/**', 'ios/Packages/**/Sources/**', 'ios/Packages/**/Tests/**', 'ios/Packages/**/Package.swift', 'ios/project.yml', 'ios/scripts/ci.sh') }}
+          key: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/App/**', 'ios/Tests/**', 'ios/UITests/**', 'ios/Packages/**/Sources/**', 'ios/Packages/**/Tests/**', 'ios/Packages/**/Package.swift', 'ios/project.yml', 'ios/scripts/ci.sh', 'ios/scripts/xcodegen.sh') }}
       - name: Export screenshots
         if: always()
         run: bash ios/scripts/ci.sh screenshots

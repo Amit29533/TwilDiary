@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Security
 import TwilDiaryCore
 
@@ -53,10 +54,11 @@ struct AccessCredential: Codable {
 }
 
 enum APIError: LocalizedError {
-    case signIn, message(String), rejected(Int, String), databaseLimit(Date?)
+    case signIn, notModified, message(String), rejected(Int, String), databaseLimit(Date?)
     var errorDescription: String? {
         switch self {
         case .signIn: "Your private session expired. Sign in again to continue."
+        case .notModified: "Your diary has not changed."
         case .message(let text): text
         case .rejected(_, let text): text
         case .databaseLimit(let reset):
@@ -79,14 +81,20 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
     }
 }
 
-@MainActor final class DiaryAPI {
+@MainActor @Observable final class DiaryAPI {
     var credential: AccessCredential?
     private let session: URLSession
     private let boundedReadSession: URLSession
     private let storage: any SessionStoring
-    private var sessionGeneration = UUID()
-    init(configuration: URLSessionConfiguration = .ephemeral, storage: any SessionStoring = KeychainSessionStorage()) {
+    private let clock: @MainActor () -> Date
+    @ObservationIgnored private var quotaGeneration = UUID()
+    private(set) var quotaBlockedUntil: Date?
+    var isQuotaBlocked: Bool { quotaBlockedUntil.map { $0 > clock() } ?? false }
+    func retryQuota() { quotaGeneration = UUID(); quotaBlockedUntil = nil }
+    @ObservationIgnored private var sessionGeneration = UUID()
+    init(configuration: URLSessionConfiguration = .ephemeral, storage: any SessionStoring = KeychainSessionStorage(), clock: @escaping @MainActor () -> Date = { .now }) {
         self.storage = storage
+        self.clock = clock
         let config = configuration
         config.httpCookieAcceptPolicy = .never; config.httpShouldSetCookies = false
         config.urlCache = nil; config.requestCachePolicy = .reloadIgnoringLocalCacheData
@@ -107,6 +115,7 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
             guard generation == sessionGeneration else { throw CancellationError() }
             guard session.authenticated else { throw APIError.signIn }
             try storage.save(value)
+            retryQuota()
         } catch {
             if generation == sessionGeneration { credential = previous }
             throw error
@@ -114,6 +123,7 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
     }
     func signOut() {
         sessionGeneration = UUID()
+        retryQuota()
         storage.delete()
         credential = nil
     }
@@ -123,9 +133,13 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
     }
     private func responseData(_ path: String, method: String = "GET", body: [String: Any]? = nil, timeout: TimeInterval? = nil) async throws -> Data {
         let generation = sessionGeneration
+        let quotaTicket = quotaGeneration
         guard path.hasPrefix("/api/"), let url = URL(string: path, relativeTo: AppConfiguration.backend)?.absoluteURL,
               BackendEndpoint.isPrivateAPI(url) else { throw APIError.message("Invalid diary request.") }
         guard let credential, credential.isValid else { throw APIError.signIn }
+        // Session validation is independent of D1. Preserve explicit writes and
+        // cached reads, but stop new automatic GET traffic during a known quota.
+        if method == "GET", path != "/api/session", isQuotaBlocked { throw APIError.databaseLimit(quotaBlockedUntil) }
         var request = URLRequest(url: url)
         if let timeout { request.timeoutInterval = timeout }
         request.httpMethod = method
@@ -136,16 +150,22 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             if let body { request.httpBody = try JSONSerialization.data(withJSONObject: body) }
         }
-        let (data, response) = try await (timeout == nil ? session : boundedReadSession).data(for: request)
+        let (data, response) = try await send(request, session: timeout == nil ? session : boundedReadSession, generation: generation, quotaTicket: quotaTicket)
         guard generation == sessionGeneration else { throw CancellationError() }
         guard let http = response as? HTTPURLResponse else { throw APIError.message("No response from the diary.") }
-        guard http.statusCode != 401 && http.statusCode != 403 && !(300..<400).contains(http.statusCode) else { throw APIError.signIn }
         let isJSON = http.value(forHTTPHeaderField: "Content-Type")?.lowercased().contains("application/json") == true
+        if http.statusCode == 304 { throw APIError.notModified }
+        if http.statusCode == 401 || (300..<400).contains(http.statusCode) || (http.statusCode == 403 && !isJSON) { throw APIError.signIn }
         if !(200..<300).contains(http.statusCode) {
             let envelope = isJSON ? (try? JSONDecoder().decode(ErrorEnvelope.self, from: data)) : nil
             if ["database_read_limit", "database_write_limit"].contains(envelope?.error.code ?? "") {
                 let reset = envelope?.error.resetAt.flatMap { ISO8601DateFormatter().date(from: $0) ?? ISO8601DateFormatter.fractional.date(from: $0) }
-                throw APIError.databaseLimit(reset)
+                var utc = Calendar(identifier: .gregorian); utc.timeZone = TimeZone(secondsFromGMT: 0)!
+                let fallback = utc.nextDate(after: clock(), matching: DateComponents(hour: 0, minute: 0, second: 0), matchingPolicy: .nextTime) ?? clock().addingTimeInterval(86_400)
+                guard quotaTicket == quotaGeneration else { throw CancellationError() }
+                quotaGeneration = UUID()
+                quotaBlockedUntil = reset ?? fallback
+                throw APIError.databaseLimit(quotaBlockedUntil)
             }
             let fallback = method == "GET"
                 ? "The diary could not be loaded. Please try refreshing."
@@ -153,7 +173,33 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
             throw APIError.rejected(http.statusCode, envelope?.error.message ?? fallback)
         }
         guard isJSON else { throw APIError.message("The diary returned an unexpected response. Please try again.") }
+        if quotaTicket == quotaGeneration, path.hasPrefix("/api/workspace") || path.hasPrefix("/api/glance/") { quotaBlockedUntil = nil }
         return data
+    }
+    private func send(_ request: URLRequest, session: URLSession, generation: UUID, quotaTicket: UUID) async throws -> (Data, URLResponse) {
+        for attempt in 0...1 {
+            try Task.checkCancellation()
+            guard generation == sessionGeneration, quotaTicket == quotaGeneration else { throw CancellationError() }
+            do { return try await session.data(for: request) }
+            catch let error as URLError {
+                if error.code == .cancelled { throw CancellationError() }
+                // A dropped GET is safe to repeat once. Writes retain their
+                // receipt/operation identity and are never retried here. A full
+                // timeout is surfaced immediately rather than doubled to60s.
+                if request.httpMethod == "GET", attempt == 0, error.code == .networkConnectionLost {
+                    try await Task.sleep(for: .milliseconds(350)); continue
+                }
+                let message: String
+                switch error.code {
+                case .notConnectedToInternet, .dataNotAllowed: message = "You’re offline. Your saved diary is available; changes need a connection."
+                case .timedOut: message = "The diary took too long to answer. Try again."
+                case .networkConnectionLost: message = "The connection dropped. Refresh before retrying; your saved diary is unchanged."
+                default: message = "The diary could not be reached. Check your connection and try again."
+                }
+                throw APIError.message(message)
+            }
+        }
+        throw APIError.message("The diary could not be reached. Please try again.")
     }
     func allPages<T: Decodable & Sendable>(_ section: String, as: T.Type) async throws -> [T] {
         let generation = sessionGeneration

@@ -75,6 +75,7 @@ struct SettingsView: View {
             .fileExporter(isPresented: $showExport, document: exportDocument, contentType: .json, defaultFilename: "TwilDiary-\(DiaryDate.day(store.now))") { result in if case .failure(let error) = result { store.error = error.localizedDescription } }
     }
     private var storageDetail: String {
+        if let reset = store.quotaBlockedUntil { return "Database allowance resumes " + reset.formatted(date: .abbreviated, time: .shortened) + ". Tap to check again." }
         let detail = store.showingCachedSnapshot ? "Using the saved copy on this device. Tap to refresh." : "Your diary is saved to your workspace. Tap to refresh."
         guard let date = store.lastRefreshedAt else { return detail }
         return detail + " Last updated " + date.formatted(date: .abbreviated, time: .shortened) + "."

@@ -1,6 +1,14 @@
 import SwiftUI
 import WebKit
 
+enum SignInNavigationPolicy {
+    static func allows(_ url: URL?) -> Bool {
+        guard let url else { return false }
+        if url.scheme?.lowercased() == "https" { return url.host?.isEmpty == false && url.user == nil && url.password == nil }
+        return url.absoluteString == "about:blank" || url.absoluteString == "about:srcdoc"
+    }
+}
+
 /// A browser is used only for the existing Cloudflare login, never app screens.
 @MainActor struct AccessSignIn: View {
     let completion: @MainActor (AccessCredential) -> Void
@@ -34,9 +42,9 @@ import WebKit
     }
     func updateUIView(_ uiView: WKWebView, context: Context) {}
     static func dismantleUIView(_ web: WKWebView, coordinator: Coordinator) {
-        coordinator.stop(); web.navigationDelegate = nil; web.stopLoading()
+        coordinator.stop(); web.navigationDelegate = nil; web.uiDelegate = nil; web.stopLoading()
     }
-    @MainActor final class Coordinator: NSObject, WKNavigationDelegate, WKHTTPCookieStoreObserver {
+    @MainActor final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, WKHTTPCookieStoreObserver {
         private let state: AccessSignInState
         private let ticket: UUID
         private let completion: @MainActor (AccessCredential) -> Void
@@ -49,7 +57,7 @@ import WebKit
             self.state = state; self.ticket = state.begin(); self.completion = completion
         }
         func attach(_ web: WKWebView) {
-            self.web = web; web.navigationDelegate = self
+            self.web = web; web.navigationDelegate = self; web.uiDelegate = self
             cookieStore = web.configuration.websiteDataStore.httpCookieStore
             cookieStore?.add(self)
         }
@@ -58,6 +66,13 @@ import WebKit
             cookieStore?.remove(self); cookieStore = nil; web = nil
         }
         func cookiesDidChange(in cookieStore: WKHTTPCookieStore) { inspectCookies() }
+        func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+            SignInNavigationPolicy.allows(navigationAction.request.url) ? .allow : .cancel
+        }
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+            if navigationAction.targetFrame == nil, SignInNavigationPolicy.allows(navigationAction.request.url) { webView.load(navigationAction.request) }
+            return nil
+        }
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
             checking?.cancel(); checking = nil; state.started(ticket)
         }

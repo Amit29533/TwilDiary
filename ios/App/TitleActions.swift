@@ -66,7 +66,7 @@ extension DiaryStore {
                     throw APIError.message("Unreleased episodes cannot be marked watched")
                 }
             }
-            let key = "viewing:" + title.id + ":" + (episode?.id ?? "movie")
+            let key = "viewing:" + title.id + ":" + (episode?.id ?? "movie") + (rewatch ? ":rewatch" : ":watch")
             let operation = self.pendingViewing(key: key, episode: episode?.id, date: watchedAt, rewatch: rewatch)
             let receipt: EpisodeWatchReceipt
             do { receipt = try await self.read("/api/titles/\(title.id)/watches", method: "POST", body: operation) }

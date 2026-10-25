@@ -31,8 +31,7 @@ workflows:
           export GITHUB_ENV="$CM_ENV"
           bash ios/scripts/ci.sh inventory
           export SIMULATOR_ID="$(python3 -c 'import json; print(json.load(open("ios/.artifacts/simulator.json"))["udid"])')"
-          if ! command -v xcodegen >/dev/null 2>&1; then brew install xcodegen; fi
-          xcodegen generate --spec ios/project.yml
+          bash ios/scripts/xcodegen.sh
           swift test --package-path ios/Packages/TwilDiaryCore 2>&1 | tee ios/.artifacts/logs/core-tests.log
           bash ios/scripts/ci.sh build-simulator
           bash ios/scripts/ci.sh boot

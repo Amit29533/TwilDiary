@@ -3,6 +3,15 @@ import SwiftUI
 @testable import TwilDiary
 
 @MainActor final class NativeNavigationAndSynopsisTests: XCTestCase {
+    func testT30LoginNavigationAllowsHTTPSProvidersAndOnlyBlankInternalDocuments() {
+        for address in ["https://example.cloudflareaccess.com/login", "https://accounts.google.com/", "about:blank", "about:srcdoc"] {
+            XCTAssertTrue(SignInNavigationPolicy.allows(URL(string: address)), address)
+        }
+        for address in ["http://example.com", "tel:123", "file:///etc/hosts", "data:text/html,test", "javascript:alert(1)", "about:config", "https://user:password@example.com/"] {
+            XCTAssertFalse(SignInNavigationPolicy.allows(URL(string: address)), address)
+        }
+        XCTAssertFalse(SignInNavigationPolicy.allows(nil))
+    }
     func testRootTabSwipeUsesTheRequestedDirectionAndStopsAtEitherEnd() {
         let right = CGSize(width: 150, height: 10), left = CGSize(width: -150, height: 10)
         for (index, tab) in AppTab.allCases.enumerated() {

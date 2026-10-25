@@ -334,6 +334,13 @@ struct TitleDetailView: View {
             }
             if expandedEpisodes.contains(episode.id) { Text(episodeSummary(episode)).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("episode-summary-\(episode.number)") }
         }.padding(.vertical, 8).frame(minHeight: 72).background(next ? theme.accent.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 18))
+            .contextMenu {
+                if isWatched {
+                    Button("Log rewatch", systemImage: "arrow.counterclockwise") {
+                        Task { await store.recordViewing(title, episode: episode, rewatch: true, watchedAt: watchInstant); await loadCard(title) }
+                    }.disabled(store.writesBlocked || !hasAired(episode))
+                }
+            }
     }
     @ViewBuilder private func episodeArtwork(_ episode: Episode) -> some View {
         if isHidden(episode) { Color(webHex: "#211d2d").overlay { DiaryIcon(name: "eye-off", size: 23).foregroundStyle(.secondary) } }

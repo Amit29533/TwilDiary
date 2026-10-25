@@ -162,6 +162,7 @@ import TwilDiaryCore
     }
     func refresh() async {
         guard !loading, !needsSignIn else { return }
+        api.retryQuota()
         #if DEBUG
         if isPreview && fixture == nil { return }
         #else
@@ -176,12 +177,12 @@ import TwilDiaryCore
     /// No background polling on the phone. Coalesce rapid scene changes and
     /// wait for in-flight write receipts before reading the scheduled D1 result.
     func refreshOnForeground(at date: Date = .now) async {
-        guard !needsSignIn, lastForegroundRead.map({ date.timeIntervalSince($0) >= 10 }) ?? true else { return }
+        guard !needsSignIn, !api.isQuotaBlocked, lastForegroundRead.map({ date.timeIntervalSince($0) >= 10 }) ?? true else { return }
         let session = sessionGeneration
         while busy && session == sessionGeneration && !Task.isCancelled {
             await withCheckedContinuation { mutationWaiters.append($0) }
         }
-        guard session == sessionGeneration, !Task.isCancelled,
+        guard session == sessionGeneration, !Task.isCancelled, !api.isQuotaBlocked,
               lastForegroundRead.map({ date.timeIntervalSince($0) >= 10 }) ?? true else { return }
         lastForegroundRead = date
         defer { if Task.isCancelled, session == sessionGeneration, lastForegroundRead == date { lastForegroundRead = nil } }
@@ -273,6 +274,7 @@ import TwilDiaryCore
     func libraryProgress(_ title: MediaTitle) -> Double { progressIndex[title.id] ?? 0 }
     func hasPresentLocation(_ titleID: String) -> Bool { presentTitleIDs.contains(titleID) }
     func browserCredential() -> AccessCredential? { api.credential }
+    var quotaBlockedUntil: Date? { api.isQuotaBlocked ? api.quotaBlockedUntil : nil }
     func read<T: Decodable>(_ path: String, method: String = "GET", body: [String: Any]? = nil, timeout: TimeInterval? = nil) async throws -> T {
         #if DEBUG
         if let fixture {
