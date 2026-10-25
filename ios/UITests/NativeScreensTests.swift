@@ -3,7 +3,7 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false, slowWrites: Bool = false, slowMetadata: Bool = false, communityUnavailable: Bool = false, cachedSnapshot: Bool = false, longEpisodes: Bool = false) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false, slowWrites: Bool = false, slowMetadata: Bool = false, communityUnavailable: Bool = false, cachedSnapshot: Bool = false, longEpisodes: Bool = false, automaticCarousel: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
         if scanner { app.launchArguments.append("--ui-scanner") }
@@ -17,6 +17,7 @@ import UIKit
         if communityUnavailable { app.launchArguments.append("--ui-community-unavailable") }
         if cachedSnapshot { app.launchArguments.append("--ui-cached-snapshot") }
         if longEpisodes { app.launchArguments.append("--ui-long-episodes") }
+        if automaticCarousel { app.launchArguments.append("--ui-automatic-carousel") }
         if let traktScenario { app.launchArguments.append("--ui-trakt=" + traktScenario) }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
@@ -39,7 +40,7 @@ import UIKit
         capture("Cache information contained in Settings")
     }
     func testContinueCarouselControlsPauseAdvanceReturnAndRestoreAcrossTabs() {
-        let app = launch()
+        let app = launch(automaticCarousel: true)
         app.buttons["tab-home"].tap()
         let carousel = app.descendants(matching: .any).matching(identifier: "continue-carousel").firstMatch
         let controls = app.buttons["continue-controls"]
@@ -47,8 +48,7 @@ import UIKit
         controls.tap()
         let pause = app.buttons["continue-pause"]
         XCTAssertTrue(pause.waitForExistence(timeout: 5))
-        if pause.label.hasPrefix("Pause") { pause.tap() }
-        else { app.buttons["continue-next"].tap() }
+        XCTAssertTrue(pause.label.hasPrefix("Pause")); pause.tap()
         guard let original = carousel.value as? String, !original.isEmpty else { XCTFail("Carousel has no selected title"); return }
         controls.tap(); app.buttons["continue-next"].tap()
         let advanced = NSPredicate(format: "value != nil AND value != %@ AND value != ''", original)

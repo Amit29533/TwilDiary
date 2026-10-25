@@ -103,6 +103,8 @@ cover/watch actions and root gesture exclusion. It adds visibility/scene/tab/
 path/write/drag/motion/VoiceOver/open-controls guards, interaction cooldown,
 scene identity/pause restoration and an ID/session-keyed cancelled task.
 
+Self-review caught fixture scene-state leaking selected cards across separate UI cases. DEBUG preview now seeds a deterministic paused first card once per view, preserving same-case tab returns; only the dedicated --ui-automatic-carousel case seeds real default rotation and asserts Pause is initially available, actual advance, and six seconds of no movement after pause. Release behavior/preferences are untouched. This prevents unrelated slow UI assertions/screenshots from racing a5second timer without removing automatic-behavior coverage.
+
 A small rounded top-corner popover exposes previous/next/pause rather than the
 web's hover/focus-only controls. This deliberate native adaptation is documented
 in IOS-PARITY.md. Two policy tests and one actual automatic/pause/tab-return

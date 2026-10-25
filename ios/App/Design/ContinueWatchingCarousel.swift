@@ -29,6 +29,7 @@ struct ContinueWatchingCarousel: View {
     @State private var visible = false
     @State private var scrollIdle = true
     @State private var showControls = false
+    @State private var initialized = false
     @State private var lastInteraction = Date.distantPast
     private struct RotationKey: Equatable { let enabled: Bool; let ids: [String]; let session: UUID }
     private var ids: [String] { titles.map(\.id) }
@@ -71,7 +72,20 @@ struct ContinueWatchingCarousel: View {
             .accessibilityLabel("Continue watching")
             .accessibilityValue(titles.first { $0.id == selection }?.name ?? "")
             .onScrollVisibilityChange(threshold: 0.5) { visible = $0 }
-            .onAppear { reconcile() }
+            .onAppear {
+                if !initialized {
+                    initialized = true
+                    #if DEBUG
+                    // A deterministic paused preference keeps unrelated captures
+                    // stable. The dedicated carousel case exercises real rotation.
+                    if store.isPreview {
+                        selection = ids.first ?? ""
+                        paused = !ProcessInfo.processInfo.arguments.contains("--ui-automatic-carousel")
+                    }
+                    #endif
+                }
+                reconcile()
+            }
             .onChange(of: ids) { _, _ in reconcile() }
             .onChange(of: selection) { _, value in
                 if value != automaticSelection { lastInteraction = .now }
