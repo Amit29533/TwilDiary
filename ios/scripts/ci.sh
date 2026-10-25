@@ -71,6 +71,17 @@ PY
       -only-testing:TwilDiaryTests -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/UnitTests.xcresult" \
       2>&1 | tee "$ARTIFACTS/logs/unit-tests.log"
     ;;
+  test-repairs)
+    # Reproduce both native40 failures twice before spending time on the full
+    # suite. These are repetitions, never retry-until-pass; any failure stops it.
+    xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
+      -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 240 \
+      -test-iterations 2 \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testCommunityInformationSheetUsesOverallStatsAndReturnsToTheTitle \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testIncomingTraktWatchesCanBeEnabledDisabledAndReviewedWithoutAProgressOverlay \
+      -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/RepairGate.xcresult" \
+      2>&1 | tee "$ARTIFACTS/logs/repair-tests.log"
+    ;;
   test-progress)
     xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 300 -maximum-test-execution-time-allowance 360 \
@@ -146,6 +157,9 @@ PY
     if [ -f "$ARTIFACTS/ProgressGate.xcresult/Info.plist" ]; then
       xcrun xcresulttool export attachments --path "$ARTIFACTS/ProgressGate.xcresult" --output-path "$ARTIFACTS/screenshots/ProgressGate"
     fi
+    if [ -f "$ARTIFACTS/RepairGate.xcresult/Info.plist" ]; then
+      xcrun xcresulttool export attachments --path "$ARTIFACTS/RepairGate.xcresult" --output-path "$ARTIFACTS/screenshots/RepairGate"
+    fi
     for result in "$ARTIFACTS"/Layout-*.xcresult; do
       if [ -f "$result/Info.plist" ]; then
         folder_name=$(basename "$result" .xcresult)
@@ -168,6 +182,9 @@ if progress_log.exists() and '** TEST EXECUTE SUCCEEDED **' not in progress_log.
 unit_log = folder / 'logs' / 'unit-tests.log'
 if not unit_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in unit_log.read_text(errors='replace'):
     errors.append('Native unit execution did not finish successfully; inspect UnitTests.xcresult.')
+repair_log = folder / 'logs' / 'repair-tests.log'
+if not repair_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in repair_log.read_text(errors='replace'):
+    errors.append('Repeated community/incoming repair gate incomplete/failed; inspect RepairGate.xcresult.')
 test_log = folder / 'logs' / 'tests.log'
 if not test_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in test_log.read_text(errors='replace'):
     errors.append('tests.log: Unit/UI execution did not finish successfully; inspect the job timeout and xcresult before accepting this build.')

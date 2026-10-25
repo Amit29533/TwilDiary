@@ -70,6 +70,10 @@ jobs:
         id: unit
         timeout-minutes: 20
         run: bash ios/scripts/ci.sh test-unit
+      - name: Reproduce repaired community dismissal and incoming toggle twice
+        id: repairs
+        timeout-minutes: 15
+        run: bash ios/scripts/ci.sh test-repairs
       - name: Verify progress, navigation and recent device regressions before Release
         id: progress
         timeout-minutes: 30
@@ -100,11 +104,11 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Run complete primary iPhone UI regression
-        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.unit.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.unit.outcome == 'success' && steps.repairs.outcome == 'success' }}
         timeout-minutes: 100
         run: bash ios/scripts/ci.sh test
       - name: Run compact and large iPhone layout regression
-        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.unit.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.unit.outcome == 'success' && steps.repairs.outcome == 'success' }}
         timeout-minutes: 40
         run: bash ios/scripts/ci.sh test-layouts
       - name: Save compiled native targets

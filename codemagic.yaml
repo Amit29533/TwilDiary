@@ -37,6 +37,7 @@ workflows:
           bash ios/scripts/ci.sh build-simulator
           bash ios/scripts/ci.sh boot
           bash ios/scripts/ci.sh test-unit
+          bash ios/scripts/ci.sh test-repairs
           progress_status=0
           evidence_status=0
           device_status=0

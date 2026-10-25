@@ -79,7 +79,7 @@ import TwilDiaryCore
             if let error = incoming.error { Text(error).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("trakt-incoming-error") }
             Button("Refresh status", systemImage: "arrow.clockwise") { Task { await incoming.refresh() } }
                 .font(.subheadline).buttonStyle(.bordered).disabled(incoming.busy).accessibilityIdentifier("trakt-incoming-refresh")
-        }.diaryPanel().accessibilityIdentifier("trakt-incoming-panel")
+        }.diaryPanel().accessibilityElement(children: .contain).accessibilityIdentifier("trakt-incoming-panel")
     }
     private var connection: some View {
         VStack(alignment: .leading, spacing: 16) {

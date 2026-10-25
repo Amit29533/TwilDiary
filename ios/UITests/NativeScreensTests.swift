@@ -3,6 +3,16 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
+    override func tearDownWithError() throws {
+        if (testRun?.failureCount ?? 0) > 0 {
+            // Every app launched by this class is an isolated DEBUG fixture.
+            // Retain the actual hierarchy so the next repair has evidence.
+            let hierarchy = XCUIApplication().debugDescription
+            let attachment = XCTAttachment(string: hierarchy)
+            attachment.name = "Failed fixture accessibility hierarchy"; attachment.lifetime = .keepAlways; add(attachment)
+            print("Failed fixture accessibility hierarchy:\n" + hierarchy)
+        }
+    }
     private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false, slowWrites: Bool = false, slowMetadata: Bool = false, communityUnavailable: Bool = false, cachedSnapshot: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
@@ -80,7 +90,12 @@ import UIKit
         XCTAssertTrue(negative.exists); XCTAssertEqual(negative.label, "Negative: Repetitive storyline")
         XCTAssertFalse(app.buttons["title-personal-rating"].isHittable)
         capture("Trakt community information fixture")
-        for _ in 0..<3 { if !app.navigationBars["Information"].exists { break }; app.swipeDown() }
+        let sheetBar = app.navigationBars["Information"]
+        XCTAssertTrue(sheetBar.isHittable)
+        sheetBar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.96)), withVelocity: .slow, thenHoldForDuration: 0.1)
+        let dismissed = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: sheetBar)
+        wait(for: [dismissed], timeout: 5)
         XCTAssertTrue(information.waitForExistence(timeout: 5)); XCTAssertTrue(information.isHittable)
         XCTAssertEqual(app.sliders["episode-progress"].value as? String, "8 of 16 episodes watched")
         app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["title-quiet-orbit"].tap()
@@ -450,8 +465,9 @@ import UIKit
         let app = launch(); app.buttons["tab-more"].tap()
         app.buttons["settings-trakt-summary"].tap()
         let toggle = app.switches["trakt-incoming-toggle"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
-        for _ in 0..<5 { if toggle.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(app.navigationBars["Trakt"].waitForExistence(timeout: 10))
+        for _ in 0..<5 { if toggle.exists && toggle.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         XCTAssertTrue(toggle.isHittable)
         XCTAssertEqual(toggle.value as? String, "0")
         toggle.tap()
