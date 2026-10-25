@@ -144,3 +144,10 @@ The ephemeral WebKit browser now reports loading/process failures inline and off
 Eight native lifecycle/policy tests are prepared; actual identity-provider login and existing-device Keychain migration remain device checks. APIs checked against [Apple cookie observation](https://developer.apple.com/documentation/webkit/wkhttpcookiestoreobserver) and [Cloudflare authorization-cookie documentation](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/). Provider/team global cookies are distinct from the protected application's cookie and are not accepted here.
 
 Both native CI pipelines retain early-gate failures while collecting complete primary/all-phone diagnostics after successful native unit tests. Device packaging/passed early evidence still require the early gate to pass; final summary rejects any missing/failed gate. This expands failure evidence, never release acceptance.
+
+
+## Incoming Trakt watches — prepared native40
+
+The incoming scheduler remains a client of the same D1/OAuth backend. See [backend design and Free-plan bounds](../../../docs/TRAKT-INCOMING-SYNC.md). Native IncomingTraktController is independent of the reviewed two-way controller: it uses the owner API, enables/disables only after acknowledgement, serializes setting changes, retains honest unavailable/cooldown/paused/review states and never embeds credentials. A DEBUG-only service exercises the setting without touching Trakt/D1. No spinner timer or global status overlay.
+
+Root scene activation calls refreshOnForeground, coalescing ten-second scene churn and waiting for pending write receipts before starting the existing complete workspace load. Cancelled foreground waits do not consume the next resume. Account/session replacement clears the debounce and fences pending work. There is no phone background timer. Five controller and three foreground tests plus one UI toggle scenario are prepared for macOS CI; syntax checks alone are not acceptance.

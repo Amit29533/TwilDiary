@@ -60,7 +60,8 @@ export async function incomingStatus(db: Db) {
       importedAt: null,
       error: null,
       pending: 0,
-      review: 0
+      review: 0,
+      paused: false
     };
   const counts = await db.$client
     .prepare(
@@ -69,13 +70,21 @@ export async function incomingStatus(db: Db) {
     )
     .bind(current.account_id)
     .all<{ state: string; total: number }>();
+  const manual = await db.$client
+    .prepare(
+      `SELECT 1 FROM trakt_sync_runs WHERE account_id=?
+    AND state IN ('building','review','applying') LIMIT 1`
+    )
+    .bind(current.account_id)
+    .first();
   return {
     enabled: !!current.enabled,
     checkedAt: current.checked_at,
     importedAt: current.imported_at,
     error: current.error,
     pending: counts.results.find((x) => x.state === 'pending')?.total ?? 0,
-    review: counts.results.find((x) => x.state === 'review')?.total ?? 0
+    review: counts.results.find((x) => x.state === 'review')?.total ?? 0,
+    paused: !!manual
   };
 }
 

@@ -95,6 +95,46 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         return DiaryAPI(configuration: configuration, storage: storage)
     }
 
+    func testForegroundRefreshReadsTheLatestDiaryAndCoalescesRapidSceneChanges() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { _ in .init(#"{"items":[],"next":null}"#) }
+        let store = DiaryStore(api: api(storage)), start = Date.now
+        store.workspace = PreviewData.workspace; store.hasLoadedWorkspace = true
+        await store.refreshOnForeground(at: start)
+        XCTAssertTrue(store.workspace.titles.isEmpty); XCTAssertEqual(StubProtocol.state.recorded().count, 4)
+        await store.refreshOnForeground(at: start.addingTimeInterval(1))
+        XCTAssertEqual(StubProtocol.state.recorded().count, 4)
+        await store.refreshOnForeground(at: start.addingTimeInterval(11))
+        XCTAssertEqual(StubProtocol.state.recorded().count, 8)
+    }
+    func testForegroundReadWaitsForAnInFlightWriteBeforeLoadingTheServerSnapshot() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { _ in .init(#"{"items":[],"next":null}"#) }
+        let store = DiaryStore(api: api(storage)); store.busy = true
+        var started = false
+        let pending = Task { started = true; await store.refreshOnForeground() }
+        guard await waitForRegressionCondition({ started }) else {
+            pending.cancel(); store.busy = false; await pending.value; XCTFail("Foreground task did not start"); return
+        }
+        XCTAssertTrue(StubProtocol.state.recorded().isEmpty)
+        store.busy = false; await pending.value
+        XCTAssertEqual(StubProtocol.state.recorded().count, 4)
+    }
+    func testCancelledForegroundWaitDoesNotConsumeTheNextResumeRefresh() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        StubProtocol.state.reset { _ in .init(#"{"items":[],"next":null}"#) }
+        let store = DiaryStore(api: api(storage)); store.busy = true
+        var started = false
+        let pending = Task { started = true; await store.refreshOnForeground() }
+        guard await waitForRegressionCondition({ started }) else {
+            pending.cancel(); store.busy = false; await pending.value; XCTFail("Foreground task did not start"); return
+        }
+        pending.cancel(); store.busy = false; await pending.value
+        XCTAssertTrue(StubProtocol.state.recorded().isEmpty)
+        await store.refreshOnForeground()
+        XCTAssertEqual(StubProtocol.state.recorded().count, 4)
+    }
+
     func testCatalogSeasonUsesReadOnlyEndpointAndExplicitSpoilerChoice() async throws {
         let storage = MemorySessionStorage(); storage.credential = credential
         StubProtocol.state.reset { _ in .init(#"{"items":[{"number":1,"name":"","overview":"","airedOn":null,"stillPath":null,"communityScore":8.1}]}"#) }

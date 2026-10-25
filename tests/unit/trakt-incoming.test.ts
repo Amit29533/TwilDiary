@@ -261,6 +261,7 @@ test('daily import budget and an active manual review stop all provider reads', 
     VALUES('manual','fixture-account','review','ready','2026-10-25','2026-10-25','round')`);
   assert.equal((await f.tick()).state, 'idle');
   assert.equal(f.requests.length, 0);
+  assert.equal((await incomingStatus(f.db)).paused, true);
 });
 
 test('new watches interrupt an older scan and take precedence over its backlog', async (t) => {

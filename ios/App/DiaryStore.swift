@@ -61,6 +61,7 @@ import TwilDiaryCore
     private var sessionGeneration = UUID()
     var sessionRevision: UUID { sessionGeneration }
     private var snapshotGeneration = UUID()
+    private var lastForegroundRead: Date?
     private var pendingWatches: [String: [String: Any]] = [:]
     private var pendingProgress: [String: [String: Any]] = [:]
     private var pendingRemovals: [String: WatchCard.Previous] = [:]
@@ -112,6 +113,7 @@ import TwilDiaryCore
     func connect(_ credential: AccessCredential) async {
         let previousScope = api.credential?.cacheScope
         let generation = UUID(); sessionGeneration = generation; snapshotGeneration = UUID()
+        lastForegroundRead = nil
         invalidateDiscovery()
         communityCache.reset()
         do {
@@ -138,6 +140,7 @@ import TwilDiaryCore
         failNextFixtureRefresh = false
         #endif
         sessionGeneration = UUID(); snapshotGeneration = UUID()
+        lastForegroundRead = nil
         invalidateDiscovery()
         communityCache.reset()
         needsMutationRefresh = false
@@ -161,6 +164,20 @@ import TwilDiaryCore
         do { try await reload(); if session == sessionGeneration { error = nil } }
         catch is CancellationError { }
         catch { if session == sessionGeneration { fail(error) } }
+    }
+    /// No background polling on the phone. Coalesce rapid scene changes and
+    /// wait for in-flight write receipts before reading the scheduled D1 result.
+    func refreshOnForeground(at date: Date = .now) async {
+        guard !needsSignIn, lastForegroundRead.map({ date.timeIntervalSince($0) >= 10 }) ?? true else { return }
+        let session = sessionGeneration
+        while busy && session == sessionGeneration && !Task.isCancelled {
+            await withCheckedContinuation { mutationWaiters.append($0) }
+        }
+        guard session == sessionGeneration, !Task.isCancelled,
+              lastForegroundRead.map({ date.timeIntervalSince($0) >= 10 }) ?? true else { return }
+        lastForegroundRead = date
+        defer { if Task.isCancelled, session == sessionGeneration, lastForegroundRead == date { lastForegroundRead = nil } }
+        await refresh()
     }
     func reload() async throws {
         #if DEBUG

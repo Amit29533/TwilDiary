@@ -443,6 +443,26 @@ import UIKit
         XCTAssertFalse(app.buttons["1Y"].isSelected)
         capture("Stats from Home")
     }
+    func testIncomingTraktWatchesCanBeEnabledDisabledAndReviewedWithoutAProgressOverlay() {
+        let app = launch(); app.buttons["tab-more"].tap()
+        app.buttons["settings-trakt-summary"].tap()
+        let toggle = app.switches["trakt-incoming-toggle"]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 10))
+        for _ in 0..<5 { if toggle.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(toggle.isHittable)
+        XCTAssertEqual(toggle.value as? String, "0")
+        toggle.tap()
+        let enabled = expectation(for: NSPredicate(format: "value == '1'"), evaluatedWith: toggle)
+        wait(for: [enabled], timeout: 5)
+        XCTAssertTrue(app.staticTexts["Waiting for the first scheduled check."].exists)
+        XCTAssertFalse(app.staticTexts["Saved diary"].exists)
+        capture("Trakt incoming watches enabled awaiting scheduler")
+        toggle.tap()
+        let disabled = expectation(for: NSPredicate(format: "value == '0'"), evaluatedWith: toggle)
+        wait(for: [disabled], timeout: 5)
+        XCTAssertFalse(app.staticTexts["Waiting for the first scheduled check."].exists)
+        capture("Trakt incoming watches disabled")
+    }
     func testTraktReviewAppliesSafeChangesThenRequiresAnExplicitConflictChoice() {
         let app = launch(); app.buttons["tab-more"].tap()
         XCTAssertTrue(app.buttons["settings-trakt-summary"].waitForExistence(timeout: 5))

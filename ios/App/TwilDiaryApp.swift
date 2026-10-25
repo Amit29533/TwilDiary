@@ -91,6 +91,7 @@ struct SavedTitleRoute: Hashable {
 struct RootView: View {
     @Environment(DiaryStore.self) private var store
     @Environment(AppRouter.self) private var router
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showSignIn = false
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     var body: some View {
@@ -161,7 +162,7 @@ struct RootView: View {
                         onAdd: { router.randomPick = nil; router.library("add") }).id(scope.id)
                 }
             }.onChange(of: store.sessionRevision) { _, _ in router.randomPick = nil }
-            .task { await store.refresh() }
+            .task(id: scenePhase) { if scenePhase == .active { await store.refreshOnForeground() } }
     }
     private var showNavigation: Bool { !router.detailTabs.contains(router.selectedTab) }
     private var navigation: some View { DiaryNavigationBar() }

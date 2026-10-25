@@ -58,3 +58,11 @@ Hosted mutation tests require the owner's explicit authorization. Simulator chec
 - After a network failure or WebKit process interruption, the inline Try again action should create a fresh ephemeral sign-in page; normal redirect cancellations must not show an error. Verify delayed cookie completion and missing-cookie retry without shortening the person's 2FA time.
 - Confirm an existing installation retains secure Keychain access after the policy update, and genuine server validation still precedes credential persistence. No Access/binding-cookie configuration is changed automatically.
 - Reselect Home from Explore and let the native transition settle. Reopen and complete/cancel content Back; query/scroll ownership and slider protection remain intact. A transition-time accessibility node is not a completed-navigation failure.
+
+
+## Incoming watches (prepared native40, backend deployment pending approval)
+
+- After approved setup, finish a real Infuse episode; measure time to Trakt, scheduled D1 import, then iOS open/resume. Verify progress without relaunching or pulling to refresh.
+- Repeat on a cold title/season, expired OAuth refresh and a provider cooldown. Check Cloudflare idle/watch/refresh/metadata CPU against the Free10ms limit and actual D1 row metrics before claiming a one-minute guarantee.
+- Toggle off/disconnect while an import is in flight; verify no late writes. Review manual sync while incoming is enabled and see its paused state. Undo a play/Trash/purge a title and confirm polling does not revive it.
+- Briefly interrupt with Control Center or switch apps during a write; verify no duplicate play, draft loss, keyboard jump or blocked resume. Repeated rapid scene changes must not issue full refresh loops.

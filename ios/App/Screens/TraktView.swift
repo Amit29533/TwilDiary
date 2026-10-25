@@ -4,13 +4,18 @@ import TwilDiaryCore
 @MainActor struct TraktView: View {
     let store: DiaryStore
     @State private var controller: TraktController
+    @State private var incoming: IncomingTraktController
     @State private var showSignIn = false
     @State private var clock = Date.now
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     @AppStorage("traktGrid") private var grid = false
-    init(store: DiaryStore) { self.store = store; _controller = State(initialValue: TraktController(service: makeTraktService(store: store))) }
+    init(store: DiaryStore) {
+        self.store = store
+        _controller = State(initialValue: TraktController(service: makeTraktService(store: store)))
+        _incoming = State(initialValue: IncomingTraktController(service: makeIncomingTraktService(store: store)))
+    }
     var body: some View {
         @Bindable var controller = controller
         ScrollView {
@@ -18,6 +23,7 @@ import TwilDiaryCore
                 connection
                 if controller.status?.connected == true {
                     preferences
+                    incomingWatches
                     if controller.busy || controller.sync?.run?.state == "building" { scanProgress }
                     if let sync = controller.sync, sync.run != nil { review(sync) }
                 }
@@ -27,7 +33,8 @@ import TwilDiaryCore
             .task(id: controller.kind.rawValue + "\n" + controller.query) {
                 do { try await Task.sleep(for: .milliseconds(250)); try Task.checkCancellation(); await controller.refreshReview() } catch { }
             }
-            .refreshable { await controller.refresh() }
+            .refreshable { await controller.refresh(); if controller.status?.connected == true { await incoming.refresh() } }
+            .task(id: "\(controller.status?.connected == true):\(controller.sync?.run?.state ?? "")") { if controller.status?.connected == true { await incoming.refresh() } }
             .task(id: controller.cooldownUntil) {
                 clock = .now
                 while controller.cooldownUntil > clock && !Task.isCancelled {
@@ -48,6 +55,31 @@ import TwilDiaryCore
                     }
                 }
             }
+    }
+    private var incomingWatches: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("Incoming watches", isOn: Binding(get: { incoming.status?.enabled ?? false }, set: { enabled in
+                Task { await incoming.configure(enabled: enabled) }
+            })).disabled(incoming.busy || incoming.status == nil || controller.status?.needsReconnect == true).accessibilityIdentifier("trakt-incoming-toggle")
+            Text("Import completed plays from Trakt automatically. Ratings, watchlist changes and deletions still use review.")
+                .font(.caption).foregroundStyle(.secondary)
+            if incoming.status?.enabled == true {
+                Text("Usually within a few minutes. New titles may need extra metadata checks. Your diary refreshes when you open the app.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if incoming.status?.paused == true {
+                    Text("Paused while you review Trakt changes.").font(.caption).foregroundStyle(.secondary)
+                } else if let date = DiaryDate.parse(incoming.status?.checkedAt) {
+                    Text("Last checked \(date.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
+                } else { Text("Waiting for the first scheduled check.").font(.caption).foregroundStyle(.secondary) }
+                if let status = incoming.status, status.pending > 0 || status.review > 0 {
+                    Text("\(status.pending) waiting · \(status.review) need manual review").font(.caption).foregroundStyle(.secondary)
+                }
+                if let health = incoming.health { Text(health).font(.caption).foregroundStyle(.secondary) }
+            }
+            if let error = incoming.error { Text(error).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("trakt-incoming-error") }
+            Button("Refresh status", systemImage: "arrow.clockwise") { Task { await incoming.refresh() } }
+                .font(.subheadline).buttonStyle(.bordered).disabled(incoming.busy).accessibilityIdentifier("trakt-incoming-refresh")
+        }.diaryPanel().accessibilityIdentifier("trakt-incoming-panel")
     }
     private var connection: some View {
         VStack(alignment: .leading, spacing: 16) {
