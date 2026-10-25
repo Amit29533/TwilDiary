@@ -329,18 +329,18 @@ struct TitleDetailView: View {
                         if !episodesGrid { Spacer(minLength: 0) }
                     }
                 }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) details").accessibilityValue(episodeName(episode)).accessibilityIdentifier("title-episode-\(episode.number)")
+                    .contextMenu {
+                        if isWatched {
+                            Button("Log rewatch", systemImage: "arrow.counterclockwise") {
+                                Task { await store.recordViewing(title, episode: episode, rewatch: true, watchedAt: watchInstant); await loadCard(title) }
+                            }.disabled(store.writesBlocked || !hasAired(episode))
+                        }
+                    }
                 Button { Task { if isWatched { await store.unwatchEpisode(episode) } else { await store.recordViewing(title, episode: episode, watchedAt: watchInstant) }; await loadCard(title) } } label: { Image(systemName: isWatched ? "checkmark.circle.fill" : "circle").font(.system(size: 24)).foregroundStyle(isWatched ? theme.accent : Color.secondary).frame(width: 44, height: 44) }
                     .buttonStyle(.plain).disabled(store.writesBlocked || (!isWatched && !hasAired(episode))).accessibilityLabel("Mark episode \(episode.number) \(isWatched ? "unwatched" : "watched")")
             }
             if expandedEpisodes.contains(episode.id) { Text(episodeSummary(episode)).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("episode-summary-\(episode.number)") }
         }.padding(.vertical, 8).frame(minHeight: 72).background(next ? theme.accent.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 18))
-            .contextMenu {
-                if isWatched {
-                    Button("Log rewatch", systemImage: "arrow.counterclockwise") {
-                        Task { await store.recordViewing(title, episode: episode, rewatch: true, watchedAt: watchInstant); await loadCard(title) }
-                    }.disabled(store.writesBlocked || !hasAired(episode))
-                }
-            }
     }
     @ViewBuilder private func episodeArtwork(_ episode: Episode) -> some View {
         if isHidden(episode) { Color(webHex: "#211d2d").overlay { DiaryIcon(name: "eye-off", size: 23).foregroundStyle(.secondary) } }

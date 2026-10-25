@@ -337,10 +337,19 @@ import UIKit
     func testT35WatchedEpisodeOffersRewatchAndUndoKeepsItsOriginalWatch() {
         let app = launch(mutations: true); app.buttons["tab-library"].tap(); app.buttons["title-again"].tap()
         let episode = app.buttons["title-episode-8"]
-        for _ in 0..<7 { if episode.isHittable { break }; app.swipeUp() }
-        XCTAssertTrue(episode.isHittable); episode.press(forDuration: 0.8)
+        for _ in 0..<7 {
+            if episode.exists, episode.isHittable {
+                if episode.frame.minY > 120, episode.frame.maxY < app.frame.maxY - 40 { break }
+                if episode.frame.minY <= 120 { episode.swipeDown() } else { episode.swipeUp() }
+            } else { app.swipeUp() }
+        }
+        XCTAssertTrue(episode.isHittable); XCTAssertGreaterThan(episode.frame.minY, 120); XCTAssertLessThan(episode.frame.maxY, app.frame.maxY - 40)
+        capture("Fully visible watched episode rewatch target")
+        episode.press(forDuration: 0.8)
         let rewatch = app.buttons["Log rewatch"]
-        XCTAssertTrue(rewatch.waitForExistence(timeout: 5)); rewatch.tap()
+        let menuAppeared = rewatch.waitForExistence(timeout: 5)
+        if !menuAppeared { capture("Episode rewatch menu failure"); print("Episode rewatch hierarchy: " + String(app.debugDescription.prefix(12000))) }
+        XCTAssertTrue(menuAppeared); rewatch.tap()
         XCTAssertTrue(app.buttons["undo-action"].waitForExistence(timeout: 5))
         tapVisibleUndo(app)
         wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.buttons["undo-action"])], timeout: 8)
@@ -992,13 +1001,14 @@ import UIKit
     }
     private func completeContentBack(_ app: XCUIApplication, beside anchor: XCUIElement) {
         XCTAssertTrue(anchor.waitForExistence(timeout: 5))
-        // UIKit can cancel a 57%-width drag after its recognition threshold. Start well
-        // inside the content (not the edge), then move far enough to commit the pop.
+        // Exercise UIKit's content recognizer from the central content region.
+        // A 12%-width start is only48pt on this phone, near the leading edge
+        // handled by a separate recognizer. Travel over half the viewport.
         // Anchor the height to static content, avoiding carousels and progress controls.
         let origin = app.coordinate(withNormalizedOffset: .zero)
         let y = anchor.frame.midY
-        origin.withOffset(CGVector(dx: app.frame.width * 0.12, dy: y)).press(forDuration: 0.05,
-            thenDragTo: origin.withOffset(CGVector(dx: app.frame.width * 0.98, dy: y)))
+        origin.withOffset(CGVector(dx: app.frame.width * 0.35, dy: y)).press(forDuration: 0.05,
+            thenDragTo: origin.withOffset(CGVector(dx: app.frame.width * 0.98, dy: y)), withVelocity: .fast, thenHoldForDuration: 0)
     }
     func testToastExpiresAndCardCoverAndUsefulMenuWork() {
         let app = launch(mutations: true)
