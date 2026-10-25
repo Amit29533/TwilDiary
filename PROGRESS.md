@@ -110,6 +110,15 @@ UI test are added; the new case joins the focused gate (9cases, all old8remain)
 so failures stop before the long suite. Source196native/52primary; local
 .local/validate56.py passes, **no56Swift compile/runtime/screenshots yet**.
 
+## Owner phone checklist
+
+Owner requested the complete device test list. Wrote ios/docs/DEVICE-TEST-BUILD54.md
+and D:/Downloads/TwilDiary-native54-iPhone-checklist.md with41numbered checks,
+prioritized old UI issues, watch/rewatch/Undo/date/season rules, all screens,
+reviewed/automatic Trakt distinction and real-phone offline/accessibility/performance.
+Explicitly excludes55cache and56carousel features from54expectations. Phone results
+remain pending; do not treat sending a checklist as a pass.
+
 ## Exact next actions
 
 1. Inspect55compiler and all194native cases, especially new cache interleavings.
