@@ -52,13 +52,20 @@ export async function traktRequest(
     throw new TraktError(502, 'trakt_unavailable', 'Could not reach Trakt. Please retry.');
   }
   if (response.status === 429) {
-    const raw = Number(response.headers.get('Retry-After'));
+    const header = response.headers.get('Retry-After');
+    const raw =
+      header && /^\d+(?:\.\d+)?$/.test(header.trim())
+        ? Number(header)
+        : header
+          ? (Date.parse(header) - Date.now()) / 1000
+          : Number.NaN;
+    const present = Number.isFinite(raw) && raw > 0;
     throw new TraktError(
       429,
       'trakt_rate_limited',
       'Trakt is busy. Try again after the cooldown.',
-      Number.isFinite(raw) && raw > 0 ? Math.ceil(raw) : 60,
-      Number.isFinite(raw) && raw > 0
+      present ? Math.min(86_400, Math.ceil(raw)) : 60,
+      present
     );
   }
   if (response.status === 401)

@@ -14,6 +14,29 @@ results and actual artifacts; reconcile before editing. Notes and source test
 counts never substitute for runtime evidence. No Mac/Xcode/Swift runtime is
 available locally; Windows checks grammar/YAML/Bash/Python only.
 
+## Native59 follow-up — actual58 failure and continued audit
+
+CM58 **6ade1cf14a72334e32e50900**, exact sourcef3b9d33262b0e048cf9afa6fb5e3623d7370e9c8:
+warning-free simulator build;212native tests executed,13new transfer tests all
+pass; sole failure SessionTests.testTraktWireContractCarriesEveryExplicitDirectionChoice
+supplies a temporary DiaryStore to the now-weak service. Retain the fixture owner
+through the existing four wire assertions and add a store/controller release
+regression. Native59source213tests; no59runtime evidence yet. Focused/full UI
+not reached on58. No promotion/IPA acceptance.
+
+Broader audit reproduced provider Retry-After loss at our API boundary; three
+new tests first reproduced two failures then all passed after bounded header/date
+handling. Full399Node tests and web0error/0warning typecheck pass. Wrangler
+isolated D1 migrations0000–0014and2,000proposal trigger/count/order smoke pass;
+local duration metadata does not establish hosted billing savings. Dependency
+audit found Undici7.29.1 advisories in Miniflare; scoped patched7.30.1 override
+now reports0vulnerabilities. Full npm run verify passes with patched tooling:399backend cases, web0errors/0warnings,
+production build and3PWA runtime tests;13CI-tool checks pass.
+Full audit ledger: ios/docs/AUDIT-2026-10-25.md.
+
+Exact next action: push this59candidate and start official CM regression. Continue independent logic/performance audit while
+it runs. No hosted migration/deploy yet; daily quota remains a rollout limitation.
+
 ## Active candidate and audit — native58
 
 Owner authorized a rigorous whole-project audit on25October. First complete the

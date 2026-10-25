@@ -64,8 +64,18 @@ export async function ownerApi(context: ApiContext, action: () => Promise<unknow
       throw new ApiError(401, 'unauthorized', 'Sign in through Cloudflare Access');
     return privateJson(await action(), status);
   } catch (error) {
-    if (error instanceof ApiError)
-      return privateJson({ error: { code: error.code, message: error.message } }, error.status);
+    if (error instanceof ApiError) {
+      const response = privateJson(
+        { error: { code: error.code, message: error.message } },
+        error.status
+      );
+      // Preserve a provider's cooldown through our own HTTP boundary. The
+      // native bulk worker must not guess a shorter delay from the status alone.
+      const retry = 'retryAfter' in error ? error.retryAfter : undefined;
+      if (typeof retry === 'number' && Number.isFinite(retry) && retry > 0)
+        response.headers.set('Retry-After', String(Math.min(86_400, Math.ceil(retry))));
+      return response;
+    }
     const quota = databaseQuotaFailure(error);
     if (quota) {
       const { retryAfter, ...detail } = quota;
