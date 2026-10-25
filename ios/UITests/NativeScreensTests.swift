@@ -188,7 +188,13 @@ import UIKit
         let app = launch(traktScenario: "cold-quota")
         app.tabBars.buttons["More"].tap(); app.buttons["settings-trakt-summary"].tap()
         XCTAssertTrue(app.staticTexts["Restoring approved import"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.buttons["trakt-pause-restoration"].isEnabled)
+        let restorationPause = app.buttons["trakt-pause-restoration"]
+        guard restorationPause.waitForExistence(timeout: 8) else {
+            capture("Cold quota restoration missing Pause control")
+            print("Cold quota restoration hierarchy: " + String(app.debugDescription.prefix(18000)))
+            XCTFail("The restoration panel must expose its own Pause button"); return
+        }
+        XCTAssertTrue(restorationPause.isEnabled); XCTAssertTrue(restorationPause.isHittable)
         XCTAssertFalse(app.progressIndicators["trakt-apply-progress"].exists, "No invented percentage before review loads")
         capture("Cold quota restoration waits without a fake percentage")
         app.tabBars.buttons["Home"].tap()

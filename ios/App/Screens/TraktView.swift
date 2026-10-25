@@ -74,7 +74,7 @@ import TwilDiaryCore
             Button("Pause import", systemImage: "pause.fill") { controller.pauseApplying() }
                 .buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(controller.paused)
                 .accessibilityIdentifier("trakt-pause-restoration")
-        }.diaryPanel().accessibilityIdentifier("trakt-restoring-import")
+        }.diaryPanel().accessibilityElement(children: .contain).accessibilityIdentifier("trakt-restoring-import")
     }
     private func transferProgress(_ sync: TraktSync) -> some View {
         let progress = TraktApplyProgress(sync)

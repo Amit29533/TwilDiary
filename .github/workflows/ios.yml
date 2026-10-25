@@ -130,8 +130,8 @@ jobs:
         run: bash ios/scripts/ci.sh test-unit
       - name: Verify current stability regressions before the long suite
         id: repairs
-        # The gate grew from8to17cases. Eight cases used12m37s on the
-        # pinned Intel runner; retain the individual XCTest deadlines.
+        # Eight cases used12m37s on the pinned Intel runner. The current
+        #18case gate includes cold quota recovery; per-case deadlines stay fixed.
         timeout-minutes: 35
         run: bash ios/scripts/ci.sh test-repairs
       - name: Verify progress, navigation and recent device regressions before Release

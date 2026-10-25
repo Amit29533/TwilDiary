@@ -37,18 +37,23 @@ iOS26.5 iPhone17Pro/17e/17ProMax. CM M2candidate; GHA macos-26-intel independent
   and backend-contracts pass; downloaded Ubuntu logs prove407tests, typecheck
   0errors/0warnings and successful Worker build. Intel Core calculations passed; simulator/test targets compiling.
   Do not call the independent GHA/IPA stable until all later gates pass.
-- **63 running Codemagic candidate:** source0c087e72745e44a39cb4439ea1036f3ee26c0a71,
-  CM6ade51214a72334e32e51821, official check121268338393 in_progress. Queued UI
-  metadata and official GitHub check both identify this exact SHA.228native and
-  54primary UI source cases; no runtime result yet. Candidate refcodex/ios-ci-next
-  stays at this source. No automatic candidate trigger.
+- **63 failed Codemagic candidate:** source0c087e72745e44a39cb4439ea1036f3ee26c0a71,
+  CM6ade51214a72334e32e51821, official final check121280525245failure at
+  20:21:05UTC25October. Older initialcheck121268338393remainsin_progress;
+  always fetch all same-SHA checks and use latestofficialID, not a fixed initialID.
+  Owner supplied final diagnostic:0buildwarnings,228native tests pass (21transfer,
+  78session); cold-quota UI fails atNativeScreensTests.swift191finding
+  trakt-pause-restoration. Extra-phone layouts skipped. No promotion/retry.
+  Its final full screenshot/log archive is not downloaded; do not invent remaining
+  case counts. The candidate refcodex/ios-ci-nextstays0c087e7.
 - **64 local draft:** eb0f3db plus evidence/document reconciliation oncodex/ios-phone-polish.236native/54primary and69Core
   source cases; Swift grammar/YAML/Bash and16CI-tool cases pass.408backend tests
   and0-error/0-warning typecheck pass. Not compiled/run on macOS. Do not publish
   it over63's candidate ref while that evidence is still being collected.
 
 Browser control currently reports disabled; GitHub CLI still works. CM62artifact
-and63log inspection needs a working browser or official result evidence. Do not
+and full63hierarchy/attachment inspection need browser access. The owner pasted
+63failure summary, sufficient to isolate the failed control but not full hierarchy. Do not
 extract cookies/tokens or bypass that boundary. Browser ID2; CM62tab7/CM63tab8
 were markedhandoff. Re-read CUA docs after compaction; get fresh tab inventory
 if stale. Preserve any owner tabs. A downloaded artifact event can timeout while
@@ -150,6 +155,14 @@ query cases pass and fresh typecheck0errors/0warnings. No production change was
 needed for that hypothesis; this is a test-only follow-up, not hosted-cost proof.
 The last full backend suite was408cases; the added case has targeted execution.
 
+Read-only Cloudflare verification26OctoberIST: D1info succeeds,27tables,
+12,349,440bytes, rolling24h11,863,309reads/36,364writes (23,780readqueries,
+10,077writequeries). Sorted Workerdeploymentmetadata confirms100% version
+1dc0eced-83ac-4312-8d40-73aa6124cba5 from25October06:09UTC. Remote migration-list
+query rejects with Cloudflare7500dailyreadlimit; no migrations/deploy applied.
+Metadata/auth works; live query quota still blocks rollout verification. Told
+owner actual reset05:30IST26October. Rolling24hmetrics are not exact UTCdayusage.
+
 64also fences Pause/cancellation immediately after a held recovery GET. Previously
 apply/scan checked Pause before that await but could begin one extraPOST after it.
 New held-read regressions assert no additional apply after Pause/background and
@@ -173,16 +186,22 @@ the next build.** Native63was already running before this request;62independent
 GHA also continues. No new build has been started since the owner asked.
 
 Owner asked whether cooldown/stopping fixes are live. Replied precisely:62has
-app-side bulk/tab/progress/cooldown handling;63cold-start recovery still tests;
+app-side bulk/tab/progress/cooldown handling;63cold-start recovery awaited tests at that reply; its later UI failure is above;
 Cloudflare hot-query fixes are tested code but0014–0016are not deployed. A genuine
 D1daily quota cannot be bypassed. No claim that hosted usage is already fixed.
 
 ## Exact next work
 
-1. Monitor GHA62and CM63. Do not restart a failing run unchanged. Read concrete
-   compiler/test logs before repair. Download/verify passed artifacts/screenshots.
-2. If63passes, verify full source/gates and keep GHA62running independently;
-   do not cancel it merely to promote a newer build.64has its own macOSgate next.
+1. Monitor GHA62. CM63failed; retain its official latest check and owner-pasted
+   diagnostic. Download full failed hierarchy/artifacts when browser works. No
+   retry or native64start until owner bug chart is incorporated; notify first.
+2. Keep GHA62running independently; do not cancel it to promote newer work.
+   Prepared64adds explicit restoration-panel accessibility child containment,
+   waits/assertsPauseexistence+enabled+hittable, and prints hierarchy/screenshot
+   on failure. This mirrors the existing working importpanel, but root-cause/
+   runtime acceptance remains unproven until macOS. Add the failed case to the
+  18case focused gate so it runs before spending time on later suites. Per-case
+   assertions/deadlines are not relaxed. No64build started.
 3. Finish isolated native data/logic/quality checks and current parity evidence.
    Avoid broad unmeasured refactors or new features while stability is under test.
 4. Remaining real-phone checks: slow/reversing compactheader, barphysics/root/
