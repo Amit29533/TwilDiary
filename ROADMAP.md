@@ -208,3 +208,9 @@ running on frozen8c95140. Disposable real Worker80API requests pass without
 hosted traffic.62local audit draft adds runtime import/serialization bounds,
 required-reason packaging verification and shared Catalog header.405backend/
 16CI-tool checks pass;62macOS proof pending. No completed-step box changed.
+
+Native61complete CM acceptance:219native,17focused,10early,53primary and3layouts
+per extra phone;0warnings/0failures. Verified physical IPA delivered; original
+native screenshots/hash scope committed. No whole-project completion checkbox:
+62database/workflow/privacy/Catalog changes, hosted rollout and remaining physical
+and cold-quota bootstrap evidence are outstanding. UI testing scope is iOS only.

@@ -14,6 +14,39 @@ results and actual artifacts; reconcile before editing. Notes and source test
 counts never substitute for runtime evidence. No Mac/Xcode/Swift runtime is
 available locally; Windows checks grammar/YAML/Bash/Python only.
 
+## Native61complete — current deliverable;62next candidate
+
+Official CM61**6ade36de4a72334e32e5107f** completed successfully for exact
+**8c9514094e96498855b83034c52c4b4349af8fee**. Latest official
+codemagic-ci-cd check121249082762is completed/success; verify-codemagic.py accepts
+that exact SHA (older in-progress check is superseded by the newer official check).
+Actual downloaded logs:219native,17focused,10early and53primary UI cases pass;
+3layout tests pass on each iPhone17eand17ProMax. Simulator/device builds have
+zero warnings; physical Release fixture/resource gate passed. This is full
+Codemagic acceptance, not independent GitHub or real-phone performance proof.
+
+Delivered **D:/Downloads/TwilDiary-native61-codemagic-passed.ipa**,5,726,283bytes,
+SHA256**96eb75f475fdc1ff006c4e3acecbb94f50e6effd8d08d3b0f5ec86e29f24362e**.
+Verified ZIP CRC, matching archived checksum, arm64Mach-O, iPhoneOS/min26/build61,
+iPhone-only, encryption flag and absent fixture/TestSupport resources.
+Release proof:ios/docs/releases/native61-codemagic-candidate.json.
+Diagnostics D:/Downloads/TwilDiary_27_artifacts.zip:722,504,548bytes, ZIP CRC pass;
+281logs/PNG/manifest attachments extracted into.local/codemagic61-diagnostics.
+Eight unedited primary native screenshots and exact IDs/hashes/test scope are in
+**ios/docs/screenshots/step-10/build-61-codemagic-passed**. Visually inspected
+Home/Glance/title/header/grid/Information/import/Undo contact sheet; shared with
+owner alongside the installable IPA. These are synthetic native fixtures.
+
+61is not promoted toios-native:62contains the reviewed Intel-stage time budget
+and new database/API preflight job. Keep GitHub54unchanged until coherent62
+passes official CM. Next: push the locally checked62source tocodex/ios-ci-next,
+start one full official CM regression, inspect its exact checkout and artifact
+results.62has219native source cases and adds Catalog header assertions plus
+privacy resource packaging, API/runtime/query bounds and additive0016schema.
+407backend/16CI-tool tests, typecheck and Worker build pass locally. No hosted
+migration or deployment. Cold-process quota/bootstrap retry remains an open next
+native scenario; do not label the whole audit finished.
+
 ## Scope clarification and62database/workflow follow-up
 
 Owner clarifies: **testing is exclusive to the native iOS app, its database/API,
