@@ -72,3 +72,11 @@ Hosted mutation tests require the owner's explicit authorization. Simulator chec
 - With a large real library, compare cold launch/resume and warm Home/Stats/theme/tab changes. Workspace JSON now decodes outside the main actor, but cold projection and protected cache work still need profiling; CI benchmark timings do not establish real-phone frame rate or battery cost.
 - Sign out during a large read and immediately reconnect. Old decoded pages must never appear in the new session. Interrupt a resume repeatedly and verify the next genuine resume still refreshes.
 - Install the unsigned Release through the owner's chosen container/signing route. Confirm it uses authenticated live APIs and genuine demo artwork as appropriate; disposable simulator fixture JSON must be absent under the CI package gate.
+
+## Owner results — 25 October 2026, native build40
+
+- Owner reports genuine Information sentiment content and swipe-down dismissal work.
+- Incoming-watch setting turns on and remains on after multiple full app restarts.
+- Glance Notes opens at the actual editor.
+
+These are owner-reported real-phone results, not simulator screenshots or full-release acceptance. Next checks: caught-up Trakt watch import/duplicate prevention and delay, episode/range/movie Undo, season boundaries, keyboard/cancelled Back, long synopsis/compact header, offline recovery, Trash restore and navigation-lens gestures.
