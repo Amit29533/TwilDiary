@@ -18,7 +18,7 @@ available locally; Windows checks grammar/YAML/Bash/Python only.
 
 | Track | Exact source | Current evidence |
 | --- | --- | --- |
-| GitHub ios-native, native54 | d59f55e5fa574382b067477f6b4fb079690507a8 | Complete Codemagic54 passed; independent GitHub54 running. |
+| GitHub ios-native, native54 | d59f55e5fa574382b067477f6b4fb079690507a8 | Complete Codemagic54 passed. GHA54attempt1 stopped on an incompatible restored pre-split Core module; cache invalidated, same-source attempt2 requested. |
 | Codemagic candidate codex/ios-ci-next, native55 | ae2cfdcccbe58fbd2f353abbbfabb4fa67b59766 | Warning-free simulator build and all194native tests pass, including every new cache/store race. UI/full gates still running. |
 | Local codex/ios-carousel-parity, native56 |9e30c49 plus this documentation update; use git rev-parse HEAD| Carousel batch,196native/52primary/9focused source cases; uncompiled. |
 
@@ -48,7 +48,7 @@ https://codemagic.io/app/6adcc927390bc3069c9e5490/build/6adde71f4a72334e32e4fa14
 - Official same-SHA check was verified before fast-forwarding ios-native.
   Independent GitHub54 **40192486938**:
   https://github.com/Amit29533/TwilDiary/actions/runs/40192486938
-  Candidate-proof passes; native runner is in progress. This is not yet an
+  Candidate-proof passes. Attempt1failed simulator test compilation: RandomPickScopeTests saw both old Core.SampleWorkspace and new TestSupport.SampleWorkspace, although Core source no longer contains that helper and clean CM54/55compile. Actual log restored pre-split native cache9471189867. Invalidating the13matching old native cache entries prevents fallback to another pre-split module; rerun failed macOS job on unchanged54source after that environment repair. This is not yet an
   independently green stable release. Read its latest jobs before changing it.
 
 Delivered: **D:/Downloads/TwilDiary-native54-codemagic-passed.ipa**
@@ -118,6 +118,10 @@ prioritized old UI issues, watch/rewatch/Undo/date/season rules, all screens,
 reviewed/automatic Trakt distinction and real-phone offline/accessibility/performance.
 Explicitly excludes55cache and56carousel features from54expectations. Phone results
 remain pending; do not treat sending a checklist as a pass.
+
+## GitHub54 cache repair / native56future protection
+
+GHA54attempt1fails with ambiguous SampleWorkspace.make and two downstream key-path inference errors; actual notes identify a removed Core symbol plus the new Support symbol. Source is unchanged from fully passed clean CM54. Saved .local/github54-{failed,all}.log and exact restored cache list. Clear only rebuildable native-macos26-X64-xcode26.6 caches on ios-native (not diary/hosted data), then rerun the failed54job once. This is a changed cache environment, not retrying an unexplained failure. Future56restore/save keys now also include the Package.swift graph hash before the source hash, and fallback is restricted to the same graph; it cannot reuse the old target/resource layout. Current55CMref remains frozen.
 
 ## Exact next actions
 

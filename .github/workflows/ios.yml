@@ -50,13 +50,14 @@ jobs:
         with:
           path: ios/.spm
           key: spm-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/**/Package.resolved', 'ios/**/Package.swift', 'ios/project.yml') }}
+      # Package target/resource moves must not restore modules from the old graph.
       - name: Restore native compilation intermediates
         id: native-cache
         uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ios/.derived
-          key: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/App/**', 'ios/Tests/**', 'ios/UITests/**', 'ios/Packages/**/Sources/**', 'ios/Packages/**/Tests/**', 'ios/Packages/**/Package.swift', 'ios/project.yml', 'ios/scripts/ci.sh', 'ios/scripts/xcodegen.sh') }}
-          restore-keys: native-macos26-${{ runner.arch }}-xcode26.6-
+          key: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/Packages/**/Package.swift') }}-${{ hashFiles('ios/App/**', 'ios/Tests/**', 'ios/UITests/**', 'ios/Packages/**/Sources/**', 'ios/Packages/**/Tests/**', 'ios/Packages/**/Package.swift', 'ios/project.yml', 'ios/scripts/ci.sh', 'ios/scripts/xcodegen.sh') }}
+          restore-keys: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/Packages/**/Package.swift') }}-
       - name: Restore core regression build
         id: core-cache
         uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5
@@ -117,7 +118,7 @@ jobs:
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ios/.derived
-          key: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/App/**', 'ios/Tests/**', 'ios/UITests/**', 'ios/Packages/**/Sources/**', 'ios/Packages/**/Tests/**', 'ios/Packages/**/Package.swift', 'ios/project.yml', 'ios/scripts/ci.sh', 'ios/scripts/xcodegen.sh') }}
+          key: native-macos26-${{ runner.arch }}-xcode26.6-${{ hashFiles('ios/Packages/**/Package.swift') }}-${{ hashFiles('ios/App/**', 'ios/Tests/**', 'ios/UITests/**', 'ios/Packages/**/Sources/**', 'ios/Packages/**/Tests/**', 'ios/Packages/**/Package.swift', 'ios/project.yml', 'ios/scripts/ci.sh', 'ios/scripts/xcodegen.sh') }}
       - name: Export screenshots
         if: always()
         run: bash ios/scripts/ci.sh screenshots
