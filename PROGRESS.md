@@ -27,16 +27,21 @@ iOS26.5 iPhone17Pro/17e/17ProMax. CM M2candidate; GHA macos-26-intel independent
   SHA25696eb75f475fdc1ff006c4e3acecbb94f50e6effd8d08d3b0f5ec86e29f24362e.
   Original screenshots:ios/docs/screenshots/step-10/build-61-codemagic-passed;
   scope/hash/provenance JSON retained and images visually inspected/shared.
-- **62 complete official Codemagic; independent GitHub now running:** exact
+- **62 complete official Codemagic; independent GitHub failed:** exact
   50134fc9addcc243434ee5721eb74ea1eec13f61, CM6ade49474a72334e32e515c7,
   official completed/success check121268303837. verify-codemagic.py accepts it.
   Prior live log inspection proved219native/17focused/10early, device Release,
   privacy manifest in actual bundle and no fixtures. Complete official provider
   pass is verified; final screenshot/IPA archive download remains pending.
-  Only this exact SHA fast-forwardedios-native. **GHA40228034161** candidate-proof
-  and backend-contracts pass; downloaded Ubuntu logs prove407tests, typecheck
-  0errors/0warnings and successful Worker build. Intel Core calculations passed; simulator/test targets compiling.
-  Do not call the independent GHA/IPA stable until all later gates pass.
+  Only this exact SHA fast-forwardedios-native. **GHA40228034161failed** at the
+  focused iOS gate. Candidate-proof/backend-contracts pass; downloaded Ubuntu logs
+  prove407tests, typecheck0errors/0warnings and successful Worker build. Intel
+  simulator compilation/219native units pass,0buildwarnings. Four focused failures:
+  carousel advance timeout; Explore and persisted-Library setup could not terminate
+  the app; rewatch Undo showed9watches instead of8. Later UI/layout/device publication
+  skipped. Full failed logs/UnitTests/RepairGate downloaded to.local/github62-final;
+  no stable GitHub IPA published, no unchanged rerun. CMpass does not erase this
+  independent failure. Root causes not yet established.
 - **63 failed Codemagic candidate:** source0c087e72745e44a39cb4439ea1036f3ee26c0a71,
   CM6ade51214a72334e32e51821, official final check121280525245failure at
   20:21:05UTC25October. Older initialcheck121268338393remainsin_progress;
@@ -183,7 +188,7 @@ they will prepare the complete bug chart and asked us to continue the existing
 tests meanwhile. **Do not
 start native64 while this feedback is pending. Notify the owner before starting
 the next build.** Native63was already running before this request;62independent
-GHA also continues. No new build has been started since the owner asked.
+GHA subsequently failed as above. No new build has been started since the owner asked.
 
 Owner asked whether cooldown/stopping fixes are live. Replied precisely:62has
 app-side bulk/tab/progress/cooldown handling;63cold-start recovery awaited tests at that reply; its later UI failure is above;
@@ -192,10 +197,11 @@ D1daily quota cannot be bypassed. No claim that hosted usage is already fixed.
 
 ## Exact next work
 
-1. Monitor GHA62. CM63failed; retain its official latest check and owner-pasted
-   diagnostic. Download full failed hierarchy/artifacts when browser works. No
+1. GHA62andCM63failed; retain exact scoped evidence. GHA62diagnostics downloaded
+   to.local/github62-final; inspect the four actual focused failures before fixes.
+   CM63full hierarchy/artifacts still need browser access. No
    retry or native64start until owner bug chart is incorporated; notify first.
-2. Keep GHA62running independently; do not cancel it to promote newer work.
+2. Do not rerun failed candidates unchanged or promote a newer draft.
    Prepared64adds explicit restoration-panel accessibility child containment,
    waits/assertsPauseexistence+enabled+hittable, and prints hierarchy/screenshot
    on failure. This mirrors the existing working importpanel, but root-cause/
@@ -207,6 +213,52 @@ D1daily quota cannot be bypassed. No claim that hosted usage is already fixed.
 4. Remaining real-phone checks: slow/reversing compactheader, barphysics/root/
    controlgestures, glassdetents/contrast, largeDynamicType/VoiceOver, coldlock/
    offline/accountswitch, large-library responsiveness/battery/haptics.
+
+
+## Deployment preparation completed26October — no hosted actions
+
+Owner authorized doing deployment prep now and explicitly requested Free-tier
+account/read-budget care. Frozen backend source50134fc matches the tested server
+files in the current draft; no untested native64code enters the package. New
+`ios/tools/prepare-d1-rollout.py` pins fullSHA/latest official CMsuccess, hashes
+migrations/config/lockfile and backend trees, archives exactGit source and restores
+an optional private SQL export only into memory. Full ledger/schema/integrity/FK
+checks, original row/column digests, exact aggregate counts and partial0014–0016
+rollout support; no Wrangler/network/hosted operation in the tool. Fails on drift,
+unknown/holed ledger, altered rows or counter mismatch. Private row values never
+appear in reports/errors.11newtests; all27Pythonrelease/tooltests pass.
+
+Actual disposable Wrangler4.151.3D1/workerd rehearsal: baseline0000–0013seeded
+with2,000proposals(600applied,skipped,uncertain,conflict), watches/Undo receipts,
+notes/favorite/Queue/incoming settings/acknowledgements. Its SQLexport restored;
+actual0014–0016upgrade and post-export exactly match in-memory rehearsal. All26
+original app tables/rows preserved;27after,2watchrows,2,000proposals,counters exact,
+FK/integrityOK. Read-onlypre/postflight SQL added/tested, including corruption
+reporting and unchanged rows. The first synthetic seed's dependency order and
+unsupported exportpersist flag were corrected locally before this successful
+run; no hosted attempt or claim followed from those local setup failures.
+
+Private package: .local/backend-rollout-native62-20261026/package/source.tar,
+SHA256fe1491379246aaf4b396b7cf5d3f6957f56255118c256950a96f4e51ee407bda.
+Exact source extracted, npmci/audit0vulnerabilities, Workerbuild and Wrangler
+**dry-run** pass. One generated bareDrizzleimport/no-side-effects bundler warning
+retained; do not claim zeroWorkerbundlewarnings.150generated build files hashed,
+builtpayload archivedworker-build.tarSHA256
+029e0b8af35f4df63809dafef8f9c66170e965e92c463235737c39ee90102de3.
+Public provenance:ios/docs/releases/backend62-deployment-preparation.json.
+Runbook:ios/docs/BACKEND-ROLLOUT.md (freshbackup/restore/target/quota checks,
+0014→0015→0016beforemainWorker,keep-varsforAccesssettings,unchangedCron,
+read-onlyactive-reviewchecks,code-firstrollbackkeepingadditiveschema).
+
+All deployment-prep test D1reads/writes are local:0hostedrows. Last hosted SQL
+verification was7500exhaustedreadquota, not proof of a recovered budget. No more
+hosted quota SQL probes, export, migration or deployment in this prep. Engineering
+target2.5Maccountreads/day,50kwrites/day(50%headroom);initial hosted diagnostic
+phase capped50kadditional measuredreads, accountUTCday+othertraffic/DDL cost
+must be checked. These are acceptance targets, not new runtime globalmeters.
+Existing incoming5,000workunits estimate writes, **not** D1reads/globalusage.
+Production savings/actualactive10msCPU margins remain unverified after rollout;
+pausedidle3ms and localqueryplans do not qualify. No paidupgrade/CI run started.
 
 ## Build/test/resume commands and safety
 

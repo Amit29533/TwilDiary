@@ -110,3 +110,13 @@ account/auth/review change stop without writes. The UI shows known recovery stat
 and Pause rather than fabricating counts/percentage before the review is loaded.
 Nine new native logic/URLProtocol tests and one isolated UI scenario are prepared;
 local syntax/tool checks pass, macOS63runtime acceptance is still pending.
+
+## Deployment preparation26October2026
+
+[Backend rollout procedure](BACKEND-ROLLOUT.md) pins50134fc(native62)and records
+actual localD1/export rehearsal through0016with2,000proposals and all original
+rows preserved.27release-tool tests pass; hashed source/build payload retained
+privately. No hostedmigration/deployment or new iOSbuild. Free-tier production
+read-cost acceptance remains open; all prepDB tests consume0hostedrows. Native63
+unit228pass but coldquotaPauseUIfailed; native62independentGHAfocusedUIalsofailed.
+These UI failures are separate from its passing407backendcontract job.
