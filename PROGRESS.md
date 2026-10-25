@@ -119,7 +119,7 @@ and D:/Downloads/TwilDiary-native54-iPhone-checklist.md with41numbered checks,
 prioritized old UI issues, watch/rewatch/Undo/date/season rules, all screens,
 reviewed/automatic Trakt distinction and real-phone offline/accessibility/performance.
 Explicitly excludes55cache and56carousel features from54expectations. Phone results
-remain pending; do not treat sending a checklist as a pass.
+remain pending; do not treat sending a checklist as a pass. Reviewed sync checks refer to actual incoming/outgoing proposals, not an invented global one-way/two-way switch; Undo timing states the8second VoiceOver allowance.
 
 ## GitHub54 cache repair / native56future protection
 
