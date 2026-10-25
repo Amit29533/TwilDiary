@@ -9,13 +9,16 @@ performance certification. Windows has not compiled Swift.
 
 ## Latest acceptance update
 
-Codemagic47 is now fully successful: zero warnings/errors,173native,4focused,
-10early,49full UI and3layouts on each extra phone. Exact8c9f163 was promoted
-to ios-native; GitHub47/run40175024692 passes its same-SHA candidate-proof and
-is running independent native/full/all-phone verification. The older46 run
-failed early and was retired by normal concurrency. No184-test draft, new
-review feature or cache repair was promoted. The earlier checkpoint below
-records what was known during this audit.
+Codemagic47 fully passed (173native/49primary/all-phone/zero warnings), but
+independent GitHub47 failed its retained-search content-Back case, so no stable
+IPA was published. Codemagic48 passed184native and5/6focused; the new episode
+rewatch menu failed.49 compiled with zero warnings, then failed1/184native:
+parallel quota responses could turn the awaited title error into cancellation,
+suppressing the quota message.50 repairs that race with deterministic gated
+responses and two additional quota regressions. Its186native/sixfocused/51full
+and all-phone results are still pending. Review hardening is candidate-only;
+origin/ios-native remains the exact47 source. Historical evidence below retains
+its original checkpoint scope; it is not current all-step acceptance.
 
 ## Actual current evidence
 

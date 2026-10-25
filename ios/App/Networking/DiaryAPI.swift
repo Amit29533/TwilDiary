@@ -88,6 +88,7 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
     private let storage: any SessionStoring
     private let clock: @MainActor () -> Date
     @ObservationIgnored private var quotaGeneration = UUID()
+    @ObservationIgnored private var quotaRevision = UUID()
     private(set) var quotaBlockedUntil: Date?
     var isQuotaBlocked: Bool { quotaBlockedUntil.map { $0 > clock() } ?? false }
     func retryQuota() { quotaGeneration = UUID(); quotaBlockedUntil = nil }
@@ -134,6 +135,7 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
     private func responseData(_ path: String, method: String = "GET", body: [String: Any]? = nil, timeout: TimeInterval? = nil) async throws -> Data {
         let generation = sessionGeneration
         let quotaTicket = quotaGeneration
+        let quotaVersion = quotaRevision
         guard path.hasPrefix("/api/"), let url = URL(string: path, relativeTo: AppConfiguration.backend)?.absoluteURL,
               BackendEndpoint.isPrivateAPI(url) else { throw APIError.message("Invalid diary request.") }
         guard let credential, credential.isValid else { throw APIError.signIn }
@@ -163,8 +165,14 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
                 var utc = Calendar(identifier: .gregorian); utc.timeZone = TimeZone(secondsFromGMT: 0)!
                 let fallback = utc.nextDate(after: clock(), matching: DateComponents(hour: 0, minute: 0, second: 0), matchingPolicy: .nextTime) ?? clock().addingTimeInterval(86_400)
                 guard quotaTicket == quotaGeneration else { throw CancellationError() }
-                quotaGeneration = UUID()
-                quotaBlockedUntil = reset ?? fallback
+                // A quota response must not cancel its sibling workspace reads:
+                // async-let can otherwise surface a sibling CancellationError
+                // before the original limit, leaving the screen without an error.
+                // Only an explicit retry/session change invalidates the request
+                // generation. A separate revision fences older successful reads.
+                quotaRevision = UUID()
+                let nextReset = reset.flatMap { $0 > clock() ? $0 : nil } ?? fallback
+                quotaBlockedUntil = max(quotaBlockedUntil ?? nextReset, nextReset)
                 throw APIError.databaseLimit(quotaBlockedUntil)
             }
             let fallback = method == "GET"
@@ -173,7 +181,8 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
             throw APIError.rejected(http.statusCode, envelope?.error.message ?? fallback)
         }
         guard isJSON else { throw APIError.message("The diary returned an unexpected response. Please try again.") }
-        if quotaTicket == quotaGeneration, path.hasPrefix("/api/workspace") || path.hasPrefix("/api/glance/") { quotaBlockedUntil = nil }
+        if quotaTicket == quotaGeneration, quotaVersion == quotaRevision,
+           path.hasPrefix("/api/workspace") || path.hasPrefix("/api/glance/") { quotaBlockedUntil = nil }
         return data
     }
     private func send(_ request: URLRequest, session: URLSession, generation: UUID, quotaTicket: UUID) async throws -> (Data, URLResponse) {

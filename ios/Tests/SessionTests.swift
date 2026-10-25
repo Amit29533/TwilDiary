@@ -342,13 +342,28 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
     }
 
     func testSignInSurvivesDatabaseQuotaAndDoesNotProbeWorkspaceForAuthentication() async {
+        let titles = StubProtocol.ResponseGate(), siblings = StubProtocol.ResponseGate()
         StubProtocol.state.reset { request in
             if request.url?.path == "/api/session" { return .init(#"{"authenticated":true}"#) }
-            return .init(503, #"{"error":{"code":"database_read_limit","message":"Quota exhausted","resetAt":"2026-10-24T00:00:00.000Z"}}"#)
+            var reply = StubProtocol.Reply(503, #"{"error":{"code":"database_read_limit","message":"Quota exhausted","resetAt":"2999-01-01T00:00:00.000Z"}}"#)
+            reply.gate = request.url?.query == "section=titles" ? titles : siblings
+            return reply
         }
         let storage = MemorySessionStorage(), api = api(storage)
         let store = DiaryStore(api: api)
-        await store.connect(credential)
+        let connection = Task { await store.connect(credential) }
+        guard await waitForRegressionCondition({ StubProtocol.state.recorded().count == 5 }) else {
+            connection.cancel(); titles.release(); siblings.release(); await connection.value
+            XCTFail("All four workspace reads must start before releasing the quota responses"); return
+        }
+        // Awaiting the title async-let must still report a quota when another
+        // section responded first. Previously its response became cancellation.
+        siblings.release()
+        guard await waitForRegressionCondition({ api.isQuotaBlocked }) else {
+            connection.cancel(); titles.release(); await connection.value
+            XCTFail("Sibling quota response did not open the circuit breaker"); return
+        }
+        titles.release(); await connection.value
         XCTAssertFalse(store.needsSignIn)
         XCTAssertFalse(store.hasLoadedWorkspace)
         XCTAssertFalse(store.loading)
@@ -358,9 +373,40 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
         let requests = StubProtocol.state.recorded()
         XCTAssertEqual(requests.first?.url?.path, "/api/session")
         XCTAssertTrue(requests.dropFirst().allSatisfy { $0.url?.path == "/api/workspace" })
-        XCTAssertTrue((1...4).contains(requests.count - 1))
+        XCTAssertEqual(requests.count - 1, 4)
         XCTAssertTrue(requests.contains { $0.url?.query == "section=titles" })
         XCTAssertEqual(requests.first?.value(forHTTPHeaderField: "Cookie"), "CF_Authorization=synthetic-test-session")
+    }
+
+    func testT27ExpiredServerResetStillBlocksUntilTheNextUTCMidnight() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let time = try XCTUnwrap(DiaryDate.parse("2026-10-25T08:00:00Z"))
+        let network = api(storage, clock: { time })
+        StubProtocol.state.reset { _ in .init(503, #"{"error":{"code":"database_read_limit","message":"Quota","resetAt":"2026-10-24T00:00:00.000Z"}}"#) }
+        let _: EmptyResponse? = try? await network.request("/api/glance/quota")
+        XCTAssertTrue(network.isQuotaBlocked)
+        XCTAssertEqual(network.quotaBlockedUntil, DiaryDate.parse("2026-10-26T00:00:00Z"))
+        let _: EmptyResponse? = try? await network.request("/api/glance/again")
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+    }
+
+    func testT27LateQuotaFromBeforeExplicitRetryCannotBlockTheNewAttempt() async {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let network = api(storage), gate = StubProtocol.ResponseGate()
+        StubProtocol.state.reset { _ in
+            var reply = StubProtocol.Reply(503, #"{"error":{"code":"database_read_limit","message":"Quota","resetAt":"2999-01-01T00:00:00Z"}}"#)
+            reply.gate = gate; return reply
+        }
+        let pending = Task { let _: EmptyResponse = try await network.request("/api/glance/old") }
+        guard await waitForRegressionCondition({ StubProtocol.state.recorded().count == 1 }) else {
+            pending.cancel(); gate.release(); _ = try? await pending.value
+            XCTFail("Held read did not start"); return
+        }
+        network.retryQuota(); gate.release()
+        do { try await pending.value; XCTFail("The old request must not publish a quota after retry") }
+        catch is CancellationError { }
+        catch { XCTFail("Expected stale request cancellation, got \(error)") }
+        XCTAssertNil(network.quotaBlockedUntil)
     }
 
     func testSuccessfulConnectionLoadsEachSectionOnceAndAllowsEmptyDiaries() async {
