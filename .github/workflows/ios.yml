@@ -1,4 +1,4 @@
-name: Native iOS parity
+name: Native iOS stable verification
 on:
   push:
     branches: [ios-native]
@@ -6,16 +6,36 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  checks: read
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  candidate-proof:
+    runs-on: ubuntu-24.04
+    outputs:
+      check_url: ${{ steps.verify.outputs.check_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require a complete Codemagic pass for this exact source
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 ios/tools/test_verify_codemagic.py
+          gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?filter=all&per_page=100" > "$RUNNER_TEMP/codemagic-checks.json"
+          python3 ios/tools/verify-codemagic.py "$RUNNER_TEMP/codemagic-checks.json" "$GITHUB_SHA"
   build-test-artifacts:
+    needs: candidate-proof
     runs-on: macos-26-intel
     timeout-minutes: 210
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       HOMEBREW_NO_AUTO_UPDATE: '1'
+      CODEMAGIC_CHECK_URL: ${{ needs.candidate-proof.outputs.check_url }}
     defaults:
       run:
         shell: bash
@@ -70,7 +90,7 @@ jobs:
         id: unit
         timeout-minutes: 20
         run: bash ios/scripts/ci.sh test-unit
-      - name: Reproduce repaired community dismissal and incoming toggle twice
+      - name: Verify current stability regressions before the long suite
         id: repairs
         timeout-minutes: 15
         run: bash ios/scripts/ci.sh test-repairs
@@ -87,30 +107,16 @@ jobs:
           path: ios/.artifacts/progress-evidence
           if-no-files-found: error
           retention-days: 14
-      - name: Compile unsigned physical iPhone application
-        id: device
-        run: bash ios/scripts/ci.sh build-device
-      - name: Package unsigned IPA
-        if: ${{ !cancelled() && steps.device.outcome == 'success' }}
-        run: bash ios/scripts/ci.sh package
-      - name: Upload unsigned IPA
-        if: ${{ !cancelled() && steps.device.outcome == 'success' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: TwilDiary-unsigned-IPA
-          path: |
-            ios/.artifacts/TwilDiary-unsigned.ipa
-            ios/.artifacts/TwilDiary-unsigned.ipa.sha256
-          if-no-files-found: error
-          retention-days: 14
       - name: Run complete primary iPhone UI regression
-        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.unit.outcome == 'success' && steps.repairs.outcome == 'success' }}
         timeout-minutes: 100
         run: bash ios/scripts/ci.sh test
       - name: Run compact and large iPhone layout regression
-        if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.unit.outcome == 'success' && steps.repairs.outcome == 'success' }}
         timeout-minutes: 40
         run: bash ios/scripts/ci.sh test-layouts
+      - name: Compile unsigned physical iPhone application
+        run: bash ios/scripts/ci.sh build-device
+      - name: Package unsigned IPA
+        run: bash ios/scripts/ci.sh package
       - name: Save compiled native targets
         if: ${{ !cancelled() && steps.simulator.outcome == 'success' && steps.native-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5
@@ -146,3 +152,28 @@ jobs:
       - name: Print diagnostics and enforce zero build warnings
         if: always()
         run: bash ios/scripts/ci.sh summary
+      - name: Record stable artifact provenance
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib
+          artifact = pathlib.Path('ios/.artifacts/TwilDiary-unsigned.ipa')
+          proof = {
+              'sourceSHA': os.environ['GITHUB_SHA'],
+              'codemagicCheck': os.environ['CODEMAGIC_CHECK_URL'],
+              'githubRun': f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}",
+              'ipaSHA256': hashlib.sha256(artifact.read_bytes()).hexdigest(),
+              'channel': 'stable-unsigned',
+              'acceptance': 'Both provider regressions passed; real-device checks remain separately documented.'
+          }
+          artifact.with_name('stable-provenance.json').write_text(json.dumps(proof, indent=2) + '\n')
+          PY
+      - name: Publish only the completely verified stable unsigned IPA
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: TwilDiary-stable-unsigned-IPA
+          path: |
+            ios/.artifacts/TwilDiary-unsigned.ipa
+            ios/.artifacts/TwilDiary-unsigned.ipa.sha256
+            ios/.artifacts/stable-provenance.json
+          if-no-files-found: error
+          retention-days: 14

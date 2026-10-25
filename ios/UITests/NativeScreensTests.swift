@@ -737,21 +737,24 @@ import UIKit
         let mark = app.buttons["mark-title-watch"]
         if !mark.isHittable { app.swipeUp() }
         mark.tap()
-        waitForProgress("9 of 16 episodes watched", slider: progress)
+        // On Intel, extra value/frame queries can exhaust the real4.5s Undo
+        // window before XCTest synthesizes the touch. Undo first, then check
+        // the result; observe intermediate values in separate actual edits.
         tapVisibleUndo(app)
         waitForProgress("8 of 16 episodes watched", slider: progress)
         let start = progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
-        XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 10), "A range edit must produce a real Undo receipt, not only a draft value")
-        waitForProgress("10 of 16 episodes watched", slider: progress)
         tapVisibleUndo(app)
         waitForProgress("8 of 16 episodes watched", slider: progress)
+        mark.tap(); waitForProgress("9 of 16 episodes watched", slider: progress)
+        progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5625, dy: 0.5)).press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
+        waitForProgress("10 of 16 episodes watched", slider: progress)
         app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["title-quiet-orbit"].tap()
         let movieMark = app.buttons["mark-title-watch"]
         XCTAssertTrue(movieMark.waitForExistence(timeout: 5)); movieMark.tap()
-        XCTAssertTrue(app.buttons["Log a rewatch"].waitForExistence(timeout: 5))
-        app.buttons["Undo"].tap()
+        tapVisibleUndo(app)
         XCTAssertTrue(app.buttons["Log a watch"].waitForExistence(timeout: 5)); capture("Movie watch undone")
+        movieMark.tap(); XCTAssertTrue(app.buttons["Log a rewatch"].waitForExistence(timeout: 5))
     }
     func testPersonShelvesOpenFilmographyLayoutsAndPreserveReturnNavigation() {
         let app = launch(); app.buttons["tab-home"].tap(); app.buttons["search-twildiary"].tap()
@@ -786,7 +789,7 @@ import UIKit
         XCTAssertFalse(app.textFields["Search filmography"].exists)
         let heading = app.staticTexts["person-filmography-heading"]
         XCTAssertTrue(heading.exists); XCTAssertGreaterThan(layout.frame.minX, heading.frame.minX)
-        XCTAssertLessThan(abs(layout.frame.minY - heading.frame.minY), 8)
+        XCTAssertLessThan(abs(layout.frame.midY - heading.frame.midY), 8)
         XCTAssertEqual(count.label, "16 titles")
         capture("Person layout control replaces filters beside heading")
         XCTAssertFalse(app.buttons["person-filmography-done"].exists)

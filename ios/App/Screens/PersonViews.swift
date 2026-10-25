@@ -141,7 +141,7 @@ struct PersonFilmographyView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
-                    HStack(alignment: .top, spacing: 8) {
+                    HStack(alignment: .center, spacing: 8) {
                         Text(person.map { filters.heading(person: $0, section: route.section) } ?? route.section.label)
                             .font(.system(size: 22, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
                             .accessibilityIdentifier("person-filmography-heading")
