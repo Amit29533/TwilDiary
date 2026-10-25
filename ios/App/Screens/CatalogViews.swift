@@ -213,9 +213,9 @@ struct CatalogDetailView: View {
                     ToolbarItem(placement: .principal) {
                         if let details { CompactTitleNavigation(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), progress: headerProgress) }
                     }
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        TitleShareAction(name: details?.details.name ?? "Title", kind: route.kind, id: route.id).opacity(Double(headerProgress)).allowsHitTesting(headerProgress >= 0.5).accessibilityHidden(headerProgress < 0.5)
-                        Button { showInformation = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("Community information").accessibilityIdentifier("catalog-information")
+                    ToolbarItem(placement: .topBarTrailing) {
+                        TitleHeaderAction(name: details?.details.name ?? "Title", kind: route.kind, id: route.id,
+                            progress: headerProgress, informationPresented: $showInformation, informationIdentifier: "catalog-information")
                     }
                 }
                 .sheet(isPresented: $showInformation) {

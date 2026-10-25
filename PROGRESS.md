@@ -14,6 +14,46 @@ results and actual artifacts; reconcile before editing. Notes and source test
 counts never substitute for runtime evidence. No Mac/Xcode/Swift runtime is
 available locally; Windows checks grammar/YAML/Bash/Python only.
 
+## Active61run and isolated62audit draft
+
+**CM61run6ade36de4a72334e32e5107f** checked out exact
+**8c9514094e96498855b83034c52c4b4349af8fee**. At the last read:219native
+cases pass, including all six cold-cache tests; all17focused UI pass, including
+both-direction root tabs/short card watch/Undo. Early regressions are running;
+full53primary, extra-phone layouts and physical Release/artifact acceptance
+are still pending. Keep that candidate frozen; do not rerun/promote prematurely.
+The old GitHub stable ref remains54d59f55e with its recorded independent failure.
+
+Independent local audit uses a disposable Workers/D1 copy, migrations0000–0015,
+LOCAL_DIARY=1and fictional metadata configuration.30real watch/retry/Undo/
+stale-write/Trash/restore contract requests pass. Another50read/validation/header/
+paging/malformed-body/CSRF requests pass with byte-equivalent fixture data before
+and after. No hosted requests/library changes. Private machine reports:
+.local/native-api-contracts61.json and.local/extended-api61.json. Browser exercised
+local Home/Glance and explicit watch/unwatch8→9→8; the short web Undo toast had
+expired before its click, so that click is not counted as an Undo UI pass.
+
+**62is a local draft, not the running61source.** Two new backend tests first
+failed: legacy import accepts fractional/oversize runtimes; workspace emits a
+REAL value incompatible with native Int.62enforces TMDB's1–1440whole-minute
+bounds for legacy imports and serializes malformed existing runtime as unknown,
+without modifying stored rows. Full405backend tests, web0errors/0warnings,
+production build and3PWA cases pass. No hosted deploy/migration applied.
+
+Release audit confirms delivered54IPA has no PrivacyInfo.xcprivacy.62adds only
+the actual app-owned preferences/elapsed-time required reasons, explicit XcodeGen
+resource inclusion and a built-bundle verification gate (16local CI-tool tests
+pass). No empty collected-data assertion or App Store label completion claim.
+Catalog still had a separate invisible Share slot beside Information;62reuses
+the already-tested saved-title header action, removes the obsolete wrapper and
+extends the retained-search case to verify forward/reverse catalog header states.
+Windows Swift/YAML checks pass;62macOS typing/runtime/resource proof pending.
+
+Next: let61complete all gates; download/verify artifacts and original screenshots.
+Only full exact-SHA acceptance permits promotion of8c95140toios-native/GitHub.
+Commit62locally; push it to the candidate ref only when61has finished. Continue
+remaining source/data-flow/accessibility audit without altering frozen61.
+
 ## Native61 — measured cold-path repair and native60 evidence
 
 Current source61is prepared, not yet compiled. CM60run

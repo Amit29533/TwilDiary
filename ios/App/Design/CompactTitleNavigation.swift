@@ -45,21 +45,6 @@ struct CompactHeaderBackdrop: View {
     }
 }
 
-struct TitleShareAction: View {
-    let name: String
-    let kind: MediaKind
-    let id: Int?
-    var body: some View {
-        Group {
-            if let id, id > 0, let url = URL(string: "https://www.themoviedb.org/\(kind == .tv ? "tv" : "movie")/\(id)") {
-                ShareLink(item: url, preview: SharePreview(name)) { Image(systemName: "square.and.arrow.up") }
-            } else {
-                ShareLink(item: name) { Image(systemName: "square.and.arrow.up") }
-            }
-        }.accessibilityLabel("Share " + name).accessibilityIdentifier("title-share")
-    }
-}
-
 /// One native toolbar button owns the crossfade. Stacking two interactive
 /// toolbar controls can leave the invisible control intercepting the share tap.
 struct TitleHeaderAction: View {
@@ -68,6 +53,7 @@ struct TitleHeaderAction: View {
     let id: Int?
     let progress: CGFloat
     @Binding var informationPresented: Bool
+    var informationIdentifier = "title-information"
     @State private var sharing = false
     private var compact: Bool { progress >= 0.5 }
     var body: some View {
@@ -79,7 +65,7 @@ struct TitleHeaderAction: View {
                 Image(systemName: "info.circle").opacity(Double(1 - progress))
             }.frame(width: 32, height: 32)
         }.accessibilityLabel(compact ? "Share " + name : "Community information")
-            .accessibilityIdentifier(compact ? "title-share" : "title-information")
+            .accessibilityIdentifier(compact ? "title-share" : informationIdentifier)
             .sheet(isPresented: $sharing) { TitleActivitySheet(name: name, kind: kind, id: id) }
     }
 }

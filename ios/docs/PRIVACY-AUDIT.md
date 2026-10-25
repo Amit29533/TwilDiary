@@ -45,3 +45,14 @@ definitions guide the final labels. Do not use an empty collected-data list as a
 claim that a diary stored in D1 collects nothing. Final deployment retention,
 manifest/data-type mapping, built-bundle check and optional App Store labels are
 still open. They do not require changing the current unsigned phone test path.
+
+## Required-reason packaging follow-up — local62draft
+
+Inspecting the delivered native54IPA confirms no PrivacyInfo.xcprivacy is present.
+62adds the two reviewed app-owned API reasons above and NSPrivacyTracking=false.
+It does not add an empty NSPrivacyCollectedDataTypes array: actual D1/provider
+retention and final App Store labels remain a separate unresolved review.
+XcodeGen explicitly copies the manifest as a resource. The Release packaging gate
+now rejects missing/malformed manifests, duplicate/incorrect reasons and leaked
+test resources.16CI-tool tests pass locally. Real generated project/build-bundle
+verification requires the next macOS candidate; no packaging acceptance yet.

@@ -29,7 +29,14 @@ export function workspaceTitle(
     backdrop: tmdbImage(title.backdropPath, 'w780'),
     communityScore: title.communityScore,
     genres: title.genres,
-    runtimeMinutes: title.runtimeMinutes,
+    // Legacy SQLite rows may contain REAL values despite integer affinity.
+    // Keep the native Int contract and report invalid metadata as unknown.
+    runtimeMinutes:
+      Number.isInteger(title.runtimeMinutes) &&
+      (title.runtimeMinutes as number) > 0 &&
+      (title.runtimeMinutes as number) <= 1440
+        ? title.runtimeMinutes
+        : null,
     status: title.status,
     favorite: title.favorite,
     queued: title.queued,

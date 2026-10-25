@@ -62,7 +62,7 @@ export async function importPreviewWorkspace(db: ReturnType<typeof database>, va
       typeof t.favorite !== 'boolean' ||
       (t.queued !== undefined && typeof t.queued !== 'boolean') ||
       (t.runtimeMinutes !== null &&
-        (!Number.isFinite(t.runtimeMinutes) || t.runtimeMinutes <= 0)) ||
+        (!Number.isInteger(t.runtimeMinutes) || t.runtimeMinutes <= 0 || t.runtimeMinutes > 1440)) ||
       (t.deletedAt != null && !validInstant(t.deletedAt)) ||
       t.notes.length > 20000 ||
       t.overview.length > 20000 ||

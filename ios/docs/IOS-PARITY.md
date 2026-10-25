@@ -126,3 +126,14 @@ buttons sit over the bottom-right thumbnail and preserve44pt targets.
 References: Apple's TabContent.accessibilityIdentifier, TabView,
 TabBarMinimizeBehavior.never and containerBackground(.clear,for:.navigation).
 No Swift compile/screenshots/physical smoothness acceptance yet.
+
+##25October audit correction — native61runtime evidence, full suite pending
+
+The earlier table's synchronous-cache statement is historical.61native tests now
+verify off-main protected save and cold read with cancellation/owner fences.
+All219native and17focused UI cases pass, including official native tab tracking,
+body swipes, episode thumbnail checks, Notes targeting, import persistence and
+Information content. Full primary/all-size/Release acceptance remains pending.
+Owner54results remain in DEVICE-RESULTS-BUILD54.md. Physical header smoothness,
+glass rendering, haptics, VoiceOver and large text still require device evidence.
+62local draft aligns Catalog's header action with saved titles; no62runtime proof.
