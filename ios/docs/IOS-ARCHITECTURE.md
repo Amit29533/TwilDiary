@@ -2,6 +2,34 @@
 
 The native application is a SwiftUI client of the existing Cloudflare Worker and D1 API. Swift 6 strict concurrency, Observation and iOS 26+ are used; the user confirmed an iOS 27 phone. XcodeGen generates the project in macOS CI. There are no third-party Swift dependencies. CryptoKit protects read snapshots; Foundation, Security, SwiftUI, Charts and UIKit provide the other runtime capabilities.
 
+## Current boundaries after the complete native61 Codemagic pass
+
+The five-tab bar is first-party SwiftUI TabView with minimization disabled;
+UIKit owns native tracking and push/pop. Root body swipes are a separate bounded
+recognizer that yields to horizontal controls/Glance watch gestures. The older
+custom capsule/lens descriptions below are historical.
+
+Cold protected reads and save preparation now perform file authentication,
+JSON and AES-GCM work in utility detached tasks. Keychain lookup and the short
+atomic protected-file commit stay on the main actor. Session, snapshot and
+cache generations fence publication after cancellation/account changes; no
+synchronous disk read occurs in store initialization.219native tests include
+executor/race/format/large-snapshot coverage; this is not physical FPS proof.
+Incidental saved-cache notices stay in Settings, while actionable write recovery
+and real errors retain their explicit UI.
+
+The retained Trakt controller owns approved bulk work across tabs; only the
+approved review ID is persisted in preferences. Tokens remain in Keychain/server
+storage. Warm quota/read-back/background behavior passes61.63adds bounded cold
+bootstrap GET recovery before any write, with fresh connection/review/approval
+checks; its macOS acceptance is pending. The existing Worker+D1 remains the
+single backend.0014–0016are additive local-tested candidates, not deployed changes.
+
+Codemagic is the candidate track. Only an official complete same-SHA pass may
+advance toios-native; GitHub independently runs native checks, API/database
+contracts and device packaging. New62privacy resource and backend GHA gate are
+separately tracked; a written test is never described as a passed execution.
+
 DiaryStore is main-actor isolated. URLSession uses a restricted HTTPS backend and explicit Access credentials stored in Keychain. Sign-in uses a non-persistent WKWebView only for the existing Cloudflare login flow; all product screens are native SwiftUI. The database-independent session endpoint validates login before loading complete paginated workspace snapshots. Partial reloads never replace a valid snapshot. Session/request generations discard late responses after sign-out and older refreshes. Mutation identities are retained in memory for uncertain retries; version checks and server Undo receipts preserve concurrency semantics. The current web requires reconnecting to save, so no offline write is claimed successful or silently queued; a write outbox is not a parity requirement.
 
 ProtectedWorkspaceCache saves complete owner-scoped snapshots using AES-GCM and a random 256-bit device-only Keychain key. Files use complete iOS data protection, atomic replacement and backup exclusion. The cache partition hashes the backend plus issuer/subject from an already saved Access session (falling back to a token digest); these claims are never used as authentication. The server remains the only authorization authority. Expired/missing credentials cannot open cached UI. The cached-state notice includes the last confirmed refresh time; a failed network read preserves this snapshot. Corrupt, wrong-key or wrong-owner data fails closed without partial publication. Sign-out removes the snapshots and credentials. No tokens are written into the cache. Tests use temporary directories and injected keys, never the real app cache or owner library.

@@ -1,3 +1,24 @@
+# Current physical-device verification boundary
+
+Native61 has a verified complete Codemagic pass and unsigned IPA. Its automated
+checks do not certify physical frame pacing, glass composition, haptics, battery,
+VoiceOver or the largest accessibility type. Current checks for that IPA:
+
+- Slowly reverse-scroll saved/online titles through the compact-header fade;
+  check centered identity and a single usable Share/Information action.
+- Hold/slide/cancel the official native tab bar and swipe all root tabs in both
+  directions; short Glance swipes must log one watch and preserve Undo ownership.
+- Check Information translucency at medium/large detents while scrolling; dark
+  sentiment cards should remain readable with Reduce Transparency toggled.
+- Cold-launch offline, reconnect, sign out during a read, then change account;
+  old protected content must never appear under the new session.
+- Exercise large text/VoiceOver through episode grids, history, filters, Undo and
+  import Pause. Assess scrolling and battery with a large real library.
+
+63cold-quota bootstrap and62privacy/database/workflow changes are separate
+candidates; do not test/claim them as native61 features. The older checklist below
+records build-specific history and is superseded where behavior has changed.
+
 # Real-device checks
 
 After each passed build, install the unsigned IPA using LiveContainer or your signing tool and check:

@@ -41,8 +41,9 @@ owner alongside the installable IPA. These are synthetic native fixtures.
 and new database/API preflight job. Keep GitHub54unchanged until coherent62
 passes official CM. CM62**6ade49474a72334e32e515c7** checked out exact
 **50134fc9addcc243434ee5721eb74ea1eec13f61** fromcodex/ios-ci-next.
-Actual simulator compilation and219native cases pass; focused UI is running.
-Do not accept its physical packaging or later gates until logs/artifacts prove them.
+Actual simulator/device compilation,219native,17focused and10early UI pass.
+The Release resource gate confirms actual privacy-manifest packaging and fixture
+exclusion. Primary/extra-phone UI and final artifacts are still running.
 62adds Catalog header assertions plus
 privacy resource packaging, API/runtime/query bounds and additive0016schema.
 407backend/16CI-tool tests, typecheck and Worker build pass locally. No hosted
@@ -67,7 +68,10 @@ Retry-After, explicit Pause, changed review/disconnection, late session callback
 bounded outage, background/foreground and expired Access session.228native/54UI
 source inventory, all Swift grammar/YAML/Bash checks and16CI-tool cases pass.
 **63has no macOS compilation/runtime proof yet.** Do not conflate tests written
-with tests passed. Next: self-review/commit this coherent draft; let62finish,
+with tests passed. Source f557580plus a stricter asynchronous-test completion
+condition is reviewed; current architecture/parity/device documents now clearly
+separate accepted61, running62and uncompiled63and mark obsolete notes as history.
+Next: publish this coherent draft to the candidate source branch; let62finish,
 verify its official result/resources/screenshots, then run63once on Codemagic.
 Only the exact fully qualified source may move toios-native for independent GHA.
 

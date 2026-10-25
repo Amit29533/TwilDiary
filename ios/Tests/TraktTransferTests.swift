@@ -206,7 +206,7 @@ import TwilDiaryCore
         await controller.refresh()
         XCTAssertNil(controller.status); XCTAssertNil(controller.sync)
         await controller.resumeApprovedApply()
-        let finished = await waitForRegressionCondition { controller.sync?.run?.state == "complete" && !controller.busy && !controller.loading }
+        let finished = await waitForRegressionCondition { controller.sync?.run?.state == "complete" && !controller.busy && !controller.loading && service.statusReads == 3 }
         XCTAssertTrue(finished); XCTAssertGreaterThanOrEqual(clock.now, reset)
         XCTAssertEqual(controller.sync?.counts["applied"], 2); XCTAssertNil(checkpoint.runID)
         XCTAssertEqual(service.statusReads, 3) // refusal, bootstrap and final refresh

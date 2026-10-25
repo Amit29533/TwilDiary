@@ -1,34 +1,48 @@
 # Native parity status — work in progress
 
-## Current checkpoint — 25 October, native54/55
+## Current evidence — native61 accepted on Codemagic;62 running;63 draft
 
-Complete Codemagic54/run6adde71f4a72334e32e4fa14 (d59f55e) has passed
-warning-free simulator compilation,188native tests,8focused UI and10early UI
-checks. Its full51primary suite and extra-phone/Release/artifacts remain in
-progress. Independent GitHub stable publication is still blocked at47; earlier
-passed screenshots are scoped evidence, not a finished-app declaration.
-Native53's verified physical-device diagnostic IPA was supplied separately for
-owner swipe/header feedback. Native55's cache-write preparation is a separate
-local draft, not part of54's screenshots or pass counts.
+Native61 source8c9514094e96498855b83034c52c4b4349af8fee / CM6ade36de4a72334e32e5107f
+has a complete official pass:219native,17focused,10early and53primary UI tests,
+plus3layout cases on each iPhone17eand17ProMax. Simulator/device Release compile
+with zero warnings. Its physical IPA, checksum and eight unedited screenshots
+are retained in releases/native61-codemagic-candidate.json and
+screenshots/step-10/build-61-codemagic-passed. This proves the named automated
+flows, not every phone/edge case or pixel-perfect production acceptance.
 
-The existing screen table below is a historical checklist. Its old build-specific
-pending statements need reconciling against the complete54artifacts before any
-final acceptance box is checked. Current focused passes establish Library
-relaunch, explicit episode rewatch/Undo/original8-history count, settings and
-Explore Back/content swipes, retained/scoped search, filmography, theme/search
-containment and title/range/movie Undo. They do not establish every error state,
-physical animation, VoiceOver or pixel-level visual parity.
+Native62 / CM6ade49474a72334e32e515c7 / source50134fc has passed219native,
+17focused and10early UI plus physical Release/resource checks. Its actual app
+contains the new required-reason privacy manifest and excludes test fixtures.
+Full primary/extra-phone acceptance and artifacts are still running.63is a
+separate cold-quota bootstrap draft (228native/54primary source cases); it has
+only local grammar/tool checks so far. Stable GitHub remains54after its focused
+gate failure; no later source is labelled independently accepted there.
 
-Confirmed remaining Home gap from direct code comparison: web
-src/lib/components/ContinueCarousel.svelte rotates every5seconds only while
-at least half visible, active, not paused/reduced-motion/focused/hovered and
-outside the5second interaction cooldown. It wraps previous/next and remembers
-title identity/pause state. Native HomeView currently has only a horizontally
-snapping ScrollView. Automatic rotation and accessible previous/next/pause
-behavior are absent, rather than merely untested. Preserve card gestures and
-owner-requested root swipes when implementing this separately after the current
-stability/cache batches. Respect native Reduce Motion and VoiceOver; document
-any deliberate adaptation instead of silently redesigning the cards.
+| Area | Native61 automated evidence | Remaining practical limit |
+| --- | --- | --- |
+| Root navigation | All five body swipes both ways, boundaries, native bar hold/slide/cancel, per-tab return | Physical touch physics/frame pacing/VoiceOver |
+| Home | Carousel auto-advance/pause/return, cover actions, shortcuts, empty random pick | Physical scroll with a large real library |
+| Library | Composed filters, sort/layout relaunch, multi-select, Queue, Trash/restore, public ratings | Live provider availability is separate from fixture correctness |
+| Glance | Per-card pending actions, category reuse, cover/menu, current-season completion, Notes and Undo | Phone haptics and rapid gesture comfort |
+| Saved title/episodes | Segments, watch/range/movie Undo, metadata/spoilers, notes, grid thumbnail check targets, compact header actions | Physical slow/reversing header transition and largest text |
+| Explore/search/cast | Search/library+TMDB scope, retained return, no keyboard behind Back, cast filmography and grids | Live metadata/network latency |
+| Stats/history | Calendar ranges, empty/unknown dates, source golden rules, chart/history navigation | Largest Dynamic Type and VoiceOver chart reading |
+| Information | Overall stats/sentiment state, empty/error/retry, detent scroll and dark cards | Physical transparency at both detents; screenshot is not material-motion proof |
+| Locations/settings | Files/scanner review fixtures, native Back, inline search, appearance/source settings | Windows ingestion remains PC-only |
+| Manual Trakt | Reviewed safe/conflict actions,2,000-change worker, tab continuation, Pause/resume, quotas/read-back |63cold-process quota recovery is not yet runtime accepted |
+| Incoming Trakt | Enable/disable/review UI; owner previously confirms setting survives restarts | Live scheduled latency/active Free CPU and hosted optimized-schema rollout |
+| Offline/session/cache | Owner-bound authenticated AES-GCM cache, off-main sealing/cold read, sign-out and late callback fences | Real-device cold launch/lock/interruption/battery |
+| Database/workflow |407local API/shared-rule/SQLite tests, migration/query plans;16CI-tool cases |0014–0016not deployed;62new GHA backend job not yet run |
+
+The Home automatic carousel is implemented and passed61; the earlier report of
+its absence is obsolete. The bottom navigation is now first-party SwiftUI
+TabView Liquid Glass by explicit owner direction, an intentional departure from
+the original web capsule. UI acceptance uses native XCUITests; further web/PWA
+walkthroughs are outside the owner's clarified audit scope.
+
+The following build-by-build notes/table are historical. Their old pending/
+custom-navigation/synchronous-cache statements do not override this current
+checkpoint. ROADMAP.md remains unfinished until the remaining evidence is met.
 
 ## Historical verification and owner-directed native changes (25 October)
 
