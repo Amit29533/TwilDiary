@@ -1,6 +1,6 @@
 # Incoming Trakt watches on Free
 
-Initial rollout deployed 2026-10-25 on `ios-native`; the owner enabled incoming in iOS. A preserved active manual review currently pauses it. The hardening below is the next source candidate, pending its verification/deployment checkpoint.
+Initial rollout and the hardening below deployed 2026-10-25 from server source `66d625e`; the owner enabled incoming in iOS. A preserved active manual review currently pauses it. Current scheduled Worker version: `3150a352-0013-4151-a93a-00d6266b9b46`; main Worker: `1dc0eced-83ac-4312-8d40-73aa6124cba5`. No new migration was needed for the hardening.
 This is the owner's requested extension of the earlier manual-only contract.
 Connecting Trakt still enables nothing automatically.
 
@@ -69,7 +69,7 @@ Official limits checked 2026-10-25:
 | Subrequests     | 50/invocation                                          | Ten-item enqueue + one viewing/metadata phase                      |
 
 SQLite correctness/query plans and a Wrangler dry run do **not** prove the 10 ms
-CPU budget. The initial hosted idle samples measured3ms; that proves only idle ticks. Still measure a day of idle samples, OAuth refresh, matched-title watch, cold movie and cold season via Cloudflare metrics/tail, plus actual D1 rows including indexes. Use8msP99 as engineering headroom below the10ms limit; it is not a platform guarantee.
+CPU budget. The initial hosted samples measured3ms while fenced by the active manual review; that proves only that paused path. Still measure a day of normal enabled/unchanged activity samples, OAuth refresh, matched-title watch, cold movie and cold season via Cloudflare metrics/tail, plus actual D1 rows including indexes. Use8msP99 as engineering headroom below the10ms limit; it is not a platform guarantee.
 Other account traffic shares the allowance. If cold metadata exceeds Free CPU,
 leave those entries for manual metadata while retaining the cheap matched-watch
 minute path. Never silently switch to paid; 15-minute wall time is not CPU time.
@@ -159,8 +159,11 @@ The conservative matched-episode test stays below50 prepared statements; D1
 counts a batch as one query against the invocation cap, while row/index writes
 still consume daily account allowance. This is not a CPU measurement.
 
-Validation for this source candidate:38 incoming tests and391 complete Node tests
+Validation before hardening deployment:38 incoming tests and391 complete Node tests
 pass on disposable SQLite/providers. Svelte/TypeScript, worker tsc, production
 build and dry-run results are recorded at the final PROGRESS.md checkpoint. Three
-new Swift health/decode tests are source-reviewed but unrun until the next macOS
-CI. No claim that Windows compiled or ran Swift.
+new Swift health/decode tests passed within native46's173-unit Codemagic run;
+the full native UI acceptance still failed separately. No claim that Windows
+compiled or ran Swift. A fresh SQL export failed at its endpoint before rollout;
+the fresh official D1 Time Travel bookmark and earlier verified private SQL
+backup are recorded in PROGRESS.md. No restore was performed.

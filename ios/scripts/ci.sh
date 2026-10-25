@@ -72,15 +72,16 @@ PY
       2>&1 | tee "$ARTIFACTS/logs/unit-tests.log"
     ;;
   test-repairs)
-    # Exercise this batch's navigation/layout repairs before the long suite.
+    # Exercise the actually failing cases before spending time on the long suite.
     # No retry-until-pass; any failure stops the run and retains its evidence.
     xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 180 -maximum-test-execution-time-allowance 240 \
-      -only-testing:TwilDiaryUITests/NativeScreensTests/testCommunityInformationSheetUsesOverallStatsAndReturnsToTheTitle \
-      -only-testing:TwilDiaryUITests/NativeScreensTests/testRootContentSwipesVisitEveryTabWithoutWrappingAndKeepCardGestures \
-      -only-testing:TwilDiaryUITests/NativeScreensTests/testTraktComparisonShowsFiniteRecordsAndStopsWithoutPartialApplyActions \
-      -only-testing:TwilDiaryUITests/NativeScreensTests/testCollectionGridsKeepEpisodeActionsFoldersAndHistoryEntries \
-      -only-testing:TwilDiaryUITests/LayoutScreensTests/testExpandedSummaryAndWatchDateRemainInsideEveryPhone \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testT31LibraryLayoutAndSortSurviveAProcessRelaunch \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testT35WatchedEpisodeOffersRewatchAndUndoKeepsItsOriginalWatch \
+      -only-testing:TwilDiaryUITests/LayoutScreensTests/testEveryThemeIsSelectableAndGlassSearchKeepsOneContainedField \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testPersonShelvesOpenFilmographyLayoutsAndPreserveReturnNavigation \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testTitleWatchAndUndoUpdateTheEpisodePiecesAndMovieHistory \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testSearchReturnsDirectlyToRetainedResultsAndGlanceRemainsScoped \
       -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/RepairGate.xcresult" \
       2>&1 | tee "$ARTIFACTS/logs/repair-tests.log"
     ;;
@@ -186,7 +187,7 @@ if not unit_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in unit_log.read_
     errors.append('Native unit execution did not finish successfully; inspect UnitTests.xcresult.')
 repair_log = folder / 'logs' / 'repair-tests.log'
 if not repair_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in repair_log.read_text(errors='replace'):
-    errors.append('Repeated community/incoming repair gate incomplete/failed; inspect RepairGate.xcresult.')
+    errors.append('Current stability repair gate incomplete/failed; inspect RepairGate.xcresult.')
 test_log = folder / 'logs' / 'tests.log'
 if not test_log.exists() or '** TEST EXECUTE SUCCEEDED **' not in test_log.read_text(errors='replace'):
     errors.append('tests.log: Unit/UI execution did not finish successfully; inspect the job timeout and xcresult before accepting this build.')

@@ -331,7 +331,7 @@ import UIKit
         app.terminate(); app.launch()
         XCTAssertTrue(app.buttons["tab-library"].waitForExistence(timeout: 15)); app.buttons["tab-library"].tap()
         XCTAssertTrue(app.buttons["Grid layout"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Highest TMDB rating"].exists)
+        XCTAssertTrue(app.buttons["library-order"].label.contains("Highest TMDB rating"))
         capture("Library persisted list layout and typed rating order after relaunch")
     }
     func testT35WatchedEpisodeOffersRewatchAndUndoKeepsItsOriginalWatch() {
@@ -343,8 +343,13 @@ import UIKit
         XCTAssertTrue(rewatch.waitForExistence(timeout: 5)); rewatch.tap()
         XCTAssertTrue(app.buttons["undo-action"].waitForExistence(timeout: 5))
         tapVisibleUndo(app)
+        wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.buttons["undo-action"])], timeout: 8)
         XCTAssertTrue(app.buttons["Mark episode 8 unwatched"].exists, "Undoing the rewatch must keep the original watch")
-        capture("Episode rewatch Undo preserves the original viewing")
+        app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["tab-more"].tap(); app.buttons["settings-history"].tap()
+        let filter = app.textFields["Filter watch history"]
+        XCTAssertTrue(filter.waitForExistence(timeout: 5)); filter.tap(); filter.typeText("18 Again\n")
+        XCTAssertEqual(app.staticTexts["history-count"].label, "8 watches", "Undo must remove the extra play, not merely keep the original episode checked")
+        capture("Episode rewatch Undo restores the original eight history entries")
     }
 
     func testLibraryCommunityRatingPreferenceNeverDisplaysPersonalScores() {
@@ -761,15 +766,16 @@ import UIKit
         let mark = app.buttons["mark-title-watch"]
         if !mark.isHittable { app.swipeUp() }
         mark.tap()
-        // Intel XCTest's value snapshots consumed most of the real4.5s window.
-        // Exercise Undo first; verify the intermediate value in a separate edit.
+        // On Intel, extra value/frame queries can exhaust the real4.5s Undo
+        // window before XCTest synthesizes the touch. Undo first, then check
+        // the result; observe intermediate values in separate actual edits.
+        tapVisibleUndo(app)
+        waitForProgress("8 of 16 episodes watched", slider: progress)
+        let start = progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        start.press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
         tapVisibleUndo(app)
         waitForProgress("8 of 16 episodes watched", slider: progress)
         mark.tap(); waitForProgress("9 of 16 episodes watched", slider: progress)
-        let start = progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5625, dy: 0.5))
-        start.press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
-        tapVisibleUndo(app)
-        waitForProgress("9 of 16 episodes watched", slider: progress)
         progress.coordinate(withNormalizedOffset: CGVector(dx: 0.5625, dy: 0.5)).press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.625, dy: 0.5)))
         waitForProgress("10 of 16 episodes watched", slider: progress)
         app.navigationBars.buttons.element(boundBy: 0).tap(); app.buttons["title-quiet-orbit"].tap()
@@ -812,7 +818,7 @@ import UIKit
         XCTAssertFalse(app.textFields["Search filmography"].exists)
         let heading = app.staticTexts["person-filmography-heading"]
         XCTAssertTrue(heading.exists); XCTAssertGreaterThan(layout.frame.minX, heading.frame.minX)
-        XCTAssertLessThan(abs(layout.frame.minY - heading.frame.minY), 8)
+        XCTAssertLessThan(abs(layout.frame.midY - heading.frame.midY), 8)
         XCTAssertEqual(count.label, "16 titles")
         capture("Person layout control replaces filters beside heading")
         XCTAssertFalse(app.buttons["person-filmography-done"].exists)

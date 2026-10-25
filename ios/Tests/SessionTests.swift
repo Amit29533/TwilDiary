@@ -135,7 +135,10 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
             do {
                 let _: EmptyResponse = try await api(storage).request("/api/glance/again", method: method)
                 XCTAssertEqual(method, "GET")
-            } catch { XCTAssertEqual(method, "POST"); XCTAssertTrue(error.localizedDescription.contains("connection dropped")) }
+            } catch {
+                XCTAssertEqual(method, "POST"); XCTAssertTrue(error.localizedDescription.contains("connection dropped"))
+                XCTAssertTrue(error.localizedDescription.contains("not confirmed"), "A lost POST response must never promise that the server stayed unchanged")
+            }
             XCTAssertEqual(StubProtocol.state.recorded().count, method == "GET" ? 2 : 1)
         }
     }

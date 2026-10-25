@@ -191,10 +191,10 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
                 }
                 let message: String
                 switch error.code {
-                case .notConnectedToInternet, .dataNotAllowed: message = "You’re offline. Your saved diary is available; changes need a connection."
-                case .timedOut: message = "The diary took too long to answer. Try again."
-                case .networkConnectionLost: message = "The connection dropped. Refresh before retrying; your saved diary is unchanged."
-                default: message = "The diary could not be reached. Check your connection and try again."
+                case .notConnectedToInternet, .dataNotAllowed: message = "You’re offline. Connect to refresh your diary or make changes."
+                case .timedOut: message = request.httpMethod == "GET" ? "The diary took too long to answer. Try again." : "The request timed out before the change was confirmed. Refresh before retrying."
+                case .networkConnectionLost: message = request.httpMethod == "GET" ? "The connection dropped. Try refreshing." : "The connection dropped. The change was not confirmed. Refresh before retrying."
+                default: message = request.httpMethod == "GET" ? "The diary could not be reached. Check your connection and try again." : "The change could not be confirmed. Check your connection and refresh before retrying."
                 }
                 throw APIError.message(message)
             }
