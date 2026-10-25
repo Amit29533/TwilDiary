@@ -196,7 +196,7 @@ uncompiled; no new acceptance checkbox or stable promotion is implied.
 - [ ] Validate D1 aggregate/index migration in local Workers runtime; deploy safely after quota recovery and verify actual metrics.
 - [ ] Audit native navigation/layout/motion, metadata/search/cache, session boundaries and all mutation receipts.
 - [ ] Audit backend schema/API/data invariants, sync retry/leases/idempotence and free-plan query budget.
-- [ ] Run complete web/native/UI/release suites; inspect artifacts and record remaining phone checks.
+- [ ] Run native UI/logic/release and supporting API/database suites; inspect artifacts and record remaining phone checks. Owner excludes further web/PWA UI walkthroughs.
 
 Native60audit checkpoint:213native/16of17focused pass, zero compiler warnings.
 One concrete left Glance cover/page interaction remains;61prepares symmetric

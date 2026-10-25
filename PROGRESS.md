@@ -142,6 +142,14 @@ cover reference validity, transient success, bounded persistentfailure/cache,
 quota and signoutduringheldretry.408backendtests/checkpass; macOS64stillpending.
 This protects references, not a transactionally versioned snapshot of every value.
 
+Additional local verification captures the actual incoming-status and minute-lease
+SQL with1,000completed reviews, both no-active and one-active review. All four
+query plans use the existingtrakt_one_active_runpartial index; no historical-run
+scan and zero provider calls while not due/manual-review-paused. Three targeted
+query cases pass and fresh typecheck0errors/0warnings. No production change was
+needed for that hypothesis; this is a test-only follow-up, not hosted-cost proof.
+The last full backend suite was408cases; the added case has targeted execution.
+
 64also fences Pause/cancellation immediately after a held recovery GET. Previously
 apply/scan checked Pause before that await but could begin one extraPOST after it.
 New held-read regressions assert no additional apply after Pause/background and
@@ -158,10 +166,16 @@ requires zero apply requests.
 
 Owner tested the previous fully passed Codemagic build: native62 (50134fc / CM
 6ade49474a72334e32e515c7). They report issues but have not described them yet;
-an asynchronous question asks for affected screens/reproduction steps. **Do not
+they will prepare the complete bug chart and asked us to continue the existing
+tests meanwhile. **Do not
 start native64 while this feedback is pending. Notify the owner before starting
 the next build.** Native63was already running before this request;62independent
 GHA also continues. No new build has been started since the owner asked.
+
+Owner asked whether cooldown/stopping fixes are live. Replied precisely:62has
+app-side bulk/tab/progress/cooldown handling;63cold-start recovery still tests;
+Cloudflare hot-query fixes are tested code but0014–0016are not deployed. A genuine
+D1daily quota cannot be bypassed. No claim that hosted usage is already fixed.
 
 ## Exact next work
 
