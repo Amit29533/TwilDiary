@@ -25,11 +25,16 @@ import SwiftUI
         }
         XCTAssertNil(RootTabSwipe.destination(from: .library, translation: CGSize(width: 200, height: 0), width: 0))
     }
-    func testCompactHeaderRetainsItsStateAcrossTheCrossingBand() {
-        XCTAssertEqual(CompactHeaderThreshold.visibility(nameBottom: -17), true)
-        for position in [CGFloat(-16), -2, 0, 16, 24] { XCTAssertNil(CompactHeaderThreshold.visibility(nameBottom: position)) }
-        XCTAssertEqual(CompactHeaderThreshold.visibility(nameBottom: 25), false)
-        XCTAssertNil(CompactHeaderThreshold.visibility(nameBottom: .nan))
+    func testCompactHeaderCrossfadesMonotonicallyAndReversesWithoutAThresholdJump() {
+        XCTAssertEqual(CompactHeaderTransition.progress(nameBottom: 100), 0)
+        XCTAssertEqual(CompactHeaderTransition.progress(nameBottom: -100), 1)
+        XCTAssertEqual(CompactHeaderTransition.progress(nameBottom: 8), 0.5)
+        let values = stride(from: CGFloat(48), through: -32, by: -4).map { CompactHeaderTransition.progress(nameBottom: $0) }
+        XCTAssertEqual(values, values.sorted())
+        XCTAssertGreaterThan(Set(values).count, 15, "The hero must fade through intermediate states")
+        for (previous, next) in zip(values, values.dropFirst()) { XCTAssertLessThanOrEqual(next - previous, 0.063) }
+        XCTAssertEqual(CompactHeaderTransition.progress(nameBottom: .nan), 0)
+        XCTAssertEqual(CompactHeaderTransition.progress(nameBottom: .infinity), 0)
     }
     func testDonePopsOnlyTheOwningStackAndKeepsOtherTabHistory() {
         let router = AppRouter()

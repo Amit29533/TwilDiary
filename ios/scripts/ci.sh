@@ -75,6 +75,12 @@ PY
       -only-testing:TwilDiaryUITests/NativeScreensTests/testT35WatchedEpisodeOffersRewatchAndUndoKeepsItsOriginalWatch \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testContinueCarouselControlsPauseAdvanceReturnAndRestoreAcrossTabs \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testToastExpiresAndCardCoverAndUsefulMenuWork \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeTabsAndTitleNavigation \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testRootContentSwipesVisitEveryTabWithoutWrappingAndKeepCardGestures \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testNavigationLensCanBeHeldAndSlidAcrossTheBarAndCancelledOutsideIt \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testCollectionGridsKeepEpisodeActionsFoldersAndHistoryEntries \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testTitleMenuRevealsAndScrollsNotesAndLocationsAndCopiesAPath \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testCommunityInformationSheetUsesOverallStatsAndReturnsToTheTitle \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeBackReturnsFromEverySettingsDestination \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeExploreReturnsByBackActiveHomeTabAndFullContentSwipe \
       -only-testing:TwilDiaryUITests/LayoutScreensTests/testEveryThemeIsSelectableAndGlassSearchKeepsOneContainedField \

@@ -7,11 +7,9 @@ private struct DiaryPageChrome: ViewModifier {
     let detail: Bool
     @Environment(DiaryStore.self) private var store
     func body(content: Content) -> some View {
-        content.safeAreaInset(edge: .bottom, spacing: 0) {
-            if !detail { DiaryNavigationBar().reservesHorizontalSwipe().padding(.horizontal, 12).padding(.bottom, 10) }
-        }.overlay(alignment: .bottom) {
+        content.overlay(alignment: .bottom) {
             if let label = store.undoLabel {
-                UndoToast(label: label).padding(.horizontal, 14).padding(.bottom, detail ? 10 : 78)
+                UndoToast(label: label).padding(.horizontal, 24).padding(.bottom, 10)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }

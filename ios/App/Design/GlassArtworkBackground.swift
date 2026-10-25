@@ -1,5 +1,6 @@
 import SwiftUI
 import ImageIO
+import CoreImage
 import UIKit
 import TwilDiaryCore
 
@@ -89,7 +90,13 @@ actor GlassArtworkCache {
         }
         guard drawn else { return nil }
         let color = dominant(bytes)
-        return GlassArtworkBitmap(image: image, red: color.0, green: color.1, blue: color.2)
+        // The tiny backdrop is blurred once before caching, off the UI actor.
+        // Scrolling then composites a bitmap instead of filtering a full screen.
+        let source = CIImage(cgImage: image)
+        let output = source.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: ["inputRadius": 6.0])
+        let context = CIContext(options: [.cacheIntermediates: false])
+        let blurred = context.createCGImage(output, from: source.extent) ?? image
+        return GlassArtworkBitmap(image: blurred, red: color.0, green: color.1, blue: color.2)
     }
     nonisolated static func dominant(_ bytes: [UInt8]) -> (Double, Double, Double) {
         var bins: [Int: (count: Int, r: Int, g: Int, b: Int)] = [:]
@@ -108,6 +115,7 @@ actor GlassArtworkCache {
 struct DiaryScreenBackground: View {
     var path: String? = nil
     var name = ""
+    var forceGlass = false
     @Environment(DiaryStore.self) private var store
     @AppStorage("theme") private var theme = DiaryTheme.twilight
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -120,18 +128,18 @@ struct DiaryScreenBackground: View {
         GeometryReader { geometry in
             ZStack {
                 Color.black
-                if theme == .glass && !reduceTransparency, let bitmap {
+                if (theme == .glass || forceGlass) && !reduceTransparency, let bitmap {
                     Color(red: bitmap.red, green: bitmap.green, blue: bitmap.blue).opacity(0.5)
                     Image(decorative: bitmap.image, scale: 1).resizable().scaledToFill()
                         .frame(width: geometry.size.width, height: geometry.size.height).clipped()
-                        .blur(radius: 34, opaque: true).opacity(0.44)
+                        .opacity(0.44)
                     LinearGradient(colors: [.black.opacity(0.28), .black.opacity(0.55)], startPoint: .top, endPoint: .bottom)
                 }
             }.frame(width: geometry.size.width, height: geometry.size.height).clipped()
         }.ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
-            .task(id: BackgroundKey(path: artwork, glass: theme == .glass, reduced: reduceTransparency)) {
+            .task(id: BackgroundKey(path: artwork, glass: theme == .glass || forceGlass, reduced: reduceTransparency)) {
                 bitmap = nil
-                guard theme == .glass, !reduceTransparency, let artwork else { return }
+                guard (theme == .glass || forceGlass), !reduceTransparency, let artwork else { return }
                 let result: GlassArtworkBitmap?
                 if let local = localArtwork(artwork) {
                     result = await GlassArtworkCache.shared.local(GlassArtworkBitmap(image: local, red: 0, green: 0, blue: 0), key: artwork)

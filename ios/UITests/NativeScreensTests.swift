@@ -86,7 +86,7 @@ import UIKit
         XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5)); capture("Home")
         app.buttons["tab-library"].tap()
         XCTAssertTrue(app.buttons["Search library"].waitForExistence(timeout: 5)); capture("Library")
-        XCTAssertEqual(app.tabBars.count, 0, "The custom capsule must be the only tab bar")
+        XCTAssertEqual(app.tabBars.count, 1, "The system Liquid Glass tab bar must be the only tab bar")
         let first = app.buttons["title-after-rain"].frame, second = app.buttons["title-again"].frame, third = app.buttons["title-frieren"].frame
         XCTAssertLessThan(first.maxX, second.minX)
         XCTAssertLessThan(second.maxX, third.minX)
@@ -115,7 +115,7 @@ import UIKit
         func swipe(_ right: Bool) {
             let logo = app.buttons["random-pick-logo"]
             XCTAssertTrue(logo.waitForExistence(timeout: 5))
-            let y = logo.frame.midY
+            let y = app.frame.height * (app.buttons["tab-home"].isSelected ? 0.68 : 0.43)
             let start = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: app.frame.width * (right ? 0.25 : 0.75), dy: y))
             let end = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: app.frame.width * (right ? 0.75 : 0.25), dy: y))
             start.press(forDuration: 0.05, thenDragTo: end)
@@ -1070,7 +1070,7 @@ import UIKit
         mark.tap()
         let toast = app.otherElements["undo-toast"]
         XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 5))
-        if toast.exists { XCTAssertLessThan(toast.frame.height, 80) }
+        if toast.exists { XCTAssertLessThanOrEqual(toast.frame.height, 48); XCTAssertLessThanOrEqual(toast.frame.width, 330) }
         capture("Compact watch toast")
         wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.buttons["Undo"])], timeout: 8)
         XCTAssertFalse(app.buttons["Dismiss undo"].exists)
@@ -1216,8 +1216,16 @@ import UIKit
             let watch = app.buttons["Mark episode \(number) " + (number == 8 ? "unwatched" : "watched")]
             XCTAssertTrue(watch.exists)
             XCTAssertLessThan(details.frame.height, 210, "The artwork/caption button must not grow a vertical Spacer when its summary expands")
-            XCTAssertLessThan(watch.frame.minY - details.frame.maxY, 24)
-            XCTAssertLessThan(summary.frame.minY - watch.frame.maxY, 30)
+            let thumbnail = app.descendants(matching: .any)["episode-thumbnail-\(number)"]
+            XCTAssertTrue(thumbnail.exists)
+            XCTAssertGreaterThanOrEqual(watch.frame.minX, thumbnail.frame.minX)
+            XCTAssertLessThanOrEqual(watch.frame.maxX, thumbnail.frame.maxX)
+            XCTAssertGreaterThanOrEqual(watch.frame.minY, thumbnail.frame.minY)
+            XCTAssertLessThanOrEqual(watch.frame.maxY, thumbnail.frame.maxY)
+            XCTAssertLessThan(abs(watch.frame.maxY - thumbnail.frame.maxY), 8)
+            XCTAssertLessThan(abs(watch.frame.maxX - thumbnail.frame.maxX), 8)
+            XCTAssertGreaterThan(summary.frame.minY, details.frame.maxY)
+            XCTAssertLessThan(summary.frame.minY - details.frame.maxY, 30)
         }
         capture("Expanded episode grid keeps captions watch controls and summaries together")
         eighth.tap(); ninth.tap()
@@ -1261,7 +1269,8 @@ import UIKit
         XCTAssertTrue(app.staticTexts["Pick up where you left off"].exists)
         let start = library.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.3, thenDragTo: start.withOffset(CGVector(dx: 0, dy: -170)))
-        XCTAssertTrue(app.buttons["tab-home"].isSelected, "Releasing outside the bar must cancel the preview")
+        XCTAssertEqual(["home", "library", "glance", "stats", "more"].filter { app.buttons["tab-" + $0].isSelected }.count, 1)
+        XCTAssertEqual(app.tabBars.count, 1)
         app.buttons["tab-library"].tap(); XCTAssertTrue(app.buttons["tab-library"].isSelected)
         capture("Glass navigation cancelled and tap restored")
     }

@@ -111,3 +111,18 @@ The isolated draft overlays the extracted unchanged menu, preserves card height
 and button paint sizes, adds44pt hit areas and makes the Home pending style
 include its tinted background. Existing watch/cover/menu tests gain real target
 bounds. Runtime and screenshot comparison remain pending;54images are unchanged.
+
+## Owner-directed native57 navigation/material changes (uncompiled)
+
+The owner explicitly replaces the custom web-like bottom capsule tracking with
+SwiftUI's system TabView Liquid Glass bar. Five destinations and per-tab paths
+remain. Tab labels/symbols/lens/touch tracking now follow native iOS behavior;
+this is an authorized visual departure from web navigation. Root content
+swipes coexist with short Glance one-watch swipes (long >=160pt pages).
+Header identity/material fade over80pt with fixed toolbar slots. Information
+retains its artwork-tinted translucency at both detents. Episode grid check
+buttons sit over the bottom-right thumbnail and preserve44pt targets.
+
+References: Apple's TabContent.accessibilityIdentifier, TabView,
+TabBarMinimizeBehavior.never and containerBackground(.clear,for:.navigation).
+No Swift compile/screenshots/physical smoothness acceptance yet.

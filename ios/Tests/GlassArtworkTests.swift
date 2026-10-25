@@ -1,4 +1,5 @@
 import XCTest
+import CoreGraphics
 @testable import TwilDiary
 
 final class GlassArtworkTests: XCTestCase {
@@ -30,4 +31,29 @@ final class GlassArtworkTests: XCTestCase {
         let first = GlassArtworkCache.dominant(a + b), second = GlassArtworkCache.dominant(b + a)
         XCTAssertEqual(first.0, second.0); XCTAssertEqual(first.1, second.1); XCTAssertEqual(first.2, second.2)
     }
+    func testCachedBackdropIsPreblurredWithoutChangingItsExtent() async throws {
+        let result = await Task.detached { () -> GlassArtworkBitmap? in
+            guard let context = CGContext(data: nil, width: 32, height: 32, bitsPerComponent: 8, bytesPerRow: 128,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+            context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+            context.fill(CGRect(x: 0, y: 0, width: 16, height: 32))
+            context.setFillColor(CGColor(red: 0, green: 0, blue: 1, alpha: 1))
+            context.fill(CGRect(x: 16, y: 0, width: 16, height: 32))
+            guard let image = context.makeImage() else { return nil }
+            return GlassArtworkCache.bitmap(image)
+        }.value
+        let bitmap = try XCTUnwrap(result)
+        XCTAssertEqual(bitmap.image.width, 32); XCTAssertEqual(bitmap.image.height, 32)
+        let middle = try XCTUnwrap(bitmap.image.cropping(to: CGRect(x: 15, y: 16, width: 1, height: 1)))
+        var bytes = [UInt8](repeating: 0, count: 4)
+        let rendered = bytes.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(data: buffer.baseAddress, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.draw(middle, in: CGRect(x: 0, y: 0, width: 1, height: 1)); return true
+        }
+        XCTAssertTrue(rendered)
+        XCTAssertGreaterThan(bytes[0], 30); XCTAssertGreaterThan(bytes[2], 30)
+        XCTAssertGreaterThan(bytes[3], 240, "Clamping must keep the backdrop edges opaque")
+    }
+
 }

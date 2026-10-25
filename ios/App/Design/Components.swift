@@ -113,7 +113,7 @@ struct PageHeader: View {
             Spacer(minLength: 0)
             if let onSearch { Button(action: onSearch) { DiaryIcon(name: "search", size: 22).frame(width: 44, height: 44) }.buttonStyle(.plain).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel(name == "Library" ? "Search library" : "Search").accessibilityIdentifier("search-" + name.lowercased()) }
         }.frame(height: height).padding(.horizontal, 14).background {
-            if theme == .glass { Rectangle().fill(.ultraThinMaterial).overlay(.black.opacity(0.2)) }
+            if theme == .glass { Color.clear }
             else { Color(webHex: ["Library", "Trash"].contains(name) ? "#0e0d13" : "#050507") }
         }
     }
@@ -332,8 +332,8 @@ struct ProgressCard: View {
             .simultaneousGesture(DragGesture(minimumDistance: 22).onChanged { value in
                 guard !compact, value.startLocation.x > 24, canMark else { return }
                 if value.translation.width > abs(value.translation.height) * 1.3 { drag = min(120, max(0, value.translation.width)); suppressNavigationUntil = .now.addingTimeInterval(0.35) }
-            }.onEnded { _ in
-                let mark = drag > 80; if drag > 22 { suppressNavigationUntil = .now.addingTimeInterval(0.35) }; withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.8)) { drag = 0 }
+            }.onEnded { value in
+                let mark = drag > 80 && value.translation.width < 160; if drag > 22 { suppressNavigationUntil = .now.addingTimeInterval(0.35) }; withAnimation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.8)) { drag = 0 }
                 if mark { Task { await markWatch() } }
             })
             .reservesHorizontalSwipe(!compact)

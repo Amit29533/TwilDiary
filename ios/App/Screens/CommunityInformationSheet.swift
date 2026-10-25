@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CommunityInformationSheet: View {
     let name: String
+    var artwork: String? = nil
     let identity: CommunityIdentity?
     @Environment(DiaryStore.self) private var store
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -47,10 +48,19 @@ struct CommunityInformationSheet: View {
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }.padding(20).padding(.bottom, 20)
             }.scrollContentBackground(.hidden).background(.clear)
+                .containerBackground(.clear, for: .navigation)
                 .navigationTitle("Information").navigationBarTitleDisplayMode(.inline)
                 .toolbarBackground(.hidden, for: .navigationBar)
+        }.background {
+            if reduceTransparency { Color(webHex: "#1c1c1e").ignoresSafeArea() }
+            else {
+                ZStack {
+                    DiaryScreenBackground(path: artwork, name: name, forceGlass: true).opacity(0.55)
+                    Rectangle().fill(.ultraThinMaterial)
+                }.ignoresSafeArea()
+            }
         }.presentationDetents([.medium, .large], selection: $detent).presentationDragIndicator(.visible)
-            .presentationBackground(reduceTransparency ? AnyShapeStyle(Color(webHex: "#1c1c1e")) : AnyShapeStyle(Material.ultraThin))
+            .presentationBackground(.clear)
             .task(id: TaskIdentity(identity: identity, session: store.sessionRevision, retry: retryRevision)) {
                 await controller.load(identity, retry: retryRevision > 0) { identity, retry in try await store.communityInformation(identity, retry: retry) }
             }

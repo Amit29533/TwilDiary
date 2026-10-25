@@ -12,9 +12,9 @@ struct TitleHero<PersonalRating: View>: View {
     let score: Double?
     let summary: String
     @Binding var expanded: Bool
-    let onNameScrolled: ((Bool) -> Void)?
+    let onNameScrolled: ((CGFloat) -> Void)?
     let personalRating: PersonalRating
-    init(name: String, poster: String?, year: Int?, category: String, runtime: Int?, series: Bool, score: Double?, summary: String, expanded: Binding<Bool>, onNameScrolled: ((Bool) -> Void)? = nil, @ViewBuilder personalRating: () -> PersonalRating) {
+    init(name: String, poster: String?, year: Int?, category: String, runtime: Int?, series: Bool, score: Double?, summary: String, expanded: Binding<Bool>, onNameScrolled: ((CGFloat) -> Void)? = nil, @ViewBuilder personalRating: () -> PersonalRating) {
         self.name = name; self.poster = poster; self.year = year; self.category = category; self.runtime = runtime; self.series = series; self.score = score; self.summary = summary; self._expanded = expanded; self.onNameScrolled = onNameScrolled; self.personalRating = personalRating()
     }
     @State private var synopsisWidth: CGFloat = 0
@@ -31,7 +31,7 @@ struct TitleHero<PersonalRating: View>: View {
                     Text(name).font(.system(size: 24, weight: .bold)).tracking(-1.08).foregroundStyle(.white).fixedSize(horizontal: false, vertical: true)
                         .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
                         .accessibilityIdentifier("title-hero-name")
-                        .onGeometryChange(for: Bool?.self) { CompactHeaderThreshold.visibility(nameBottom: $0.frame(in: .scrollView(axis: .vertical)).maxY) } action: { if let visible = $0 { onNameScrolled?(visible) } }
+                        .onGeometryChange(for: CGFloat.self) { CompactHeaderTransition.progress(nameBottom: $0.frame(in: .scrollView(axis: .vertical)).maxY) } action: { onNameScrolled?($0) }
                     Text([year.map(String.init) ?? "—", category, runtime.map { series ? "\($0) min per episode" : "\($0) min" }].compactMap { $0 }.joined(separator: " · ")).font(.system(size: 14.4)).lineSpacing(4.3).foregroundStyle(.secondary).frame(minHeight: 21.6, alignment: .top).padding(.top, 14)
                     InlineFlowLayout {
                         HStack(spacing: 5) { Image(systemName: "star.fill").font(.system(size: 20)).foregroundStyle(.yellow); Text(score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—").foregroundStyle(.yellow); Text("TMDb").font(.system(size: 14.4)).foregroundStyle(.secondary) }.frame(minHeight: 44)

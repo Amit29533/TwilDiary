@@ -18,7 +18,7 @@ available locally; Windows checks grammar/YAML/Bash/Python only.
 
 | Track | Exact source | Current evidence |
 | --- | --- | --- |
-| GitHub ios-native, native54 | d59f55e5fa574382b067477f6b4fb079690507a8 | Complete Codemagic54 passed. GHA54attempt1 stopped on an incompatible restored pre-split Core module; cache invalidated, same-source attempt2 requested. |
+| GitHub ios-native, native54 | d59f55e5fa574382b067477f6b4fb079690507a8 | Complete Codemagic54 passed. GHA54attempt1 stopped on an incompatible restored pre-split Core module; cache invalidated; attempt2 compiled/unit188passed but two focused UI cases failed (settings-theme reachability and retained Glance search). Do not rerun unchanged. |
 | Codemagic candidate codex/ios-ci-next, native55 | ae2cfdcccbe58fbd2f353abbbfabb4fa67b59766 | Warning-free simulator build and allComplete CM55passed:0warnings/194native/8focused/10early/51primary/3layouts each extra phone/Release. Official success verified; artifacts need download. |
 | Local codex/ios-carousel-parity, native56 |9e30c49 plus this documentation update; use git rev-parse HEAD| Carousel batch,196native/52primary/10focused source cases; uncompiled. |
 
@@ -67,7 +67,7 @@ and top62/bottom34OS-only insets, with no stretching. Font weights/metrics,
 small spacing/card padding and requested native controls differ; no claim of
 pixel-identical parity. Comparison outputs remain .local/native54-*-web-comparison.png.
 
-Owner asked which IPA to try; directed them explicitly to native54, with History/Explore Back, slow/reverse compact-header scroll and the visible watched-episode Log rewatch action. No new phone result yet. Native53diagnostic remains available but is superseded for this check. Earlier native40 owner feedback confirms
+Owner asked which IPA to try; directed them explicitly to native54, with History/Explore Back, slow/reverse compact-header scroll and the visible watched-episode Log rewatch action. Owner has now returned T01–T33 results; see DEVICE-RESULTS-BUILD54.md. Header/tab gestures/episode-grid/Notes animation/toast/glass fixes are open; data flows broadly pass. Native53diagnostic remains available but is superseded for this check. Earlier native40 owner feedback confirms
 Information sentiments/dismissal, incoming-switch persistence, Notes targeting,
 watch/Undo, keyboard-safe search, tab scrub and offline navigation.
 
@@ -120,8 +120,7 @@ Owner requested the complete device test list. Wrote ios/docs/DEVICE-TEST-BUILD5
 and D:/Downloads/TwilDiary-native54-iPhone-checklist.md with41numbered checks,
 prioritized old UI issues, watch/rewatch/Undo/date/season rules, all screens,
 reviewed/automatic Trakt distinction and real-phone offline/accessibility/performance.
-Explicitly excludes55cache and56carousel features from54expectations. Phone results
-remain pending; do not treat sending a checklist as a pass. Reviewed sync checks refer to actual incoming/outgoing proposals, not an invented global one-way/two-way switch; Undo timing states the8second VoiceOver allowance.
+Explicitly excludes55cache and56carousel features from54expectations. T01–T33 results are now recorded in DEVICE-RESULTS-BUILD54.md; T34–T41 remain pending; do not treat sending a checklist as a pass. Reviewed sync checks refer to actual incoming/outgoing proposals, not an invented global one-way/two-way switch; Undo timing states the8second VoiceOver allowance.
 
 ## GitHub54 cache repair / native56future protection
 
@@ -129,9 +128,38 @@ GHA54attempt1fails with ambiguous SampleWorkspace.make and two downstream key-pa
 
 The changed Glance toast/cover/menu case now joins the focused gate alongside carousel, giving10focused cases while preserving all old8. Catch card-input regressions before the long suite.
 
+## Native57 — owner phone fixes prepared, not compiled
+
+Owner's T01–T33 pass/partial/fail results are recorded verbatim in meaning in
+DEVICE-RESULTS-BUILD54.md. Both10.34s/8.87s clips were extracted and visually
+inspected locally. They confirm binary toolbar replacement and unstable custom
+bar tracking. Screen evidence confirms watch controls below episode artwork,
+opaque large Information presentation and a separate material header stripe.
+
+Prepared source: native SwiftUI TabView/TabContent identifiers and .never bar
+minimization; removed custom lens/zero-distance gesture and global hidden bar.
+Root paging attaches to the real window with active-root/path/modal ownership;
+long card swipes page while short one-watch swipes retain their existing action.
+Horizontal carousels, text inputs, native tabs and sliders remain excluded.
+Title/catalog identity and material crossfade over80scroll points with retained
+toolbar slots; no binary background visibility change. Notes/Files/episode focus
+scroll uses reduced-motion-aware .smooth. Episode grid watch controls overlay
+thumbnail bottom-right; layout toggle shares the Episodes row. Undo uses a44pt
+capsule up to330pt wide, retaining44pt action targets and expiry/hold semantics.
+Information clears NavigationStack/sheet fill and retains blurred title artwork
+at both detents with black sentiment cards. Glass backgrounds are preblurred once
+before bounded cache insertion; removed duplicate root/full-screen material work
+and PageHeader's flat material stripe. No quantified phone performance claim.
+
+Includes unshipped56carousel/card work and accepted55cache preparation. Build56
+was never compiled or distributed. Native57local syntax197native/52primary and
+13tool tests pass;16focused cases now exercise native tabs, actual body swipes,
+tracking, grid overlays, Notes and Information before the full suite. Swift type/
+runtime and new screenshots pending. No promotion or new phone IPA yet.
+
 ## Exact next actions
 
-1. Inspect55compiler and all194native cases, especially new cache interleavings.
+1. Run the coherent57candidate on Codemagic only; inspect compiler/197native, then16focused cases, complete regression and actual screenshots. Keep GitHub stable unchanged until exact-SHA CM success. Preserve55artifacts if downloading.
    Read54GitHub focused/full/extra-phone evidence independently. Do not retry
    unchanged failures or promote a diagnostic-only success.
 2. If55fullgreen, download/verify current artifacts and measurements, then

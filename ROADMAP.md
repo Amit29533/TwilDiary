@@ -183,3 +183,9 @@ Build 14 evidence checkpoint: run 40056346004 passes all 66 tests/zero warnings;
 - [ ] Title menu reveals Notes/Files in view; location evidence/path/copy/empty/Files-return controls work.
 
 The unchanged web unit suite passes 346 tests and isolated reference walkthrough passes 96 states; two additional menu states pass separately (98 in the manifest). Native compile/runtime/screenshots remain pending. Existing earlier-step regressions remain enabled.
+
+Owner phone feedback25October/native54: T01–T33results recorded in
+ios/docs/DEVICE-RESULTS-BUILD54.md. Native57prepares native tab handling, actual
+content paging, continuous compact header, animated focus scroll, smaller Undo,
+thumbnail check overlays and persistent glass/tinted Information. Remains
+uncompiled; no new acceptance checkbox or stable promotion is implied.

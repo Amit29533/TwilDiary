@@ -27,7 +27,9 @@ struct TitleDetailView: View {
     @State private var ratingField = VersionedField<Double?>(value: nil, version: nil)
     @State private var showRating = false
     @State private var showInformation = false
-    @State private var compactHeader = false
+    @State private var headerProgress: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private var compactHeader: Bool { headerProgress >= 0.5 }
     @State private var resetConfirmation = false
     @State private var card: WatchCard?
     @State private var cardRequest = UUID()
@@ -85,22 +87,27 @@ struct TitleDetailView: View {
                                 guard let target = pendingScrollTarget else { return }
                                 await Task.yield()
                                 guard !Task.isCancelled, pendingScrollTarget == target else { return }
-                                proxy.scrollTo(target, anchor: target == "notes-editor" ? .center : .top)
+                                withAnimation(reduceMotion ? nil : .smooth(duration: 0.4)) {
+                                    proxy.scrollTo(target, anchor: target == "notes-editor" ? .center : .top)
+                                }
                             }
                             .onChange(of: notesFocused) { _, focused in if focused { pendingScrollTarget = nil } }
                             .toolbar(.visible, for: .navigationBar).navigationBarTitleDisplayMode(.inline)
-                            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
-                            .toolbarBackground(compactHeader ? .visible : .hidden, for: .navigationBar)
+                            .toolbarBackground(.hidden, for: .navigationBar)
+                            .overlay(alignment: .top) { CompactHeaderBackdrop(progress: headerProgress, topInset: geometry.safeAreaInsets.top) }
                             .toolbar {
                                 ToolbarItem(placement: .principal) {
-                                    CompactTitleNavigation(name: title.name, poster: title.poster, visible: compactHeader)
+                                    CompactTitleNavigation(name: title.name, poster: title.poster, progress: headerProgress)
                                 }
                                 ToolbarItemGroup(placement: .topBarTrailing) {
-                                    if compactHeader { TitleShareAction(name: title.name, kind: title.isSeries ? .tv : .movie, id: title.tmdbId) }
-                                    else {
-                                        Button { showInformation = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("Community information").accessibilityIdentifier("title-information")
-                                        Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
-                                    }
+                                    ZStack {
+                                        TitleShareAction(name: title.name, kind: title.isSeries ? .tv : .movie, id: title.tmdbId)
+                                            .opacity(Double(headerProgress)).allowsHitTesting(compactHeader).accessibilityHidden(!compactHeader)
+                                        Button { showInformation = true } label: { Image(systemName: "info.circle") }
+                                            .accessibilityLabel("Community information").accessibilityIdentifier("title-information")
+                                            .opacity(Double(1 - headerProgress)).allowsHitTesting(!compactHeader).accessibilityHidden(compactHeader)
+                                    }.frame(width: 32, height: 32)
+                                    Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
                                     Menu {
                                         if compactHeader {
                                             Button("Community information", systemImage: "info.circle") { showInformation = true }
@@ -120,7 +127,7 @@ struct TitleDetailView: View {
                                 if focusEpisodes && !didFocusEpisodes && !Task.isCancelled {
                                     await Task.yield()
                                     didFocusEpisodes = true
-                                    proxy.scrollTo("episodes", anchor: .top)
+                                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.4)) { proxy.scrollTo("episodes", anchor: .top) }
                                 }
                                 if !hideSpoilers { await revealSeason(title) }
                             }
@@ -140,7 +147,7 @@ struct TitleDetailView: View {
                                 }.presentationDetents([.medium, .large])
                             }
                             .sheet(isPresented: $showInformation) {
-                                CommunityInformationSheet(name: title.name, identity: CommunityIdentity(kind: title.isSeries ? .tv : .movie, id: title.tmdbId))
+                                CommunityInformationSheet(name: title.name, artwork: title.backdrop ?? title.poster, identity: CommunityIdentity(kind: title.isSeries ? .tv : .movie, id: title.tmdbId))
                             }
                             .onChange(of: hideSpoilers) { _, hidden in if !hidden { Task { await revealSeason(title) } } }
                             .onChange(of: store.sessionRevision) { _, _ in episodeDetails.reset(); revealedEpisodeIDs = []; expandedEpisodes = [] }
@@ -186,7 +193,7 @@ struct TitleDetailView: View {
             .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color(webHex: "#ffffff0d")))
     }
     private func header(_ title: MediaTitle) -> some View {
-        TitleHero(name: title.name, poster: title.poster, year: title.year, category: title.categoryName, runtime: title.runtimeMinutes, series: title.isSeries, score: title.communityScore, summary: title.overview, expanded: $showOverview, onNameScrolled: { compactHeader = $0 }) { personalRating(title).frame(minHeight: 44) }
+        TitleHero(name: title.name, poster: title.poster, year: title.year, category: title.categoryName, runtime: title.runtimeMinutes, series: title.isSeries, score: title.communityScore, summary: title.overview, expanded: $showOverview, onNameScrolled: { headerProgress = $0 }) { personalRating(title).frame(minHeight: 44) }
     }
     private func personalRating(_ title: MediaTitle) -> some View { Button { openRating(title) } label: { HStack(spacing: 7) { DiaryIcon(name: "star", size: 21); Text("Your rating").foregroundStyle(.secondary); Text(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "—") } }.buttonStyle(.plain).accessibilityIdentifier("title-personal-rating").accessibilityLabel("Your rating").accessibilityValue(title.score.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "Not rated") }
     private func progressPanel(_ title: MediaTitle) -> some View {
@@ -300,8 +307,8 @@ struct TitleDetailView: View {
                         ForEach(seasonNumbers, id: \.self) { number in Text(number == 0 ? "Specials" : "Season \(number)").tag(number) }
                     }.pickerStyle(.menu).accessibilityIdentifier("title-season").accessibilityValue(season == 0 ? "Specials" : "Season \(season)")
                 }
+                CollectionLayoutToggle(grid: $episodesGrid, collection: "episodes")
             }
-            HStack { Spacer(); CollectionLayoutToggle(grid: $episodesGrid, collection: "episodes") }
             if !seasonCanEdit(title) { Button("Load season episodes") { Task { await store.loadSeason(title, number: season); await loadCard(title) } }.buttonStyle(.bordered).disabled(store.writesBlocked) }
             if let seasonLoadError { RetryNotice(message: seasonLoadError) { Task { await prepareSeason(title, force: true) } } }
             if let episodeError = episodeDetails.error(for: season) { Text(episodeError).font(.caption).foregroundStyle(.secondary); Button("Retry episode details") { Task { await revealSeason(title) } } }
@@ -313,24 +320,33 @@ struct TitleDetailView: View {
     }
     private func episodeRow(_ title: MediaTitle, episode: Episode) -> some View {
         let isWatched = watched.contains(episode.id), next = card?.next?.id == episode.id
-        let layout = episodesGrid ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10)) : AnyLayout(HStackLayout(spacing: 12))
         return VStack(alignment: .leading, spacing: 10) {
-            layout {
+            if episodesGrid {
                 Button { toggleEpisode(title, episode: episode) } label: {
-                    layout {
-                        episodeArtwork(episode).frame(width: episodesGrid ? nil : 96, height: episodesGrid ? 96 : 54).frame(maxWidth: episodesGrid ? .infinity : nil).clipShape(RoundedRectangle(cornerRadius: 10))
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("\(episode.number) · \(episodeName(episode))").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).multilineTextAlignment(.leading).accessibilityIdentifier("episode-caption-\(episode.number)")
-                            InlineFlowLayout {
-                                Text(isWatched ? "Watched" : next ? "Up next" : hasAired(episode) ? "Not watched" : "Not aired yet").foregroundStyle(next ? theme.accent : Color.secondary)
-                                if let score = episodeDetails.episodes[episode.id]?.communityScore ?? episode.communityScore, score > 0 { Text("★ " + score.formatted(.number.precision(.fractionLength(1))) + " TMDb").foregroundStyle(.yellow) }
-                            }.font(.system(size: 11))
-                        }
-                        if !episodesGrid { Spacer(minLength: 0) }
+                    episodeArtwork(episode).frame(height: 96).frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .accessibilityIdentifier("episode-thumbnail-\(episode.number)")
+                }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) artwork")
+                    .overlay(alignment: .bottomTrailing) {
+                        episodeWatchControl(title, episode: episode, watched: isWatched)
+                            .background(.black.opacity(0.65), in: Circle()).padding(4)
                     }
-                }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) details").accessibilityValue(episodeName(episode)).accessibilityIdentifier("title-episode-\(episode.number)")
-                Button { Task { if isWatched { await store.unwatchEpisode(episode) } else { await store.recordViewing(title, episode: episode, watchedAt: watchInstant) }; await loadCard(title) } } label: { Image(systemName: isWatched ? "checkmark.circle.fill" : "circle").font(.system(size: 24)).foregroundStyle(isWatched ? theme.accent : Color.secondary).frame(width: 44, height: 44) }
-                    .buttonStyle(.plain).disabled(store.writesBlocked || (!isWatched && !hasAired(episode))).accessibilityLabel("Mark episode \(episode.number) \(isWatched ? "unwatched" : "watched")")
+                Button { toggleEpisode(title, episode: episode) } label: {
+                    episodeCaption(episode, watched: isWatched, next: next)
+                }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) details")
+                    .accessibilityValue(episodeName(episode)).accessibilityIdentifier("title-episode-\(episode.number)")
+            } else {
+                HStack(spacing: 12) {
+                    Button { toggleEpisode(title, episode: episode) } label: {
+                        HStack(spacing: 12) {
+                            episodeArtwork(episode).frame(width: 96, height: 54).clipShape(RoundedRectangle(cornerRadius: 10))
+                            episodeCaption(episode, watched: isWatched, next: next)
+                            Spacer(minLength: 0)
+                        }
+                    }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) details")
+                        .accessibilityValue(episodeName(episode)).accessibilityIdentifier("title-episode-\(episode.number)")
+                    episodeWatchControl(title, episode: episode, watched: isWatched)
+                }
             }
             if expandedEpisodes.contains(episode.id) {
                 Text(episodeSummary(episode)).font(.subheadline).foregroundStyle(.secondary).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("episode-summary-\(episode.number)")
@@ -345,6 +361,34 @@ struct TitleDetailView: View {
                 }
             }
         }.padding(.vertical, 8).frame(minHeight: 72).background(next ? theme.accent.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 18))
+    }
+    private func episodeCaption(_ episode: Episode, watched: Bool, next: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(episode.number) · \(episodeName(episode))").font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white).multilineTextAlignment(.leading)
+                .accessibilityIdentifier("episode-caption-\(episode.number)")
+            InlineFlowLayout {
+                Text(watched ? "Watched" : next ? "Up next" : hasAired(episode) ? "Not watched" : "Not aired yet")
+                    .foregroundStyle(next ? theme.accent : Color.secondary)
+                if let score = episodeDetails.episodes[episode.id]?.communityScore ?? episode.communityScore, score > 0 {
+                    Text("★ " + score.formatted(.number.precision(.fractionLength(1))) + " TMDb").foregroundStyle(.yellow)
+                }
+            }.font(.system(size: 11))
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+    private func episodeWatchControl(_ title: MediaTitle, episode: Episode, watched: Bool) -> some View {
+        Button {
+            Task {
+                if watched { await store.unwatchEpisode(episode) }
+                else { await store.recordViewing(title, episode: episode, watchedAt: watchInstant) }
+                await loadCard(title)
+            }
+        } label: {
+            Image(systemName: watched ? "checkmark.circle.fill" : "circle").font(.system(size: 24))
+                .foregroundStyle(watched ? theme.accent : Color.secondary).frame(width: 44, height: 44)
+        }.buttonStyle(.plain).disabled(store.writesBlocked || (!watched && !hasAired(episode)))
+            .accessibilityLabel("Mark episode \(episode.number) \(watched ? "unwatched" : "watched")")
+            .accessibilityIdentifier("episode-watch-\(episode.number)")
     }
     @ViewBuilder private func episodeArtwork(_ episode: Episode) -> some View {
         if isHidden(episode) { Color(webHex: "#211d2d").overlay { DiaryIcon(name: "eye-off", size: 23).foregroundStyle(.secondary) } }

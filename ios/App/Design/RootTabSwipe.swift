@@ -40,9 +40,10 @@ enum RootTabSwipe {
         var onSwipe: (@MainActor (CGSize, CGFloat) -> Void)?
         private weak var surface: UIView?
         private var attaching: Task<Void, Never>?
+        private var startsOnWatchCard = false
         private lazy var pan: UIPanGestureRecognizer = {
             let gesture = UIPanGestureRecognizer(target: self, action: #selector(finish(_:)))
-            gesture.maximumNumberOfTouches = 1; gesture.delegate = self
+            gesture.maximumNumberOfTouches = 1; gesture.cancelsTouchesInView = false; gesture.delegate = self
             return gesture
         }()
         override func loadView() {
@@ -61,11 +62,11 @@ enum RootTabSwipe {
             attaching = Task { @MainActor [weak self] in
                 await Task.yield()
                 guard !Task.isCancelled, let self, self.viewIfLoaded?.window != nil,
-                      let nav = self.navigationOwner, nav.viewControllers.count == 1,
-                      let top = nav.topViewController, self.view.isDescendant(of: top.view) else { return }
-                if self.surface !== top.view {
+                      let nav = self.navigationOwner, let top = nav.topViewController,
+                      self.view.isDescendant(of: top.view), let window = self.view.window else { return }
+                if self.surface !== window {
                     self.surface?.removeGestureRecognizer(self.pan)
-                    top.view.addGestureRecognizer(self.pan); self.surface = top.view
+                    window.addGestureRecognizer(self.pan); self.surface = window
                 }
             }
         }
@@ -80,7 +81,7 @@ enum RootTabSwipe {
         }
         private var ownsRoot: Bool {
             guard enabled, let nav = navigationOwner, nav.transitionCoordinator == nil,
-                  nav.viewControllers.count == 1, let top = nav.topViewController,
+                  let top = nav.topViewController,
                   viewIfLoaded?.window != nil else { return false }
             return view.isDescendant(of: top.view) && nav.presentedViewController == nil
         }
@@ -93,13 +94,14 @@ enum RootTabSwipe {
             guard ownsRoot, let surface else { return false }
             var ancestor = touch.view
             while let current = ancestor {
-                if current is UISlider || current is UISwitch || current is UITextField || current is UITextView { return false }
+                if current is UITabBar || current is UISlider || current is UISwitch || current is UITextField || current is UITextView { return false }
                 if let scroll = current as? UIScrollView,
                    scroll.alwaysBounceHorizontal || scroll.contentSize.width > scroll.bounds.width + 1 { return false }
                 if current === surface { break }
                 ancestor = current.superview
             }
-            return !containsExclusion(surface, point: touch.location(in: surface))
+            startsOnWatchCard = containsExclusion(surface, point: touch.location(in: surface))
+            return true
         }
         private func containsExclusion(_ container: UIView, point: CGPoint) -> Bool {
             guard !container.isHidden, container.alpha > 0.01 else { return false }
@@ -111,11 +113,14 @@ enum RootTabSwipe {
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
             // Let a root vertical ScrollView settle naturally. Horizontal child
             // scrolls and reserved card gestures are rejected at touch-down.
-            other.view is UIScrollView
+            ownsRoot
         }
         @objc private func finish(_ gesture: UIPanGestureRecognizer) {
             guard gesture.state == .ended, ownsRoot, let surface else { return }
             let movement = gesture.translation(in: surface)
+            // Short Glance card swipes keep the existing one-watch action;
+            // a deliberate long page swipe navigates, without logging a watch.
+            guard !startsOnWatchCard || abs(movement.x) >= 160 else { return }
             onSwipe?(CGSize(width: movement.x, height: movement.y), surface.bounds.width)
         }
     }

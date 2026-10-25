@@ -182,13 +182,13 @@ struct CatalogDetailView: View {
     @State private var loading = false
     @State private var showOverview = false
     @State private var showInformation = false
-    @State private var compactHeader = false
+    @State private var headerProgress: CGFloat = 0
     var body: some View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     if let details {
-                        TitleHero(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), year: details.details.year, category: details.details.suggestedCategory == "anime-movie" ? "Anime movie" : details.details.suggestedCategory.capitalized, runtime: details.details.runtimeMinutes, series: route.kind == .tv, score: details.details.communityScore, summary: details.details.overview, expanded: $showOverview, onNameScrolled: { compactHeader = $0 }) { EmptyView() }
+                        TitleHero(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), year: details.details.year, category: details.details.suggestedCategory == "anime-movie" ? "Anime movie" : details.details.suggestedCategory.capitalized, runtime: details.details.runtimeMinutes, series: route.kind == .tv, score: details.details.communityScore, summary: details.details.overview, expanded: $showOverview, onNameScrolled: { headerProgress = $0 }) { EmptyView() }
                         if details.libraryTitle?.trashed == true {
                             NavigationLink(value: AppDestination.trash) { Text("Restore from Trash") }.buttonStyle(.borderedProminent).controlSize(.large)
                         } else if let saved = details.libraryTitle {
@@ -207,18 +207,19 @@ struct CatalogDetailView: View {
                         if let details { TitleArtworkBackdrop(path: CatalogTools.image(details.details.backdropPath, size: "w780"), name: details.details.name, topExtension: geometry.safeAreaInsets.top) }
                     }
             }.scrollClipDisabled().diaryScreenBackground(path: details.flatMap { CatalogTools.image($0.details.backdropPath, size: "w780") }, name: details?.details.name ?? "").navigationTitle("").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
-                .toolbarBackground(.ultraThinMaterial, for: .navigationBar).toolbarBackground(compactHeader ? .visible : .hidden, for: .navigationBar)
+                .toolbarBackground(.hidden, for: .navigationBar)
+                .overlay(alignment: .top) { CompactHeaderBackdrop(progress: headerProgress, topInset: geometry.safeAreaInsets.top) }
                 .toolbar {
                     ToolbarItem(placement: .principal) {
-                        if let details { CompactTitleNavigation(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), visible: compactHeader) }
+                        if let details { CompactTitleNavigation(name: details.details.name, poster: CatalogTools.image(details.details.posterPath), progress: headerProgress) }
                     }
                     ToolbarItemGroup(placement: .topBarTrailing) {
-                        if compactHeader { TitleShareAction(name: details?.details.name ?? "Title", kind: route.kind, id: route.id) }
+                        TitleShareAction(name: details?.details.name ?? "Title", kind: route.kind, id: route.id).opacity(Double(headerProgress)).allowsHitTesting(headerProgress >= 0.5).accessibilityHidden(headerProgress < 0.5)
                         Button { showInformation = true } label: { Image(systemName: "info.circle") }.accessibilityLabel("Community information").accessibilityIdentifier("catalog-information")
                     }
                 }
                 .sheet(isPresented: $showInformation) {
-                    CommunityInformationSheet(name: details?.details.name ?? "Title", identity: CommunityIdentity(kind: route.kind, id: route.id))
+                    CommunityInformationSheet(name: details?.details.name ?? "Title", artwork: details.flatMap { CatalogTools.image($0.details.backdropPath, size: "w780") ?? CatalogTools.image($0.details.posterPath) }, identity: CommunityIdentity(kind: route.kind, id: route.id))
                 }
                 .task(id: route) { await load() }
         }
