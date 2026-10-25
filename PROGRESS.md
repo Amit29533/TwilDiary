@@ -14,6 +14,38 @@ results and actual artifacts; reconcile before editing. Notes and source test
 counts never substitute for runtime evidence. No Mac/Xcode/Swift runtime is
 available locally; Windows checks grammar/YAML/Bash/Python only.
 
+## Scope clarification and62database/workflow follow-up
+
+Owner clarifies: **testing is exclusive to the native iOS app, its database/API,
+Trakt data flow and build workflows**. Stop web UI/PWA walkthroughs. The temporary
+local web UI tab was closed; prior local evidence is historical, not Swift UI
+acceptance. Use native XCUITest artifacts for UI and disposable local D1/SQLite/
+URLProtocol fixtures for data checks. Keep hosted library untouched during audit.
+
+62follow-up captured actual native API SQL: latest Trakt review and movie progress
+select a first row without LIMIT and sort all historical matches. Two regressions
+failed before the fix with1,000reviews/600rewatches. All four ordered first-row
+lookups now have explicit LIMIT1; additive0016adds recent-review/account-order
+and active-movie partial indexes. Actual SQLite plans use the indexes without a
+temporary sort;14targeted and all407Node tests pass. Wrangler applied0016only to
+.local/audit58-d1.0typecheck errors/warnings. No hosted migration/deployment.
+Generated0016schema snapshot matches the full schema; index changes preserve rows.
+
+The62GitHub workflow now triggers for native API/schema/scheduler changes and
+requires an Ubuntu Node24 database/API/shared-rule suite and Worker build before
+macOS stable artifact generation. Pinned official setup-nodev7.1.0commit verified
+through GitHub API. No deploy command, credential or hosted request is added.
+YAML/Bash syntax and16CI-tool checks pass; workflow runtime waits for same-SHA CM
+qualification and promotion.61remains frozen8c95140;62has not run on macOS yet.
+
+Remaining import audit scenario: after a completely fresh process launches during
+D1quota, status/review reads may fail before the checkpoint's run is loaded;
+resumeApprovedApply currently requires a loaded matching run/status, so that
+bootstrap does not own a retry timer. Existing in-process quota/background paths
+are tested, and next foreground after recovery reloads it. Add a bounded,
+checkpoint-fenced read-only bootstrap recovery test/fix after the current coherent
+candidate; do not claim this cold-quota scenario proven or silently replay writes.
+
 ## Active61run and isolated62audit draft
 
 **CM61run6ade36de4a72334e32e5107f** checked out exact

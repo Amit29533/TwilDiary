@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
 import type { database } from './db/index.ts';
 import {
   traktSyncRuns as runs,
@@ -418,6 +418,7 @@ export async function startSync(
       )
     )
     .orderBy(asc(runs.createdAt))
+    .limit(1)
     .get();
   if (existing) return { id: existing.id };
   // Retain reviewable work and every unconfirmed send; retire one old disposable snapshot per new run.
@@ -433,6 +434,7 @@ export async function startSync(
     .from(runs)
     .where(retired)
     .orderBy(asc(runs.createdAt))
+    .limit(1)
     .get();
   if (old) await db.delete(runs).where(and(eq(runs.id, old.id), retired));
   const id = crypto.randomUUID();
@@ -485,7 +487,8 @@ export async function syncStatus(
     : await db
         .select()
         .from(runs)
-        .orderBy(sql`${runs.createdAt} DESC`)
+        .orderBy(desc(runs.createdAt), desc(runs.id))
+        .limit(1)
         .get();
   if (!run) return { run: null, items: [], counts: {}, next: null };
   // At most5states ×2review flags ×4directions, independent of library size.

@@ -55,6 +55,7 @@ export async function watchCard(
         )
       )
       .orderBy(desc(watchEvents.recordedAt), desc(watchEvents.id))
+      .limit(1)
       .get();
     return {
       title,

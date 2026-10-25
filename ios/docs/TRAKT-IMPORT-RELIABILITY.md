@@ -80,3 +80,19 @@ metering or a numerical free-plan capacity guarantee.
 Wrangler OAuth's direct analytics request returned401during the audit; the
 authenticated dashboard supplied the evidence above. No credentials are stored
 in this document, screenshots, fixtures or test logs.
+
+## Current native/database audit follow-up
+
+Native61passes219logic,17focused and10early UI cases; complete primary/extra-phone
+acceptance is still being inspected. Its approved bulk worker supports progress,
+app navigation, cooldown wait and read-back, including tested2,000changes.
+A fresh process whose first status/review fails during quota still needs owned
+bootstrap recovery; record this limitation separately from the passing warm
+background-resume case.
+
+0015replaces ongoing OFFSET planning with a durable ID seek, retaining old run/page
+compatibility.0016bounds the other native first-row API reads and indexes review
+recency/retirement plus latest active movie watch. Local migrations through0016,
+query-plan regressions and407backend tests pass. All0014–0016hosted migrations and
+real cost verification remain pending. These are additive indexes/counters/cursor,
+not a library/history rewrite. Existing unfinished review must be preserved.

@@ -189,6 +189,9 @@ export const watchEvents = sqliteTable(
     index('watch_remote_lookup').on(t.remoteHistoryId),
     index('watch_title_progress').on(t.titleId, t.revokedAt, t.episodeId),
     index('watch_activity').on(t.revokedAt, t.recordedAt, t.id),
+    index('watch_movie_latest')
+      .on(t.titleId, t.recordedAt, t.id)
+      .where(sql`${t.revokedAt} IS NULL AND ${t.episodeId} IS NULL`),
     foreignKey({
       columns: [t.episodeId, t.titleId],
       foreignColumns: [episodes.id, episodes.titleId]
@@ -441,6 +444,8 @@ export const traktSyncRuns = sqliteTable(
     planAfter: text('plan_after')
   },
   (t) => [
+    index('trakt_runs_recent').on(t.createdAt, t.id),
+    index('trakt_runs_account_created').on(t.accountId, t.createdAt, t.id),
     uniqueIndex('trakt_one_active_run')
       .on(t.accountId)
       .where(sql`${t.state} IN ('building','review','applying')`)

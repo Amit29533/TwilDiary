@@ -113,6 +113,13 @@
       "when": 1792943187054,
       "tag": "0015_trakt_planning_cursor",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1792950685842,
+      "tag": "0016_native_query_bounds",
+      "breakpoints": true
     }
   ]
 }

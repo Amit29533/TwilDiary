@@ -2,7 +2,19 @@ name: Native iOS stable verification
 on:
   push:
     branches: [ios-native]
-    paths: ['ios/**', '.github/workflows/ios.yml']
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+      - 'src/lib/server/**'
+      - 'src/lib/domain/**'
+      - 'src/routes/api/**'
+      - 'src/hooks.server.ts'
+      - 'workers/trakt-incoming/**'
+      - 'drizzle/**'
+      - 'tests/unit/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'wrangler*.jsonc'
   workflow_dispatch:
 permissions:
   contents: read
@@ -28,8 +40,38 @@ jobs:
           python3 ios/tools/test_verify_codemagic.py
           gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/check-runs?filter=all&per_page=100" > "$RUNNER_TEMP/codemagic-checks.json"
           python3 ios/tools/verify-codemagic.py "$RUNNER_TEMP/codemagic-checks.json" "$GITHUB_SHA"
-  build-test-artifacts:
+  backend-contracts:
     needs: candidate-proof
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked backend build dependencies
+        run: npm ci
+      - name: Verify the iOS API database and shared business rules without hosted access
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ios-backend-logs"
+          npm run check 2>&1 | tee "$RUNNER_TEMP/ios-backend-logs/types.log"
+          npm test 2>&1 | tee "$RUNNER_TEMP/ios-backend-logs/contracts.log"
+          npm run build 2>&1 | tee "$RUNNER_TEMP/ios-backend-logs/worker-build.log"
+      - name: Retain backend contract and Worker build diagnostics
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: TwilDiary-iOS-backend-contract-logs
+          path: ${{ runner.temp }}/ios-backend-logs
+          if-no-files-found: warn
+          retention-days: 14
+  build-test-artifacts:
+    needs: [candidate-proof, backend-contracts]
     runs-on: macos-26-intel
     timeout-minutes: 210
     env:
