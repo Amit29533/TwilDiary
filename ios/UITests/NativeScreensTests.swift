@@ -3,7 +3,7 @@ import UIKit
 
 @MainActor final class NativeScreensTests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
-    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false, slowWrites: Bool = false, slowMetadata: Bool = false, communityUnavailable: Bool = false, cachedSnapshot: Bool = false) -> XCUIApplication {
+    private func launch(mutations: Bool = false, scanner: Bool = false, ratingsUnavailable: Bool = false, titleMetadata: Bool = false, empty: Bool = false, traktScenario: String? = nil, refreshFailure: Bool = false, upcoming: Bool = false, slowWrites: Bool = false, slowMetadata: Bool = false, communityUnavailable: Bool = false, cachedSnapshot: Bool = false, longEpisodes: Bool = false) -> XCUIApplication {
         let app = XCUIApplication(); app.launchArguments = ["--ui-testing"]
         if mutations || scanner { app.launchArguments.append("--ui-mutations") }
         if scanner { app.launchArguments.append("--ui-scanner") }
@@ -16,6 +16,7 @@ import UIKit
         if slowMetadata { app.launchArguments.append("--ui-slow-metadata") }
         if communityUnavailable { app.launchArguments.append("--ui-community-unavailable") }
         if cachedSnapshot { app.launchArguments.append("--ui-cached-snapshot") }
+        if longEpisodes { app.launchArguments.append("--ui-long-episodes") }
         if let traktScenario { app.launchArguments.append("--ui-trakt=" + traktScenario) }
         app.launchEnvironment["TZ"] = "Asia/Kolkata"
         app.launch(); XCTAssertTrue(app.buttons["tab-home"].waitForExistence(timeout: 15)); return app
@@ -127,6 +128,8 @@ import UIKit
         XCTAssertTrue(app.staticTexts["What people are saying"].exists)
         let positive = app.descendants(matching: .any)["community-positive-0"]
         let negative = app.descendants(matching: .any)["community-negative-0"]
+        capture("Community information content before accessibility checks")
+        if !positive.exists || !negative.exists { print("Community fixture hierarchy: " + String(app.debugDescription.prefix(22000))) }
         XCTAssertTrue(positive.exists); XCTAssertEqual(positive.label, "Positive: Engaging pacing and mysteries")
         XCTAssertTrue(negative.exists); XCTAssertEqual(negative.label, "Negative: Repetitive storyline")
         XCTAssertFalse(app.buttons["title-personal-rating"].isHittable)
@@ -1091,7 +1094,7 @@ import UIKit
         capture("Saved Glance Notes reopen at editor")
     }
     func testCollectionGridsKeepEpisodeActionsFoldersAndHistoryEntries() {
-        let app = launch(mutations: true); app.buttons["tab-glance"].tap()
+        let app = launch(mutations: true, titleMetadata: true, longEpisodes: true); app.buttons["tab-glance"].tap()
         let glance = app.buttons["glance-layout"]
         XCTAssertTrue(glance.waitForExistence(timeout: 5)); glance.tap(); XCTAssertEqual(glance.value as? String, "Grid")
         let again = app.buttons["progress-menu-again"], frieren = app.buttons["progress-menu-frieren"]

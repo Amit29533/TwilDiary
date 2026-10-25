@@ -11,12 +11,16 @@ import { sql } from 'drizzle-orm';
 import { SQLiteAsyncDialect } from 'drizzle-orm/sqlite-core';
 import { createTmdb, type TmdbClient } from './tmdb.ts';
 import { sortName } from './library-input.ts';
+import { traktBaselineId } from './trakt-identity.ts';
 
 const PAGE_SIZE = 10;
 const MAX_PAGES = 200;
 // Conservative record/metadata write units, separate from fixed tick overhead.
 const DAILY_WORK = 5_000;
 const WEEK = 7 * 86400_000;
+const NEVER = Number.MAX_SAFE_INTEGER;
+const OVERDUE_MS = 10 * 60_000;
+const SAME_VIEWING_MS = 6 * 3600_000;
 type State = {
   account_id: string;
   client_id: string;
@@ -51,7 +55,7 @@ const state = (binding: D1Database) =>
   binding.prepare("SELECT * FROM trakt_incoming WHERE id='trakt'").first<State>();
 
 /** Deliberately exposes health/counts, not account identity, tokens or history payloads. */
-export async function incomingStatus(db: Db) {
+export async function incomingStatus(db: Db, now = Date.now()) {
   const current = await state(db.$client);
   if (!current)
     return {
@@ -61,7 +65,9 @@ export async function incomingStatus(db: Db) {
       error: null,
       pending: 0,
       review: 0,
-      paused: false
+      paused: false,
+      pausedBy: null,
+      overdue: false
     };
   const counts = await db.$client
     .prepare(
@@ -72,11 +78,11 @@ export async function incomingStatus(db: Db) {
     .all<{ state: string; total: number }>();
   const manual = await db.$client
     .prepare(
-      `SELECT 1 FROM trakt_sync_runs WHERE account_id=?
+      `SELECT state FROM trakt_sync_runs WHERE account_id=?
     AND state IN ('building','review','applying') LIMIT 1`
     )
     .bind(current.account_id)
-    .first();
+    .first<{ state: string }>();
   return {
     enabled: !!current.enabled,
     checkedAt: current.checked_at,
@@ -84,7 +90,9 @@ export async function incomingStatus(db: Db) {
     error: current.error,
     pending: counts.results.find((x) => x.state === 'pending')?.total ?? 0,
     review: counts.results.find((x) => x.state === 'review')?.total ?? 0,
-    paused: !!manual
+    paused: !!manual,
+    pausedBy: manual?.state ?? null,
+    overdue: !!current.enabled && !manual && now - current.next_at > OVERDUE_MS
   };
 }
 
@@ -102,7 +110,7 @@ export async function configureIncoming(
       lease=NULL,lease_until=NULL WHERE id='trakt'`
       )
       .run();
-    return incomingStatus(db);
+    return incomingStatus(db, now);
   }
   const connection = await db.$client
     .prepare(
@@ -131,8 +139,37 @@ export async function configureIncoming(
     )
     .bind(now, connection.account_id, connection.client_id, connection.version)
     .run();
-  return incomingStatus(db);
+  return incomingStatus(db, now);
 }
+
+/** A corrupt play must not stall every valid watch on the same provider page. */
+function readHistoryRow(raw: unknown): { item: RemoteTraktItem } | { quarantine: string } | null {
+  try {
+    return { item: normalizeTraktItem(raw, 'history') };
+  } catch {
+    const id = raw && typeof raw === 'object' ? (raw as { id?: unknown }).id : null;
+    const key =
+      typeof id === 'string' || (typeof id === 'number' && Number.isSafeInteger(id))
+        ? String(id)
+        : '';
+    return /^\d{1,20}$/.test(key) ? { quarantine: key } : null;
+  }
+}
+
+/** Exact-minute tombstones remain protected; only active dated plays use the
+ * wider window. The lookup and the final write fence share this predicate. */
+function localViewingWhere(titleId: string, episodeId: string | null, value: string) {
+  const identity = sql`watch_events.title_id=${titleId} AND watch_events.episode_id IS ${episodeId}`;
+  if (value === 'unknown') return sql`${identity} AND watch_events.watched_at IS NULL`;
+  const at = watchInstant(value);
+  return sql`${identity} AND watch_events.watched_at IS NOT NULL AND (
+    strftime('%Y-%m-%dT%H:%M',watch_events.watched_at)=strftime('%Y-%m-%dT%H:%M',${at})
+    OR (watch_events.revoked_at IS NULL AND
+      abs(julianday(watch_events.watched_at)-julianday(${at}))*86400000<=${SAME_VIEWING_MS}))`;
+}
+
+const nearbyLocalWatch = (titleId: string, episodeId: string | null, value: string) =>
+  sql`EXISTS(SELECT 1 FROM watch_events WHERE ${localViewingWhere(titleId, episodeId, value)})`;
 
 function watchedActivity(raw: unknown) {
   const record = (value: unknown): Record<string, unknown> =>
@@ -271,8 +308,11 @@ export async function tickIncoming(
         (pages === 0 && (page !== 1 || response.data.length !== 0))
       )
         throw new ApiError(502, 'trakt_incomplete', 'Trakt returned an incomplete history page.');
-      const items = response.data.map((row) => normalizeTraktItem(row, 'history'));
-      if (new Set(items.map((x) => x.remoteKey)).size !== items.length)
+      const rows = response.data.map(readHistoryRow);
+      const items = rows.flatMap((row) => (row && 'item' in row ? [row.item] : []));
+      const invalid = rows.flatMap((row) => (row && 'quarantine' in row ? [row.quarantine] : []));
+      const keys = [...items.map((item) => item.remoteKey), ...invalid];
+      if (new Set(keys).size !== keys.length)
         throw new ApiError(502, 'trakt_incomplete', 'Trakt returned repeated history identities.');
       guard = fence(current, lease, trakt.connectionVersion, clock());
       if (!(await statement(binding, sql`SELECT 1 WHERE ${guard}`).first()))
@@ -285,6 +325,14 @@ export async function tickIncoming(
             binding,
             sql`INSERT INTO trakt_incoming_history(account_id,remote_id,payload,created_at,priority)
           SELECT ${current.account_id},${item.remoteKey},${JSON.stringify(item)},${new Date(started).toISOString()},${item.value === 'unknown' ? 0 : -Date.parse(item.value!)}
+          WHERE ${guard} ON CONFLICT(account_id,remote_id) DO NOTHING`
+          )
+        ),
+        ...invalid.map((key) =>
+          statement(
+            binding,
+            sql`INSERT INTO trakt_incoming_history(account_id,remote_id,payload,state,reason,next_at,priority,created_at)
+          SELECT ${current.account_id},${key},'{}','review','invalid_item',${NEVER},0,${new Date(started).toISOString()}
           WHERE ${guard} ON CONFLICT(account_id,remote_id) DO NOTHING`
           )
         ),
@@ -437,31 +485,93 @@ async function importWatch(
     .bind(item.remoteKey)
     .first();
   // Existing revoked events are intentional tombstones, never revived.
-  // An equal local viewing needs the reviewed linker rather than a second play.
   const duplicate = !existing
-    ? await binding
-        .prepare(
-          `SELECT id FROM watch_events
-    WHERE title_id=? AND episode_id IS ? AND (watched_at IS ? OR strftime('%Y-%m-%dT%H:%M',watched_at)=strftime('%Y-%m-%dT%H:%M',?)) LIMIT 1`
-        )
-        .bind(
-          title.id,
-          episode?.id ?? null,
-          item.value === 'unknown' ? null : watchInstant(item.value),
-          item.value === 'unknown' ? null : watchInstant(item.value)
-        )
-        .first()
-    : null;
-  if (duplicate) return defer('local_watch_needs_link');
+    ? (
+        await statement(
+          binding,
+          sql`SELECT id,version,watched_at,revoked_at,remote_history_id
+        FROM watch_events WHERE ${localViewingWhere(title.id, episode?.id ?? null, item.value!)} LIMIT 2`
+        ).all<{
+          id: string;
+          version: number;
+          watched_at: string | null;
+          revoked_at: string | null;
+          remote_history_id: string | null;
+        }>()
+      ).results
+    : [];
+  if (duplicate.length) {
+    const local = duplicate[0]!;
+    if (
+      duplicate.length !== 1 ||
+      local.revoked_at ||
+      local.remote_history_id ||
+      item.value === 'unknown'
+    )
+      return defer('local_watch_needs_link');
+    // The owner chose automatic linking only for one unambiguous live local
+    // watch. Keep its date/origin and preserve explicit tombstones and baselines.
+    const conflictingBaseline = await binding
+      .prepare(
+        `SELECT 1 FROM trakt_sync_baselines
+      WHERE account_id=? AND kind='history' AND local_key=? AND remote_key IS NOT NULL AND remote_key<>? LIMIT 1`
+      )
+      .bind(current.account_id, local.id, item.remoteKey)
+      .first();
+    if (conflictingBaseline) return defer('local_watch_needs_link');
+    await reserveWork(binding, guard, now, 16);
+    const timestamp = new Date(now).toISOString();
+    const baselineId = await traktBaselineId(current.account_id, 'history', local.id);
+    const writable = sql`${guard} AND EXISTS(SELECT 1 FROM titles t LEFT JOIN workspace_ui u ON u.title_id=t.id
+      WHERE t.id=${title.id} AND t.version=${title.version} AND t.deleted_at IS NULL AND coalesce(u.demo,0)=0)`;
+    const linked = sql`EXISTS(SELECT 1 FROM watch_events WHERE id=${local.id} AND version=${local.version + 1}
+      AND revoked_at IS NULL AND remote_history_id=${item.remoteKey} AND watched_at IS ${local.watched_at})`;
+    const acknowledged = sql`${linked} AND EXISTS(SELECT 1 FROM trakt_sync_baselines WHERE account_id=${current.account_id}
+      AND kind='history' AND local_key=${local.id} AND remote_key=${item.remoteKey}
+      AND local_value IS ${local.watched_at} AND remote_value IS ${item.value})`;
+    await binding.batch([
+      statement(
+        binding,
+        sql`UPDATE watch_events SET remote_history_id=${item.remoteKey},version=version+1
+        WHERE id=${local.id} AND version=${local.version} AND revoked_at IS NULL AND remote_history_id IS NULL
+        AND watched_at IS ${local.watched_at} AND ${writable}
+        AND NOT EXISTS(SELECT 1 FROM watch_events WHERE remote_history_id=${item.remoteKey})
+        AND (SELECT count(*) FROM watch_events WHERE ${localViewingWhere(title.id, episode?.id ?? null, item.value!)})=1
+        AND NOT EXISTS(SELECT 1 FROM trakt_sync_baselines WHERE account_id=${current.account_id}
+          AND kind='history' AND local_key=${local.id} AND remote_key IS NOT NULL AND remote_key<>${item.remoteKey})`
+      ),
+      statement(
+        binding,
+        sql`INSERT INTO trakt_sync_baselines(id,account_id,kind,local_key,remote_key,local_value,remote_value,updated_at)
+        SELECT ${baselineId},${current.account_id},'history',${local.id},${item.remoteKey},${local.watched_at},${item.value},${timestamp}
+        WHERE ${writable} AND ${linked}
+        ON CONFLICT(account_id,kind,local_key) DO UPDATE SET remote_key=excluded.remote_key,
+          local_value=excluded.local_value,remote_value=excluded.remote_value,updated_at=excluded.updated_at`
+      ),
+      statement(
+        binding,
+        sql`UPDATE trakt_incoming_history SET state='complete',reason='linked_local'
+        WHERE account_id=${current.account_id} AND remote_id=${item.remoteKey} AND ${guard} AND ${acknowledged}`
+      ),
+      statement(
+        binding,
+        sql`UPDATE trakt_incoming SET imported_at=${timestamp}
+        WHERE id='trakt' AND ${guard} AND ${acknowledged}`
+      )
+    ]);
+    const handled = await binding
+      .prepare(`SELECT state FROM trakt_incoming_history WHERE account_id=? AND remote_id=?`)
+      .bind(current.account_id, item.remoteKey)
+      .first<{ state: string }>();
+    return handled?.state === 'complete' ? ('linked' as const) : ('superseded' as const);
+  }
   await reserveWork(binding, guard, now, 16);
   const eventId = 'trakt-incoming-' + item.remoteKey;
   const timestamp = new Date(now).toISOString();
   const writable = sql`${guard} AND EXISTS(SELECT 1 FROM titles t LEFT JOIN workspace_ui u ON u.title_id=t.id
     WHERE t.id=${title.id} AND t.version=${title.version} AND t.deleted_at IS NULL AND coalesce(u.demo,0)=0)`;
   const imported = sql`EXISTS(SELECT 1 FROM watch_events WHERE remote_history_id=${item.remoteKey})`;
-  const sameLocalWatch = sql`EXISTS(SELECT 1 FROM watch_events WHERE title_id=${title.id}
-    AND episode_id IS ${episode?.id ?? null} AND (watched_at IS ${item.value === 'unknown' ? null : watchInstant(item.value)}
-    OR strftime('%Y-%m-%dT%H:%M',watched_at)=strftime('%Y-%m-%dT%H:%M',${item.value === 'unknown' ? null : watchInstant(item.value)})))`;
+  const sameLocalWatch = nearbyLocalWatch(title.id, episode?.id ?? null, item.value!);
   await binding.batch([
     statement(
       binding,

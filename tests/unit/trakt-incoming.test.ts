@@ -14,6 +14,8 @@ import { GET, PUT } from '../../src/routes/api/trakt/incoming/+server.ts';
 import { watchStatusUpdate } from '../../src/lib/server/watch-status.ts';
 import { SQLiteAsyncDialect } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
+import { startSync, buildSyncStep } from '../../src/lib/server/trakt-sync.ts';
+import { traktBaselineId } from '../../src/lib/server/trakt-identity.ts';
 
 const watch = (id = 101, tmdb = 100, value = new Date().toISOString()) => ({
   id,
@@ -118,12 +120,19 @@ test('unknown metadata, Trash, demo and a matching local watch are retained for 
       f.sqlite.exec("UPDATE titles SET deleted_at='2026-10-25' WHERE id='film'");
     if (reason === 'demo_excluded')
       f.sqlite.exec("INSERT INTO workspace_ui(title_id,demo) VALUES('film',1)");
-    if (reason === 'local_watch_needs_link')
+    if (reason === 'local_watch_needs_link') {
       await logWatch(f.db, 'film', {
         operationId: 'local-watch',
         episodeId: null,
         watchedAt: f.fake.state.history[0]!.watched_at
       });
+      await logWatch(f.db, 'film', {
+        operationId: 'ambiguous-second-watch',
+        episodeId: null,
+        watchedAt: f.fake.state.history[0]!.watched_at,
+        rewatch: true
+      });
+    }
     await configureIncoming(f.db, traktEnv, true, f.now());
     assert.equal((await f.tick()).state, 'review', reason);
     assert.equal(
@@ -152,15 +161,14 @@ test('revoked imported watches and purged acknowledged plays are never recreated
   await f.tick();
   assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM watch_events').get()!.n, 0);
 });
-test('incomplete pagination and malformed entries never advance checkpoints or partially enqueue a page', async (t) => {
+test('incomplete pagination never advances checkpoints or partially enqueues a page', async (t) => {
   const f = await fixture(t);
-  f.fake.state.history = [watch(), { ...watch(102), watched_at: 'invalid' }];
+  f.fake.state.history = [watch()];
+  f.fake.state.missingPagination = true;
   await configureIncoming(f.db, traktEnv, true, f.now());
   assert.equal((await f.tick()).state, 'deferred');
   assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM trakt_incoming_history').get()!.n, 0);
   assert.equal(f.sqlite.prepare('SELECT activity FROM trakt_incoming').get()!.activity, null);
-  f.fake.state.history = [watch()];
-  f.fake.state.missingPagination = true;
   f.advance();
   assert.equal((await f.tick()).state, 'deferred');
   assert.equal(f.sqlite.prepare('SELECT activity FROM trakt_incoming').get()!.activity, null);
@@ -262,6 +270,307 @@ test('daily import budget and an active manual review stop all provider reads', 
   assert.equal((await f.tick()).state, 'idle');
   assert.equal(f.requests.length, 0);
   assert.equal((await incomingStatus(f.db)).paused, true);
+  assert.equal((await incomingStatus(f.db, f.now())).pausedBy, 'review');
+  assert.equal((await incomingStatus(f.db, f.now())).overdue, false);
+  f.sqlite.exec("UPDATE trakt_sync_runs SET state='cancelled' WHERE id='manual'");
+  assert.equal((await incomingStatus(f.db, f.now())).pausedBy, null);
+});
+
+test('one invalid identified history row is quarantined while its valid neighbour imports', async (t) => {
+  const f = await fixture(t);
+  f.fake.state.history = [watch(), { ...watch(102), watched_at: 'invalid' }];
+  await configureIncoming(f.db, traktEnv, true, f.now());
+  assert.equal((await f.tick()).state, 'imported');
+  assert.equal((await incomingStatus(f.db, f.now())).review, 1);
+  const bad = f.sqlite
+    .prepare(
+      "SELECT state,reason,payload,next_at FROM trakt_incoming_history WHERE remote_id='102'"
+    )
+    .get()!;
+  assert.deepEqual(
+    { ...bad },
+    { state: 'review', reason: 'invalid_item', payload: '{}', next_at: Number.MAX_SAFE_INTEGER }
+  );
+  assert.notEqual(f.sqlite.prepare('SELECT activity FROM trakt_incoming').get()!.activity, null);
+  for (let i = 0; i < 3; i++) {
+    f.advance();
+    assert.equal((await f.tick()).state, 'unchanged');
+  }
+  assert.equal(f.requests.filter((x) => x === '/sync/history').length, 1);
+  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM watch_events').get()!.n, 1);
+  f.advance(3600_000);
+  await f.tick();
+  assert.equal(
+    (await incomingStatus(f.db, f.now())).review,
+    1,
+    'overlap rescan cannot duplicate or retry quarantined payloads'
+  );
+});
+
+test('invalid rows without a usable history id do not stall valid watches', async (t) => {
+  const f = await fixture(t);
+  f.fake.state.history = [watch(), { ...watch(102), id: undefined, watched_at: 'invalid' }];
+  await configureIncoming(f.db, traktEnv, true, f.now());
+  assert.equal((await f.tick()).state, 'imported');
+  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM trakt_incoming_history').get()!.n, 1);
+  assert.equal((await incomingStatus(f.db, f.now())).review, 0);
+});
+
+test('duplicate history ids still fail closed including valid versus quarantined duplicates', async (t) => {
+  for (const malformed of [false, true]) {
+    const f = await fixture(t);
+    f.fake.state.history = [watch(), malformed ? { ...watch(), watched_at: 'invalid' } : watch()];
+    await configureIncoming(f.db, traktEnv, true, f.now());
+    assert.equal((await f.tick()).state, 'deferred');
+    assert.equal(f.sqlite.prepare('SELECT count(*) n FROM trakt_incoming_history').get()!.n, 0);
+    assert.equal(f.sqlite.prepare('SELECT activity FROM trakt_incoming').get()!.activity, null);
+  }
+});
+
+test('overdue diagnoses missing checks without flagging backoff disabled or manual-paused states', async (t) => {
+  const f = await fixture(t);
+  await configureIncoming(f.db, traktEnv, true, f.now());
+  f.sqlite.prepare('UPDATE trakt_incoming SET next_at=?').run(f.now() - 11 * 60_000);
+  assert.equal((await incomingStatus(f.db, f.now())).overdue, true);
+  f.sqlite.prepare('UPDATE trakt_incoming SET next_at=?').run(f.now() + 3600_000);
+  assert.equal((await incomingStatus(f.db, f.now())).overdue, false);
+  f.sqlite.prepare('UPDATE trakt_incoming SET next_at=?').run(f.now() - 11 * 60_000);
+  f.sqlite.exec('UPDATE trakt_incoming SET enabled=0');
+  assert.equal((await incomingStatus(f.db, f.now())).overdue, false);
+  f.sqlite.exec(`UPDATE trakt_incoming SET enabled=1;
+    INSERT INTO trakt_sync_runs(id,account_id,state,stage,created_at,updated_at,rating_mode)
+    VALUES('manual','fixture-account','building','activities','2026-10-25','2026-10-25','round')`);
+  assert.equal((await incomingStatus(f.db, f.now())).overdue, false);
+  assert.equal((await incomingStatus(f.db, f.now())).pausedBy, 'building');
+});
+
+test('one local watch links a nearby remote play atomically and a later manual scan proposes no history change', async (t) => {
+  const f = await fixture(t);
+  const localAt = new Date(f.now() - 3600_000).toISOString();
+  const remoteAt = new Date(Date.parse(localAt) + 41 * 60_000).toISOString();
+  await logWatch(f.db, 'film', { operationId: 'one-local', episodeId: null, watchedAt: localAt });
+  const before = f.sqlite.prepare('SELECT * FROM watch_events').get()!;
+  f.fake.state.history = [watch(101, 100, remoteAt)];
+  await configureIncoming(f.db, traktEnv, true, f.now());
+  assert.equal((await f.tick()).state, 'linked');
+  const after = f.sqlite.prepare('SELECT * FROM watch_events').get()!;
+  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM watch_events').get()!.n, 1);
+  assert.equal(after.id, before.id);
+  assert.equal(after.watched_at, localAt);
+  assert.equal(after.origin, before.origin);
+  assert.equal(after.remote_history_id, '101');
+  assert.equal(after.version, Number(before.version) + 1);
+  const baseline = f.sqlite.prepare('SELECT * FROM trakt_sync_baselines').get()!;
+  assert.equal(baseline.id, await traktBaselineId('fixture-account', 'history', String(before.id)));
+  assert.equal(baseline.local_value, localAt);
+  assert.equal(baseline.remote_value, remoteAt);
+  assert.equal(
+    f.sqlite.prepare('SELECT reason FROM trakt_incoming_history').get()!.reason,
+    'linked_local'
+  );
+  f.advance();
+  assert.equal((await f.tick()).state, 'unchanged');
+  const run = await startSync(f.db, traktEnv, 'round', f.fake.transport);
+  for (let n = 0; n < 40; n++) {
+    const status = await buildSyncStep(f.db, traktEnv, run.id, f.fake.transport);
+    if (status.run?.state !== 'building') break;
+  }
+  assert.equal(
+    f.sqlite.prepare('SELECT state FROM trakt_sync_runs WHERE id=?').get(run.id)!.state,
+    'review'
+  );
+  assert.equal(
+    f.sqlite
+      .prepare("SELECT count(*) n FROM trakt_sync_changes WHERE run_id=? AND kind='history'")
+      .get(run.id)!.n,
+    0
+  );
+});
+
+test('nearby revoked tombstones undated matches and multiple candidates never link while distant plays import', async (t) => {
+  for (const scenario of ['distant', 'revoked-near', 'revoked-minute', 'multiple', 'unknown']) {
+    const f = await fixture(t);
+    const at = new Date(Math.floor((f.now() - 10 * 3600_000) / 60000) * 60000).toISOString();
+    await logWatch(f.db, 'film', {
+      operationId: 'local',
+      episodeId: null,
+      watchedAt: scenario === 'unknown' ? null : at
+    });
+    if (scenario.startsWith('revoked'))
+      f.sqlite.exec("UPDATE watch_events SET revoked_at='2026-10-25'");
+    if (scenario === 'multiple')
+      await logWatch(f.db, 'film', {
+        operationId: 'second',
+        episodeId: null,
+        watchedAt: at,
+        rewatch: true
+      });
+    const offset =
+      scenario === 'distant' ? 9 * 3600_000 : scenario === 'revoked-minute' ? 10_000 : 40 * 60_000;
+    f.fake.state.history = [
+      watch(
+        101,
+        100,
+        scenario === 'unknown' ? 'unknown' : new Date(Date.parse(at) + offset).toISOString()
+      )
+    ];
+    await configureIncoming(f.db, traktEnv, true, f.now());
+    const imports = ['distant', 'revoked-near'].includes(scenario);
+    assert.equal((await f.tick()).state, imports ? 'imported' : 'review', scenario);
+    assert.equal(
+      f.sqlite.prepare("SELECT count(*) n FROM watch_events WHERE origin='trakt'").get()!.n,
+      imports ? 1 : 0,
+      scenario
+    );
+    assert.equal(
+      f.sqlite.prepare('SELECT count(*) n FROM trakt_sync_baselines').get()!.n,
+      0,
+      scenario
+    );
+  }
+});
+
+test('a single episode watch links without changing progress or Dropped status and stays query-bounded', async (t) => {
+  const f = await fixture(t);
+  await addManualTitle(f.db, { id: 'show', name: 'Story', category: 'show', status: 'dropped' });
+  f.sqlite.exec(`INSERT INTO provider_identities VALUES('show-tmdb','show','tmdb','series','42');
+    INSERT INTO seasons(id,title_id,number,name,expected_episodes) VALUES('s','show',1,'Season 1',2);
+    INSERT INTO episodes(id,title_id,season_id,number) VALUES('e1','show','s',1),('e2','show','s',2)`);
+  const localAt = new Date(f.now() - 3600_000).toISOString();
+  await logWatch(f.db, 'show', {
+    operationId: 'local-episode',
+    episodeId: 'e1',
+    watchedAt: localAt
+  });
+  f.sqlite.exec("UPDATE titles SET status='dropped' WHERE id='show'");
+  f.fake.state.history = [
+    {
+      id: 202,
+      type: 'episode',
+      watched_at: new Date(f.now() - 19 * 60_000).toISOString(),
+      show: { title: 'Story', ids: { tmdb: 42, trakt: 77 } },
+      episode: { season: 1, number: 1 }
+    }
+  ];
+  await configureIncoming(f.db, traktEnv, true, f.now());
+  let prepared = 0;
+  const original = f.binding.prepare.bind(f.binding);
+  f.binding.prepare = (query) => {
+    prepared++;
+    return original(query);
+  };
+  assert.equal((await f.tick()).state, 'linked');
+  assert.ok(prepared <= 50, `conservative prepared-statement bound: ${prepared}`);
+  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM watch_events').get()!.n, 1);
+  assert.equal(
+    f.sqlite.prepare("SELECT watched_at FROM watch_events WHERE remote_history_id='202'").get()!
+      .watched_at,
+    localAt
+  );
+  assert.equal(
+    f.sqlite.prepare("SELECT status FROM titles WHERE id='show'").get()!.status,
+    'dropped'
+  );
+});
+
+test('a previous baseline for another remote play prevents silent relinking', async (t) => {
+  const f = await fixture(t);
+  const at = new Date(f.now() - 3600_000).toISOString();
+  await logWatch(f.db, 'film', { operationId: 'local', episodeId: null, watchedAt: at });
+  const local = f.sqlite.prepare('SELECT id FROM watch_events').get()!;
+  f.sqlite
+    .prepare(`INSERT INTO trakt_sync_baselines VALUES(?,?,'history',?,'777',?,?,?)`)
+    .run(
+      await traktBaselineId('fixture-account', 'history', String(local.id)),
+      'fixture-account',
+      String(local.id),
+      at,
+      at,
+      at
+    );
+  f.fake.state.history = [watch(101, 100, new Date(f.now()).toISOString())];
+  await configureIncoming(f.db, traktEnv, true, f.now());
+  assert.equal((await f.tick()).state, 'review');
+  assert.equal(
+    f.sqlite.prepare('SELECT remote_history_id FROM watch_events').get()!.remote_history_id,
+    null
+  );
+  assert.equal(
+    f.sqlite.prepare('SELECT remote_key FROM trakt_sync_baselines').get()!.remote_key,
+    '777'
+  );
+});
+
+test('link commit rechecks ambiguity manual review disable and event edits instead of trusting its earlier lookup', async (t) => {
+  for (const race of ['second-local', 'manual-review', 'disable', 'event-edited']) {
+    const f = await fixture(t);
+    const at = new Date(f.now() - 3600_000).toISOString();
+    await logWatch(f.db, 'film', { operationId: 'local', episodeId: null, watchedAt: at });
+    f.fake.state.history = [watch(101, 100, new Date(f.now()).toISOString())];
+    await configureIncoming(f.db, traktEnv, true, f.now());
+    let injected = false;
+    const batch = f.binding.batch.bind(f.binding);
+    f.binding.batch = async (statements) => {
+      if (statements.length === 4 && !injected) {
+        injected = true;
+        if (race === 'second-local')
+          f.sqlite
+            .prepare(
+              `INSERT INTO watch_events(id,operation_id,title_id,watched_at,recorded_at,origin) VALUES('race','race','film',?,?,'manual')`
+            )
+            .run(at, at);
+        if (race === 'manual-review')
+          f.sqlite.exec(
+            `INSERT INTO trakt_sync_runs(id,account_id,state,stage,created_at,updated_at,rating_mode) VALUES('manual','fixture-account','review','ready','2026-10-25','2026-10-25','round')`
+          );
+        if (race === 'disable')
+          f.sqlite.exec('UPDATE trakt_incoming SET enabled=0,generation=generation+1');
+        if (race === 'event-edited') f.sqlite.exec('UPDATE watch_events SET version=version+1');
+      }
+      return batch(statements);
+    };
+    assert.equal((await f.tick()).state, 'superseded', race);
+    assert.equal(injected, true);
+    assert.equal(
+      f.sqlite
+        .prepare('SELECT count(*) n FROM watch_events WHERE remote_history_id IS NOT NULL')
+        .get()!.n,
+      0,
+      race
+    );
+    assert.equal(f.sqlite.prepare('SELECT count(*) n FROM trakt_sync_baselines').get()!.n, 0, race);
+    assert.equal(
+      f.sqlite.prepare("SELECT state FROM trakt_incoming_history WHERE remote_id='101'").get()!
+        .state,
+      'pending',
+      race
+    );
+  }
+});
+
+test('a failed baseline write rolls back a local link and its acknowledgement then retries once', async (t) => {
+  const f = await fixture(t);
+  const at = new Date(f.now() - 3600_000).toISOString();
+  await logWatch(f.db, 'film', { operationId: 'local', episodeId: null, watchedAt: at });
+  const before = f.sqlite.prepare('SELECT version FROM watch_events').get()!.version;
+  f.fake.state.history = [watch(101, 100, new Date(f.now()).toISOString())];
+  await configureIncoming(f.db, traktEnv, true, f.now());
+  f.sqlite.exec(
+    "CREATE TRIGGER fail_link BEFORE INSERT ON trakt_sync_baselines BEGIN SELECT RAISE(ABORT,'synthetic link failure'); END"
+  );
+  assert.equal((await f.tick()).state, 'deferred');
+  const local = f.sqlite.prepare('SELECT version,remote_history_id FROM watch_events').get()!;
+  assert.equal(local.version, before);
+  assert.equal(local.remote_history_id, null);
+  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM trakt_sync_baselines').get()!.n, 0);
+  assert.equal(
+    f.sqlite.prepare('SELECT state FROM trakt_incoming_history').get()!.state,
+    'pending'
+  );
+  f.sqlite.exec('DROP TRIGGER fail_link');
+  f.advance();
+  assert.equal((await f.tick()).state, 'linked');
+  assert.equal(f.sqlite.prepare('SELECT count(*) n FROM watch_events').get()!.n, 1);
 });
 
 test('new watches interrupt an older scan and take precedence over its backlog', async (t) => {
@@ -273,7 +582,16 @@ test('new watches interrupt an older scan and take precedence over its backlog',
   await f.tick();
   assert.equal(f.sqlite.prepare('SELECT page FROM trakt_incoming').get()!.page, 2);
   f.advance();
-  f.fake.state.history.unshift(watch(999, 100, new Date(f.now()).toISOString()));
+  await addManualTitle(f.db, {
+    id: 'new-film',
+    name: 'New movie',
+    category: 'movie',
+    status: 'planned'
+  });
+  f.sqlite.exec(
+    "INSERT INTO provider_identities VALUES('new-film-tmdb','new-film','tmdb','movie','101')"
+  );
+  f.fake.state.history.unshift(watch(999, 101, new Date(f.now()).toISOString()));
   f.fake.state.version++;
   assert.equal((await f.tick()).state, 'imported');
   assert.equal(

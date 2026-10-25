@@ -29,6 +29,7 @@ import { createTmdb, type TmdbClient } from './tmdb.ts';
 import { patchTitle, changeWatch, getTitle } from './library.ts';
 import { watchStatusUpdate } from './watch-status.ts';
 import { SQLiteAsyncDialect } from 'drizzle-orm/sqlite-core';
+import { traktDigest as hash, traktBaselineId } from './trakt-identity.ts';
 type Db = ReturnType<typeof database>;
 type Run = typeof runs.$inferSelect;
 type Change = typeof changes.$inferSelect;
@@ -53,12 +54,6 @@ const stages = [
   ['movie-watchlist', '/sync/watchlist/movies'],
   ['show-watchlist', '/sync/watchlist/shows']
 ] as const;
-async function hash(text: string) {
-  return Array.from(
-    new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))),
-    (byte) => byte.toString(16).padStart(2, '0')
-  ).join('');
-}
 const record = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 function pageCount(data: unknown[], headers: Headers, page: number) {
@@ -643,7 +638,7 @@ async function saveBaseline(
   await db
     .insert(baselines)
     .values({
-      id: await hash(run.accountId + ':' + kind + ':' + key),
+      id: await traktBaselineId(run.accountId, kind, key),
       accountId: run.accountId,
       kind,
       localKey: key,

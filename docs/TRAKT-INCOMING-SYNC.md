@@ -1,6 +1,6 @@
 # Incoming Trakt watches on Free
 
-Prepared 2026-10-25 on `ios-native`. **Not deployed or enabled on hosted D1.**
+Initial rollout deployed 2026-10-25 on `ios-native`; the owner enabled incoming in iOS. A preserved active manual review currently pauses it. The hardening below is the next source candidate, pending its verification/deployment checkpoint.
 This is the owner's requested extension of the earlier manual-only contract.
 Connecting Trakt still enables nothing automatically.
 
@@ -24,8 +24,7 @@ scheduling, provider errors, quota and backlog prevent a hard 60-second SLA.
 History uses a fixed seven-day overlapping window and durable remote IDs. A new
 backdated play would be missed by a naive `watched_at > last_check` cursor. Run
 reviewed sync once for existing history, and for bulk imports older than seven
-days. Concurrent changes restart from the newest page; malformed/partial pages
-never advance checkpoints. A scan is limited to 200 pages/2,000 recent plays;
+days. Concurrent changes restart from the newest page. Partial/inconsistent pagination and duplicate usable IDs fail closed without advancing. An individually malformed row with a valid history ID is quarantined as review/invalid_item with no retained payload and a never-due retry time; rows without usable IDs are skipped. Valid neighbours still advance/import. A scan is limited to 200 pages/2,000 recent plays;
 larger batches need manual sync.
 
 ## Safeguards
@@ -40,7 +39,7 @@ larger batches need manual sync.
 - Atomic viewing/status/acknowledgement batches. Unique operation/remote IDs and
   retained acknowledgements survive Undo/purge. Revoked plays are never revived.
 - Trash/demo excluded; notes, score, favorites, Queue and Dropped status preserved.
-  Equal local viewings need reviewed linking instead of a duplicate play.
+  A single unlinked active local viewing within six hours links automatically (owner-selected Option B), preserving its local timestamp, origin and watch count. Multiple matches, conflicting previous baselines, undated matches and exact-minute revoked tombstones remain for review; no revival or fuzzy title matching. Link, canonical baseline and acknowledgement commit atomically with generation/account/title/event-version and single-candidate rechecks.
   Unmatched IDs/oversized metadata remain in review; no fuzzy name matching.
 - Metadata only inserts missing records. At most 200 season summaries or selected
   episodes, 100 KB normalized season payload. Larger metadata uses manual sync.
@@ -70,8 +69,7 @@ Official limits checked 2026-10-25:
 | Subrequests     | 50/invocation                                          | Ten-item enqueue + one viewing/metadata phase                      |
 
 SQLite correctness/query plans and a Wrangler dry run do **not** prove the 10 ms
-CPU budget. After explicit deployment approval, measure idle, new-watch, token
-refresh and cold-metadata CPU, plus actual D1 rows read/written including indexes.
+CPU budget. The initial hosted idle samples measured3ms; that proves only idle ticks. Still measure a day of idle samples, OAuth refresh, matched-title watch, cold movie and cold season via Cloudflare metrics/tail, plus actual D1 rows including indexes. Use8msP99 as engineering headroom below the10ms limit; it is not a platform guarantee.
 Other account traffic shares the allowance. If cold metadata exceeds Free CPU,
 leave those entries for manual metadata while retaining the cheap matched-watch
 minute path. Never silently switch to paid; 15-minute wall time is not CPU time.
@@ -101,7 +99,7 @@ npx tsc -p workers/trakt-incoming/tsconfig.json
 npx wrangler deploy --dry-run --config workers/trakt-incoming/wrangler.jsonc
 ```
 
-## Deployment review — pending owner approval
+## Rollout and rollback
 
 1. Verify actual database/binding and pending migrations; take a recoverable
    backup and apply only the reviewed additive migration to existing D1.
@@ -116,9 +114,53 @@ npx wrangler deploy --dry-run --config workers/trakt-incoming/wrangler.jsonc
 5. To roll back, disable incoming first/remove its Cron. Keep acknowledgements to
    prevent replay. Existing manual sync and diary data remain available.
 
-The owner explicitly approved this feature rollout on 2026-10-25. A complete
-ignored SQL backup was downloaded/restored and existing encryption/client setup
-verified without printing credentials. Only migration0013 is pending. Current
-Wrangler credentials return403 on Worker deployment APIs, so no hosted migration,
-secret upload, deployment or incoming enable has succeeded. Authentication recovery
-is in progress; owner consent is no longer the deployment blocker.
+The owner approved rollout on2026-10-25 and completed Wrangler reauthorization.
+Migration0013 is applied, no migration is required for this hardening. Scheduled
+Worker version093945a6-e9b8-4520-a402-313514742063 and main Worker
+versionb6bf0ab8-adf5-4ebc-a08d-09980fc207ce are the initial deployed baseline;
+PROGRESS.md records subsequent versions. The earlier403 was resolved. Existing
+Access/owner checks and secrets remain in place. The owner confirmed the incoming
+setting survives app restarts. No end-to-end latency or active-import CPU claim
+follows from that setting check or the idle logs.
+
+## Manual review, health and local-watch linking
+
+Any manual run in building/review/applying still fences incoming reads and writes.
+Do not narrow this to building/applying: parked reviews include Skip choices and
+proposal identities which must not be bypassed. To resume incoming, the owner can
+apply ready changes, resolve/skip conflicts, then cancel what remains; already
+applied baselines are kept. Or stop the scan without applying. The scheduler never
+cancels the owner's run. A pause over seven days may leave older plays outside the
+automatic overlap; catch these with a manual scan.
+
+GET status adds pausedBy (building/review/applying/null) and overdue. Overdue means
+enabled, not manual-paused, and next_at more than ten minutes overdue. Future
+provider/quota backoffs and disabled states do not trigger it. This detects missing
+progress, not the cause: check Worker metrics for exceededCpu/errors. Off then on
+invalidates the old lease and resets failure scheduling. iOS decodes both fields
+optionally for older backends, explains the phase/seven-day window and prioritizes
+overdue health over stale stored errors.
+
+The six-hour rule shares one SQL predicate between candidate lookup and the final
+import fence. Exact-minute matches include intentional revoked tombstones; the
+wider window includes only non-revoked plays. A sole dated, unlinked local match
+gets remote_history_id plus a version increment. Its original date/origin/count
+and title fields remain unchanged. The baseline stores the local and remote dates
+as they stand, under the exact existing SHA-256(account:history:local-key) scheme;
+a later manual comparison proposes no history change for this pair. A failed
+batch rolls everything back, and any concurrent extra candidate/manual run/edit/
+disable makes the conditional link fail safely. Existing links are not reassigned.
+Genuine nearby rewatches can need review. The manual engine's push reconciliation
+still uses exact-minute matching; broadening that is explicitly outside this pass.
+
+No new migration, index, provider credential or player integration. Existing
+watch/title-progress, baseline-local and remote-history indexes support lookups.
+The conservative matched-episode test stays below50 prepared statements; D1
+counts a batch as one query against the invocation cap, while row/index writes
+still consume daily account allowance. This is not a CPU measurement.
+
+Validation for this source candidate:38 incoming tests and391 complete Node tests
+pass on disposable SQLite/providers. Svelte/TypeScript, worker tsc, production
+build and dry-run results are recorded at the final PROGRESS.md checkpoint. Three
+new Swift health/decode tests are source-reviewed but unrun until the next macOS
+CI. No claim that Windows compiled or ran Swift.

@@ -104,6 +104,7 @@ import TwilDiaryCore
             if ProcessInfo.processInfo.arguments.contains("--ui-title-metadata") { workspace = PreviewData.metadataWorkspace }
             if ProcessInfo.processInfo.arguments.contains("--ui-long-synopsis") { workspace = PreviewData.longSynopsisWorkspace }
             if ProcessInfo.processInfo.arguments.contains("--ui-upcoming") { workspace = PreviewData.upcomingWorkspace }
+            if ProcessInfo.processInfo.arguments.contains("--ui-long-episodes") { workspace = PreviewData.withLongEpisodeSummaries(workspace) }
             if ProcessInfo.processInfo.arguments.contains("--ui-cached-snapshot") {
                 showingCachedSnapshot = true; lastRefreshedAt = now.addingTimeInterval(-600)
                 cacheWarning = "Your diary is loaded, but its protected offline copy could not be updated."

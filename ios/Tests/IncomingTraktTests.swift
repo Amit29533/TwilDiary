@@ -20,6 +20,29 @@ import XCTest
 }
 
 @MainActor final class IncomingTraktTests: XCTestCase {
+    func testOlderBackendHealthDecodesWithoutNewOptionalFields() throws {
+        let value = try JSONDecoder().decode(IncomingTraktStatus.self, from: Data(#"{"enabled":true,"pending":0,"review":0,"paused":false}"#.utf8))
+        XCTAssertNil(value.pausedBy); XCTAssertNil(value.overdue)
+    }
+    func testOverdueHealthTakesPriorityOverStoredProviderError() async {
+        let service = IncomingFixture(); service.value.enabled = true
+        service.value.overdue = true; service.value.error = "trakt_rate_limited"
+        let controller = IncomingTraktController(service: service); await controller.refresh()
+        XCTAssertTrue(controller.health?.contains("10 minutes") ?? false)
+        service.value.overdue = false; await controller.refresh()
+        XCTAssertTrue(controller.health?.contains("cooldown") ?? false)
+    }
+    func testPauseExplainsTheBlockingPhaseAndSevenDayCatchupWindow() async {
+        let service = IncomingFixture(); service.value.paused = true; service.value.pausedBy = "building"
+        let controller = IncomingTraktController(service: service); await controller.refresh()
+        XCTAssertTrue(controller.pauseExplanation?.contains("scan is running") ?? false)
+        for phase in ["review", "applying"] {
+            service.value.pausedBy = phase; await controller.refresh()
+            XCTAssertTrue(controller.pauseExplanation?.contains("finish or cancel") ?? false)
+            XCTAssertTrue(controller.pauseExplanation?.contains("seven days") ?? false)
+        }
+        service.value.paused = false; await controller.refresh(); XCTAssertNil(controller.pauseExplanation)
+    }
     func testServerAcknowledgementControlsTheSettingAndRefreshPreservesIt() async {
         let service = IncomingFixture()
         let current = IncomingTraktController(service: service)

@@ -66,8 +66,8 @@ import TwilDiaryCore
             if incoming.status?.enabled == true {
                 Text("Usually within a few minutes. New titles may need extra metadata checks. Your diary refreshes when you open the app.")
                     .font(.caption).foregroundStyle(.secondary)
-                if incoming.status?.paused == true {
-                    Text("Paused while you review Trakt changes.").font(.caption).foregroundStyle(.secondary)
+                if let explanation = incoming.pauseExplanation {
+                    Text(explanation).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 } else if let date = DiaryDate.parse(incoming.status?.checkedAt) {
                     Text("Last checked \(date.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
                 } else { Text("Waiting for the first scheduled check.").font(.caption).foregroundStyle(.secondary) }

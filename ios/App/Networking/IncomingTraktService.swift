@@ -9,6 +9,8 @@ struct IncomingTraktStatus: Codable, Equatable, Sendable {
     var pending: Int
     var review: Int
     var paused: Bool?
+    var pausedBy: String?
+    var overdue: Bool?
 }
 
 @MainActor protocol IncomingTraktServicing {
@@ -47,13 +49,23 @@ struct IncomingTraktStatus: Codable, Equatable, Sendable {
         catch { self.error = "The incoming sync setting couldn’t be confirmed. Refresh its status before retrying." }
     }
     var health: String? {
-        switch status?.error {
+        if status?.overdue == true {
+            return "Incoming checks haven’t run for over 10 minutes. Turn incoming watches off and on, then check the Worker logs."
+        }
+        return switch status?.error {
         case "trakt_reconnect_required", "trakt_connection_required": "Reconnect Trakt to resume incoming watches."
         case "trakt_rate_limited", "metadata_rate_limited": "Waiting for the provider’s cooldown. Your watches will retry."
         case "daily_import_budget", "incoming_daily_budget", "database_read_limit", "database_write_limit": "The daily allowance is in use. Incoming watches resume after midnight UTC."
         case .some: "Incoming watches are waiting to retry. Your saved diary is unchanged."
         case .none: nil
         }
+    }
+    var pauseExplanation: String? {
+        guard status?.paused == true else { return nil }
+        if status?.pausedBy == "building" {
+            return "Paused while a Trakt scan is running. Plays older than seven days when it resumes need a manual scan."
+        }
+        return "Paused until you finish or cancel the Trakt review. Plays older than seven days when it resumes need a manual scan."
     }
 }
 

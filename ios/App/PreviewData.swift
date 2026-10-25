@@ -8,6 +8,15 @@ enum PreviewData {
         return try! JSONDecoder().decode(Workspace.self, from: Data(contentsOf: url))
     }
     #if DEBUG
+    static func withLongEpisodeSummaries(_ workspace: Workspace) -> Workspace {
+        var object = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace)) as! [String: Any]
+        var episodes = object["episodes"] as! [[String: Any]]
+        for index in episodes.indices where episodes[index]["titleId"] as? String == "again" {
+            episodes[index]["overview"] = String(repeating: "This deliberately long episode synopsis checks that expanded grid text stays below the watch control without stretching the artwork or caption. ", count: 4)
+        }
+        object["episodes"] = episodes
+        return try! JSONDecoder().decode(Workspace.self, from: JSONSerialization.data(withJSONObject: object))
+    }
     static var longSynopsisWorkspace: Workspace {
         var object = try! JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace)) as! [String: Any]
         var titles = object["titles"] as! [[String: Any]]
