@@ -8,9 +8,11 @@ import TwilDiaryCore
     private var snapshot: TraktSync
     private let unavailable: Bool
     private let largeImport: Bool
+    private var quotaOnStatus: Bool
     init(scenario: String = "review") {
         unavailable = scenario == "unavailable"
-        largeImport = scenario == "large-import"
+        largeImport = scenario == "large-import" || scenario == "cold-quota"
+        quotaOnStatus = scenario == "cold-quota"
         let statusURL = Bundle.main.url(forResource: "trakt-status", withExtension: "json")!
         let syncURL = Bundle.main.url(forResource: "trakt-sync", withExtension: "json")!
         connection = try! JSONDecoder().decode(TraktStatus.self, from: Data(contentsOf: statusURL))
@@ -26,7 +28,11 @@ import TwilDiaryCore
         }
         if largeImport { snapshot.counts = ["pending": 2000, "safe": 2000, "applied": 0] }
     }
-    func status() async throws -> TraktStatus { if unavailable { throw APIError.message("The connection is temporarily unavailable. Try again.") }; return connection }
+    func status() async throws -> TraktStatus {
+        if unavailable { throw APIError.message("The connection is temporarily unavailable. Try again.") }
+        if quotaOnStatus { quotaOnStatus = false; throw APIError.databaseLimit(.now.addingTimeInterval(20)) }
+        return connection
+    }
     func review(kind: TraktKind, query: String, after: String?) async throws -> TraktSync {
         var result = snapshot
         result.items = result.items.filter { (kind == .all || $0.kind == kind.rawValue) && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)) }

@@ -39,13 +39,37 @@ owner alongside the installable IPA. These are synthetic native fixtures.
 
 61is not promoted toios-native:62contains the reviewed Intel-stage time budget
 and new database/API preflight job. Keep GitHub54unchanged until coherent62
-passes official CM. Next: push the locally checked62source tocodex/ios-ci-next,
-start one full official CM regression, inspect its exact checkout and artifact
-results.62has219native source cases and adds Catalog header assertions plus
+passes official CM. CM62**6ade49474a72334e32e515c7** checked out exact
+**50134fc9addcc243434ee5721eb74ea1eec13f61** fromcodex/ios-ci-next.
+Actual simulator compilation and219native cases pass; focused UI is running.
+Do not accept its physical packaging or later gates until logs/artifacts prove them.
+62adds Catalog header assertions plus
 privacy resource packaging, API/runtime/query bounds and additive0016schema.
 407backend/16CI-tool tests, typecheck and Worker build pass locally. No hosted
 migration or deployment. Cold-process quota/bootstrap retry remains an open next
 native scenario; do not label the whole audit finished.
+
+## Native63draft — cold-process approved-import recovery
+
+62is frozen on its running source.63adds an owned, read-only bootstrap when a
+persisted approval survives but the first status/review fails. It waits for the
+typed D1reset/provider Retry-After, checks current connection and exact review,
+then hands off to the existing paced worker. No POST occurs before those checks.
+Pause cancels bootstrap and clears approval; background preserves it; stale
+session/review/account, fatal auth and six consecutive failed recovery attempts
+stop without writing. Status transport preserves typed retry evidence too.
+The Trakt screen shows a compact restoration/cooldown panel with no invented
+percentage; the controller task continues across tabs. Debug-only cold-quota
+fixture and a native UI case exercise wait/tab navigation/automatic recovery/Pause.
+
+Eight new controller cases plus a URLProtocol case cover cold status/review quota,
+Retry-After, explicit Pause, changed review/disconnection, late session callback,
+bounded outage, background/foreground and expired Access session.228native/54UI
+source inventory, all Swift grammar/YAML/Bash checks and16CI-tool cases pass.
+**63has no macOS compilation/runtime proof yet.** Do not conflate tests written
+with tests passed. Next: self-review/commit this coherent draft; let62finish,
+verify its official result/resources/screenshots, then run63once on Codemagic.
+Only the exact fully qualified source may move toios-native for independent GHA.
 
 ## Scope clarification and62database/workflow follow-up
 

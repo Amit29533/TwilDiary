@@ -184,6 +184,25 @@ import UIKit
         XCTAssertEqual(counts.label, pausedCount)
         capture("Explicit import pause retains completed work and resume action")
     }
+    func testColdQuotaImportRestoresAcrossTabsAfterResetWithoutManualRetry() {
+        let app = launch(traktScenario: "cold-quota")
+        app.tabBars.buttons["More"].tap(); app.buttons["settings-trakt-summary"].tap()
+        XCTAssertTrue(app.staticTexts["Restoring approved import"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["trakt-pause-restoration"].isEnabled)
+        XCTAssertFalse(app.progressIndicators["trakt-apply-progress"].exists, "No invented percentage before review loads")
+        capture("Cold quota restoration waits without a fake percentage")
+        app.tabBars.buttons["Home"].tap()
+        XCTAssertTrue(app.staticTexts["Pick up where you left off"].waitForExistence(timeout: 5))
+        app.tabBars.buttons["More"].tap()
+        let counts = app.staticTexts["trakt-apply-counts"]
+        let progressed = NSPredicate { _, _ in counts.exists && !counts.label.hasPrefix("0 saved") }
+        wait(for: [expectation(for: progressed, evaluatedWith: counts)], timeout: 35)
+        let pause = app.buttons["trakt-pause-import"]
+        for _ in 0..<8 { if pause.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(pause.isHittable); pause.tap()
+        XCTAssertTrue(app.buttons["trakt-resume-import"].waitForExistence(timeout: 8))
+        capture("Cold quota import restores automatically and still supports explicit Pause")
+    }
     func testTraktComparisonShowsFiniteRecordsAndStopsWithoutPartialApplyActions() {
         let app = launch(traktScenario: "comparing")
         app.tabBars.buttons["More"].tap(); app.buttons["settings-trakt-summary"].tap()

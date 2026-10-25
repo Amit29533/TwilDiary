@@ -50,6 +50,8 @@ import TwilDiaryCore
     private let onTransferFinished: @MainActor () async -> Void
     private var operationID = UUID()
     private(set) var applyingAll = false
+    private(set) var restoringApproval = false
+    private var refreshFailure: Error?
     private var runningTask: Task<Void, Never>?
     private var runningTaskID = UUID()
     private(set) var retryAttempt = 0
@@ -78,17 +80,24 @@ import TwilDiaryCore
         self.service = service; self.checkpoint = checkpoint ?? MemoryTraktApplyCheckpoint()
         self.clock = clock; self.sleep = sleep; self.onTransferFinished = onTransferFinished
     }
-    func pauseApplying() { paused = true; checkpoint.runID = nil }
+    func pauseApplying() {
+        paused = true; checkpoint.runID = nil
+        if restoringApproval { runningTask?.cancel() }
+    }
     func suspendForBackground() { paused = true; runningTask?.cancel() }
     func finishSuspendingTransfer() async {
         if let task = runningTask, task.isCancelled { await task.value }
     }
     func startApprovedApply() {
+        launchApprovedApply(restoring: nil)
+    }
+    private func launchApprovedApply(restoring id: String?) {
         guard !busy, runningTask == nil else { return }
         let taskID = UUID(); runningTaskID = taskID
         runningTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            await self.apply()
+            if let id { await self.restoreApprovedApply(id: id) }
+            else { await self.apply() }
             guard self.runningTaskID == taskID else { return }
             if !Task.isCancelled { await self.onTransferFinished() }
             if self.runningTaskID == taskID { self.runningTask = nil }
@@ -97,12 +106,63 @@ import TwilDiaryCore
     func invalidateSession() {
         operationID = UUID(); refreshID = UUID(); runningTaskID = UUID(); paused = true; checkpoint.runID = nil
         runningTask?.cancel(); runningTask = nil
-        sync = nil; status = nil; error = nil; retryMessage = nil
+        sync = nil; status = nil; error = nil; retryMessage = nil; refreshFailure = nil
     }
     func resumeApprovedApply() async {
-        guard !busy, let id = checkpoint.runID, sync?.run?.id == id,
-              status?.connected == true, status?.needsReconnect != true else { return }
-        startApprovedApply()
+        guard !busy, !loading, let id = checkpoint.runID else { return }
+        if refreshFailure == nil, let status, let sync {
+            guard sync.run?.id == id, sync.reviewing, status.connected, status.needsReconnect != true else {
+                checkpoint.runID = nil; return
+            }
+            startApprovedApply()
+        } else { launchApprovedApply(restoring: id) }
+    }
+    /// A persisted approval is only a run identity. Restore the connection and
+    /// current review with GETs before it can authorize another write.
+    private func restoreApprovedApply(id: String) async {
+        guard !busy, checkpoint.runID == id else { return }
+        let ticket = UUID(); operationID = ticket; refreshID = UUID()
+        busy = true; changingReview = true; restoringApproval = true; paused = false
+        retryAttempt = 0; error = nil; retryMessage = nil
+        var restored = false
+        do {
+            if let failure = refreshFailure { try scheduleRecovery(failure, ticket: ticket) }
+            while !paused {
+                try await waitForCooldown(ticket)
+                try checkApproval(id: id, ticket: ticket)
+                do {
+                    let connection = try await service.status()
+                    try checkApproval(id: id, ticket: ticket)
+                    guard connection.connected, connection.needsReconnect != true else {
+                        throw APIError.message("Reconnect Trakt before resuming this import.")
+                    }
+                    let review = try await service.review(kind: .all, query: "", after: nil)
+                    try checkApproval(id: id, ticket: ticket)
+                    guard review.run?.id == id, review.reviewing else {
+                        throw APIError.message("The review changed. Open the current review before continuing.")
+                    }
+                    status = connection; accept(review); limit = 6; refreshFailure = nil
+                    restored = true; break
+                } catch is CancellationError { throw CancellationError() }
+                catch { try scheduleRecovery(error, ticket: ticket) }
+            }
+        } catch is CancellationError { if operationID == ticket { paused = true } }
+        catch {
+            if operationID == ticket { self.error = error.localizedDescription; paused = true; checkpoint.runID = nil }
+        }
+        restoringApproval = false
+        guard operationID == ticket else { changingReview = false; busy = false; return }
+        changingReview = false; busy = false; retryMessage = nil
+        if restored, !paused, !Task.isCancelled, checkpoint.runID == id {
+            await applyAllReady()
+        } else {
+            // Do not bypass the cooldown with a deferred filter/status refresh.
+            deferredRefresh = false; deferredStatus = false
+        }
+    }
+    private func checkApproval(id: String, ticket: UUID) throws {
+        try Task.checkCancellation()
+        guard operationID == ticket, !paused, checkpoint.runID == id else { throw CancellationError() }
     }
     var visibleItems: [TraktChange] { sync?.items.filter { (kind == .all || $0.kind == kind.rawValue) && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)) } ?? [] }
     func refresh() async {
@@ -126,10 +186,10 @@ import TwilDiaryCore
             let review = try await service.review(kind: selectedKind, query: search, after: nil)
             guard request == refreshID, !changingReview, kind == selectedKind, query == search, !Task.isCancelled else { return }
             if let connection { status = connection }
-            accept(review); limit = 6; error = nil
+            accept(review); limit = 6; error = nil; refreshFailure = nil
             if !receivedMode, let raw = review.run?.ratingMode, let value = TraktRatingMode(rawValue: raw) { mode = value; receivedMode = true }
         } catch is CancellationError { }
-        catch { if request == refreshID, !changingReview, kind == selectedKind, query == search, !Task.isCancelled { self.error = error.localizedDescription } }
+        catch { if request == refreshID, !changingReview, kind == selectedKind, query == search, !Task.isCancelled { self.error = error.localizedDescription; refreshFailure = error } }
     }
     func loadMore() async {
         guard !busy, let current = sync else { return }

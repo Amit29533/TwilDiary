@@ -673,6 +673,26 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
         catch { XCTFail("Unexpected error: \(error)") }
         XCTAssertEqual(StubProtocol.state.recorded().count, 1)
     }
+    func testTraktBootstrapStatusPreservesThrottleAndNetworkFailureEvidence() async {
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        for offline in [false, true] {
+            StubProtocol.state.reset { _ in
+                var reply = StubProtocol.Reply(429, #"{"error":{"code":"trakt_rate_limited","message":"Provider cooldown"}}"#)
+                reply.headers["Retry-After"] = "120"
+                if offline { reply.failureCode = .notConnectedToInternet }
+                return reply
+            }
+            let storage = MemorySessionStorage(); storage.credential = credential
+            do {
+                let _: TraktStatus = try await api(storage, clock: { date }).request("/api/trakt/status")
+                XCTFail("Status failure accepted")
+            } catch let error as TraktTransferFailure {
+                XCTAssertTrue(error.retryable); XCTAssertEqual(error.status, offline ? 0 : 429)
+                XCTAssertEqual(error.retryAt, offline ? nil : date.addingTimeInterval(120))
+            } catch { XCTFail("Unexpected error: \(error)") }
+            XCTAssertEqual(StubProtocol.state.recorded().count, 1)
+        }
+    }
     func testWriteQuotaParsesResetWithoutSigningOut() async throws {
         StubProtocol.state.reset { _ in
             .init(503, #"{"error":{"code":"database_write_limit","message":"Quota exhausted","resetAt":"2026-10-24T00:00:00Z"}}"#)

@@ -21,6 +21,7 @@ import TwilDiaryCore
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 connection
+                if controller.restoringApproval { restoringImport }
                 if controller.status?.connected == true {
                     preferences
                     incomingWatches
@@ -34,7 +35,10 @@ import TwilDiaryCore
             }.padding(16).padding(.bottom, 100)
         }.diaryScreenBackground().navigationTitle("Trakt").navigationBarTitleDisplayMode(.inline).toolbar(.visible, for: .navigationBar)
             .task(id: controller.kind.rawValue + "\n" + controller.query) {
-                do { try await Task.sleep(for: .milliseconds(250)); try Task.checkCancellation(); await controller.refreshReview() } catch { }
+                do {
+                    try await Task.sleep(for: .milliseconds(250)); try Task.checkCancellation()
+                    await controller.refreshReview(); await controller.resumeApprovedApply()
+                } catch { }
             }
             .refreshable { await controller.refresh(); if controller.status?.connected == true { await incoming.refresh() } }
             .task(id: "\(controller.status?.connected == true):\(controller.sync?.run?.state ?? "")") { if controller.status?.connected == true { await incoming.refresh() } }
@@ -57,6 +61,20 @@ import TwilDiaryCore
                     }
                 }
             }
+    }
+    private var restoringImport: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Restoring approved import").font(.headline)
+            Text(controller.retryMessage ?? "Checking your Trakt connection and saved review before continuing.")
+                .font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if coolingDown {
+                Text("Checking again after \(controller.cooldownUntil.formatted(date: .abbreviated, time: .standard)).")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Button("Pause import", systemImage: "pause.fill") { controller.pauseApplying() }
+                .buttonStyle(.bordered).buttonBorderShape(.capsule).disabled(controller.paused)
+                .accessibilityIdentifier("trakt-pause-restoration")
+        }.diaryPanel().accessibilityIdentifier("trakt-restoring-import")
     }
     private func transferProgress(_ sync: TraktSync) -> some View {
         let progress = TraktApplyProgress(sync)

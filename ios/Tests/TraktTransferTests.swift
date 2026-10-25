@@ -17,15 +17,29 @@ import TwilDiaryCore
     var neverAvailable = false
     var replaceOnRead = false
     var refusal: Error?
+    var statusRefusal: Error?
+    var reviewRefusal: Error?
+    var statusUnavailable = false
+    var connection = TraktStatus(configured: true, connected: true)
+    var statusReads = 0
+    var holdStatus = false
+    var heldStatus: CheckedContinuation<TraktStatus, Never>?
     var hold = false
     var held: CheckedContinuation<TraktSync, Never>?
     init(total: Int) {
         let data = try! JSONSerialization.data(withJSONObject: ["run": ["id": "transfer-run", "state": "review", "stage": "done", "page": 1, "progress": 2000, "retryAfter": 0], "items": [], "counts": ["pending": total, "safe": total, "applied": 0]])
         snapshot = try! JSONDecoder().decode(TraktSync.self, from: data)
     }
-    func status() async throws -> TraktStatus { TraktStatus(configured: true, connected: true) }
+    func status() async throws -> TraktStatus {
+        statusReads += 1
+        if let error = statusRefusal { statusRefusal = nil; throw error }
+        if statusUnavailable { throw TraktTransferFailure(status: 503, code: "unavailable", message: "Unavailable") }
+        if holdStatus { holdStatus = false; return await withCheckedContinuation { heldStatus = $0 } }
+        return connection
+    }
     func review(kind: TraktKind, query: String, after: String?) async throws -> TraktSync {
         reads += 1; sequence.append("read")
+        if let error = reviewRefusal { reviewRefusal = nil; throw error }
         if replaceOnRead { var next = snapshot; next.run = nil; return next }
         return snapshot
     }
@@ -176,5 +190,119 @@ import TwilDiaryCore
         let finished = await waitForRegressionCondition { controller.sync?.run?.state == "complete" && !controller.busy }
         XCTAssertTrue(finished); XCTAssertEqual(controller.sync?.counts["applied"], 3)
         XCTAssertNil(checkpoint.runID)
+    }
+    func testColdQuotaLaunchWaitsForResetAndRestoresApprovedReviewBeforeWriting() async {
+        let service = TransferService(total: 2), clock = TransferClock()
+        let checkpoint = MemoryTraktApplyCheckpoint(); checkpoint.runID = "transfer-run"
+        let reset = clock.now.addingTimeInterval(3600)
+        service.statusRefusal = APIError.databaseLimit(reset)
+        let controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { interval in
+            if clock.now < reset {
+                XCTAssertEqual(service.statusReads, 1, "No bootstrap GET before quota reset")
+                XCTAssertEqual(service.applies, 0, "No write before account/review restoration")
+            }
+            await clock.sleep(interval)
+        })
+        await controller.refresh()
+        XCTAssertNil(controller.status); XCTAssertNil(controller.sync)
+        await controller.resumeApprovedApply()
+        let finished = await waitForRegressionCondition { controller.sync?.run?.state == "complete" && !controller.busy && !controller.loading }
+        XCTAssertTrue(finished); XCTAssertGreaterThanOrEqual(clock.now, reset)
+        XCTAssertEqual(controller.sync?.counts["applied"], 2); XCTAssertNil(checkpoint.runID)
+        XCTAssertEqual(service.statusReads, 3) // refusal, bootstrap and final refresh
+        XCTAssertEqual(Array(service.sequence.prefix(2)), ["read", "write"])
+        XCTAssertNil(controller.error); XCTAssertFalse(controller.restoringApproval)
+    }
+    func testPauseDuringColdQuotaRecoveryRemovesApprovalWithoutAnyWrite() async {
+        let service = TransferService(total: 2), clock = TransferClock()
+        let checkpoint = MemoryTraktApplyCheckpoint(); checkpoint.runID = "transfer-run"
+        service.statusRefusal = APIError.databaseLimit(clock.now.addingTimeInterval(3600))
+        var controller: TraktController!
+        controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { interval in
+            controller.pauseApplying(); await clock.sleep(interval)
+        })
+        await controller.refresh(); await controller.resumeApprovedApply()
+        let stopped = await waitForRegressionCondition { controller.paused && !controller.busy }
+        XCTAssertTrue(stopped); XCTAssertEqual(service.statusReads, 1)
+        XCTAssertEqual(service.applies, 0); XCTAssertNil(checkpoint.runID)
+        XCTAssertFalse(controller.restoringApproval)
+    }
+    func testColdReviewReadFailureHonorsRetryAfterAndChecksConnectionAgain() async {
+        let service = TransferService(total: 2), clock = TransferClock()
+        let checkpoint = MemoryTraktApplyCheckpoint(); checkpoint.runID = "transfer-run"
+        let reset = clock.now.addingTimeInterval(120)
+        service.reviewRefusal = TraktTransferFailure(status: 429, code: "trakt_rate_limited", message: "Cooldown", retryAt: reset)
+        let controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { interval in
+            if clock.now < reset { XCTAssertEqual(service.statusReads, 1); XCTAssertEqual(service.reads, 1); XCTAssertEqual(service.applies, 0) }
+            await clock.sleep(interval)
+        })
+        await controller.refresh(); await controller.resumeApprovedApply()
+        let finished = await waitForRegressionCondition { controller.sync?.run?.state == "complete" && !controller.busy }
+        XCTAssertTrue(finished); XCTAssertGreaterThanOrEqual(clock.now, reset)
+        XCTAssertEqual(controller.sync?.counts["applied"], 2); XCTAssertNil(checkpoint.runID)
+        XCTAssertEqual(Array(service.sequence.prefix(3)), ["read", "read", "write"])
+        XCTAssertNil(controller.error)
+    }
+    func testColdRecoveryCannotApplyADifferentReviewOrDisconnectedAccount() async {
+        for disconnected in [false, true] {
+            let service = TransferService(total: 2), clock = TransferClock()
+            let checkpoint = MemoryTraktApplyCheckpoint(); checkpoint.runID = "transfer-run"
+            service.statusRefusal = TraktTransferFailure(status: 503, code: "unavailable", message: "Unavailable")
+            service.replaceOnRead = !disconnected
+            service.connection = TraktStatus(configured: true, connected: !disconnected)
+            let controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { await clock.sleep($0) })
+            await controller.refresh(); await controller.resumeApprovedApply()
+            let stopped = await waitForRegressionCondition { controller.paused && !controller.busy }
+            XCTAssertTrue(stopped); XCTAssertEqual(service.applies, 0); XCTAssertNil(checkpoint.runID)
+            XCTAssertNotNil(controller.error)
+        }
+    }
+    func testColdRecoveryInvalidationDiscardsTheLateConnectionBeforeReviewOrWrite() async {
+        let service = TransferService(total: 2), clock = TransferClock()
+        let checkpoint = MemoryTraktApplyCheckpoint(); checkpoint.runID = "transfer-run"
+        service.holdStatus = true
+        let controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { await clock.sleep($0) })
+        await controller.resumeApprovedApply()
+        guard await waitForRegressionCondition({ service.heldStatus != nil }) else { XCTFail("No held connection"); return }
+        controller.invalidateSession(); service.heldStatus?.resume(returning: service.connection)
+        let stopped = await waitForRegressionCondition { !controller.busy && !controller.restoringApproval }
+        XCTAssertTrue(stopped); XCTAssertEqual(service.reads, 0); XCTAssertEqual(service.applies, 0)
+        XCTAssertNil(controller.status); XCTAssertNil(controller.sync); XCTAssertNil(checkpoint.runID)
+    }
+    func testColdRecoveryIsBoundedWhenStatusKeepsFailing() async {
+        let service = TransferService(total: 2), clock = TransferClock()
+        let checkpoint = MemoryTraktApplyCheckpoint(); checkpoint.runID = "transfer-run"
+        service.statusUnavailable = true
+        let controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { await clock.sleep($0) })
+        await controller.refresh(); await controller.resumeApprovedApply()
+        let stopped = await waitForRegressionCondition { controller.paused && !controller.busy }
+        XCTAssertTrue(stopped); XCTAssertEqual(service.statusReads, 7)
+        XCTAssertEqual(service.reads, 0); XCTAssertEqual(service.applies, 0)
+        XCTAssertNil(checkpoint.runID); XCTAssertNotNil(controller.error)
+    }
+    func testBackgroundDuringColdRecoveryPreservesApprovalAndForegroundReadsAgain() async {
+        let service = TransferService(total: 2), clock = TransferClock()
+        let checkpoint = MemoryTraktApplyCheckpoint(); checkpoint.runID = "transfer-run"
+        service.holdStatus = true
+        let controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { await clock.sleep($0) })
+        await controller.resumeApprovedApply()
+        guard await waitForRegressionCondition({ service.heldStatus != nil }) else { XCTFail("No held connection"); return }
+        controller.suspendForBackground(); service.heldStatus?.resume(returning: service.connection)
+        await controller.finishSuspendingTransfer()
+        XCTAssertEqual(service.applies, 0); XCTAssertEqual(service.reads, 0)
+        XCTAssertEqual(checkpoint.runID, "transfer-run"); XCTAssertFalse(controller.busy)
+        await controller.refresh(); await controller.resumeApprovedApply()
+        let finished = await waitForRegressionCondition { controller.sync?.run?.state == "complete" && !controller.busy }
+        XCTAssertTrue(finished); XCTAssertEqual(controller.sync?.counts["applied"], 2); XCTAssertNil(checkpoint.runID)
+    }
+    func testColdRecoveryNeverRetriesAnExpiredPrivateSession() async {
+        let service = TransferService(total: 2), clock = TransferClock()
+        let checkpoint = MemoryTraktApplyCheckpoint(); checkpoint.runID = "transfer-run"
+        service.statusRefusal = APIError.signIn
+        let controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { await clock.sleep($0) })
+        await controller.refresh(); await controller.resumeApprovedApply()
+        let stopped = await waitForRegressionCondition { controller.paused && !controller.busy }
+        XCTAssertTrue(stopped); XCTAssertEqual(service.statusReads, 1)
+        XCTAssertEqual(service.applies, 0); XCTAssertTrue(clock.waits.isEmpty); XCTAssertNil(checkpoint.runID)
     }
 }

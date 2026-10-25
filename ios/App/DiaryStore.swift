@@ -7,6 +7,9 @@ import TwilDiaryCore
     var traktController: TraktController {
         if let retainedTraktController { return retainedTraktController }
         let checkpoint: any TraktApplyCheckpointStoring = isPreview ? MemoryTraktApplyCheckpoint() : PreferencesTraktApplyCheckpoint()
+        #if DEBUG
+        if isPreview, ProcessInfo.processInfo.arguments.contains("--ui-trakt=cold-quota") { checkpoint.runID = "reference-sync" }
+        #endif
         let controller = TraktController(service: makeTraktService(store: self), checkpoint: checkpoint, onTransferFinished: { [weak self] in
             guard let self, !self.needsSignIn, self.quotaBlockedUntil == nil else { return }
             await self.refresh()

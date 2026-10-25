@@ -96,3 +96,17 @@ recency/retirement plus latest active movie watch. Local migrations through0016,
 query-plan regressions and407backend tests pass. All0014–0016hosted migrations and
 real cost verification remain pending. These are additive indexes/counters/cursor,
 not a library/history rewrite. Existing unfinished review must be preserved.
+
+## Cold-process recovery candidate63
+
+When status/review fails before the saved review is loaded, the retained import
+controller now owns a bounded bootstrap task. The first request after a known
+quota waits for its reset; provider throttles preserve Retry-After. Only GET status
+and current review run during restoration. The exact approved run, connection and
+session must still match before the paced apply worker receives control.
+Explicit Pause clears approval and cancels restoration; background cancellation
+preserves it for foreground read-back. Six failed recovery attempts or a fatal
+account/auth/review change stop without writes. The UI shows known recovery state
+and Pause rather than fabricating counts/percentage before the review is loaded.
+Nine new native logic/URLProtocol tests and one isolated UI scenario are prepared;
+local syntax/tool checks pass, macOS63runtime acceptance is still pending.

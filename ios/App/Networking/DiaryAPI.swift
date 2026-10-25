@@ -178,7 +178,7 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
             let fallback = method == "GET"
                 ? "The diary could not be loaded. Please try refreshing."
                 : "The change was not confirmed. Refresh before trying again."
-            if path.hasPrefix("/api/trakt/sync") {
+            if path.hasPrefix("/api/trakt/sync") || url.path == "/api/trakt/status" {
                 throw TraktTransferFailure(status: http.statusCode, code: envelope?.error.code ?? "unconfirmed_response",
                     message: envelope?.error.message ?? fallback,
                     retryAt: TraktTransferFailure.retryDate(http.value(forHTTPHeaderField: "Retry-After"), now: clock()))
@@ -210,7 +210,7 @@ private final class StopRedirects: NSObject, URLSessionTaskDelegate, @unchecked 
                 case .networkConnectionLost: message = request.httpMethod == "GET" ? "The connection dropped. Try refreshing." : "The connection dropped. The change was not confirmed. Refresh before retrying."
                 default: message = request.httpMethod == "GET" ? "The diary could not be reached. Check your connection and try again." : "The change could not be confirmed. Check your connection and refresh before retrying."
                 }
-                if request.url?.path.hasPrefix("/api/trakt/sync") == true {
+                if request.url?.path.hasPrefix("/api/trakt/sync") == true || request.url?.path == "/api/trakt/status" {
                     throw TraktTransferFailure(status: 0, code: "network_unavailable", message: message)
                 }
                 throw APIError.message(message)
