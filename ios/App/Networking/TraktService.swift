@@ -138,7 +138,16 @@ import TwilDiaryCore
                     }
                     let review = try await service.review(kind: .all, query: "", after: nil)
                     try checkApproval(id: id, ticket: ticket)
-                    guard review.run?.id == id, review.reviewing else {
+                    guard review.run?.id == id else {
+                        throw APIError.message("The review changed. Open the current review before continuing.")
+                    }
+                    if review.run?.state == "complete" {
+                        // A final receipt may have been lost before termination.
+                        // This GET confirms completion; never replay its POST.
+                        status = connection; accept(review); refreshFailure = nil; checkpoint.runID = nil
+                        break
+                    }
+                    guard review.reviewing else {
                         throw APIError.message("The review changed. Open the current review before continuing.")
                     }
                     status = connection; accept(review); limit = 6; refreshFailure = nil

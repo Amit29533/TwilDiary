@@ -358,4 +358,16 @@ import TwilDiaryCore
             XCTAssertEqual(service.applies, 0)
         }
     }
+    func testColdRecoveryAcceptsAnAlreadyCompleteRunWithoutReplayingItsFinalWrite() async {
+        let service = TransferService(total: 0), clock = TransferClock()
+        let checkpoint = MemoryTraktApplyCheckpoint(); checkpoint.runID = "transfer-run"
+        service.snapshot.run?.state = "complete"
+        service.statusRefusal = TraktTransferFailure(status: 503, code: "unavailable", message: "Unavailable")
+        let controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { await clock.sleep($0) })
+        await controller.refresh(); await controller.resumeApprovedApply()
+        let finished = await waitForRegressionCondition { controller.sync?.run?.state == "complete" && !controller.busy }
+        XCTAssertTrue(finished); XCTAssertTrue(controller.status?.connected == true)
+        XCTAssertEqual(service.applies, 0); XCTAssertNil(checkpoint.runID); XCTAssertNil(controller.error)
+        XCTAssertFalse(controller.restoringApproval)
+    }
 }
