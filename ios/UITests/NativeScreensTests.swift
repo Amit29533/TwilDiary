@@ -466,13 +466,21 @@ import UIKit
         XCTAssertTrue(toggleExists)
         XCTAssertTrue(toggle.isHittable)
         XCTAssertEqual(toggle.value as? String, "0")
-        toggle.tap()
+        print("Incoming fixture control: enabled=\(toggle.isEnabled), value=\(String(describing: toggle.value)), frame=\(toggle.frame)")
+        if !toggle.isEnabled { print("Incoming fixture disabled hierarchy:\n" + app.debugDescription) }
+        XCTAssertTrue(toggle.isEnabled, "The confirmed initial status must enable the native switch")
+        capture("Incoming native switch before enabling")
+        // SwiftUI exposes the labelled row as one Switch accessibility frame.
+        // Touch the actual trailing switch, rather than the label's row centre.
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
+        print("Incoming fixture after enable touch: value=\(String(describing: toggle.value))")
+        if (toggle.value as? String) != "1" { print("Incoming fixture post-touch hierarchy:\n" + app.debugDescription) }
         let enabled = expectation(for: NSPredicate(format: "value == '1'"), evaluatedWith: toggle)
         wait(for: [enabled], timeout: 5)
         XCTAssertTrue(app.staticTexts["Waiting for the first scheduled check."].exists)
         XCTAssertFalse(app.staticTexts["Saved diary"].exists)
         capture("Trakt incoming watches enabled awaiting scheduler")
-        toggle.tap()
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.94, dy: 0.5)).tap()
         let disabled = expectation(for: NSPredicate(format: "value == '0'"), evaluatedWith: toggle)
         wait(for: [disabled], timeout: 5)
         XCTAssertFalse(app.staticTexts["Waiting for the first scheduled check."].exists)

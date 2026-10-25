@@ -116,5 +116,9 @@ npx wrangler deploy --dry-run --config workers/trakt-incoming/wrangler.jsonc
 5. To roll back, disable incoming first/remove its Cron. Keep acknowledgements to
    prevent replay. Existing manual sync and diary data remain available.
 
-No hosted migration, secret configuration, deployment or live write test has been
-performed. These are pending under the owner's standing no-deploy rule.
+The owner explicitly approved this feature rollout on 2026-10-25. A complete
+ignored SQL backup was downloaded/restored and existing encryption/client setup
+verified without printing credentials. Only migration0013 is pending. Current
+Wrangler credentials return403 on Worker deployment APIs, so no hosted migration,
+secret upload, deployment or incoming enable has succeeded. Authentication recovery
+is in progress; owner consent is no longer the deployment blocker.
