@@ -1527,6 +1527,89 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
         XCTAssertEqual(store.workspace.events, original.events)
         XCTAssertEqual(StubProtocol.state.recorded().filter { $0.url?.query?.contains("section=titles") == true }.count, 2)
     }
+    func testCrossSectionImportRaceRetriesReadOnceBeforePublishingAndCaching() async throws {
+        let original = PreviewData.workspace
+        let owner = try XCTUnwrap(original.events.first?.titleId)
+        var raced = original; raced.titles.removeAll { $0.id == owner }
+        let invalid = try workspacePages(raced), valid = try workspacePages(original)
+        StubProtocol.state.reset { request in
+            let query = request.url?.query ?? ""
+            let titleReads = StubProtocol.state.recorded().filter { $0.url?.query == "section=titles" }.count
+            return .init((query == "section=titles" && titleReads == 1 ? invalid : valid)[query] ?? #"{"items":[],"next":null}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let cache = MemoryWorkspaceCache(); try cache.save(original, scope: credential.cacheScope, at: .now)
+        let store = DiaryStore(api: api(storage), cache: cache)
+        await store.refresh()
+        XCTAssertNil(store.error); XCTAssertEqual(StubProtocol.state.recorded().count, 8)
+        XCTAssertEqual(store.workspace.titles, original.titles); XCTAssertEqual(store.workspace.events, original.events)
+        XCTAssertEqual(cache.load(scope: credential.cacheScope)?.workspace.titles, original.titles)
+        XCTAssertFalse(store.showingCachedSnapshot)
+    }
+    func testPersistentCrossSectionInconsistencyStopsAfterTwoReadsAndPreservesCache() async throws {
+        let original = PreviewData.workspace
+        let owner = try XCTUnwrap(original.events.first?.titleId)
+        var raced = original; raced.titles.removeAll { $0.id == owner }
+        let pages = try workspacePages(raced)
+        StubProtocol.state.reset { request in .init(pages[request.url?.query ?? ""] ?? #"{"items":[],"next":null}"#) }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let cache = MemoryWorkspaceCache(); try cache.save(original, scope: credential.cacheScope, at: .now)
+        let store = DiaryStore(api: api(storage), cache: cache)
+        await store.refresh()
+        XCTAssertEqual(store.error, WorkspaceIntegrityError.incompleteSnapshot.localizedDescription)
+        XCTAssertEqual(StubProtocol.state.recorded().count, 8)
+        XCTAssertEqual(store.workspace.titles, original.titles); XCTAssertEqual(store.workspace.events, original.events)
+        XCTAssertEqual(cache.load(scope: credential.cacheScope)?.workspace.events, original.events)
+        XCTAssertTrue(store.showingCachedSnapshot)
+    }
+    func testCrossSectionReadRetryHonorsQuotaRatherThanLoopingOrReplacingTheDiary() async throws {
+        let original = PreviewData.workspace
+        let owner = try XCTUnwrap(original.events.first?.titleId)
+        var raced = original; raced.titles.removeAll { $0.id == owner }
+        let pages = try workspacePages(raced)
+        StubProtocol.state.reset { request in
+            let query = request.url?.query ?? ""
+            if query == "section=titles", StubProtocol.state.recorded().filter({ $0.url?.query == query }).count == 2 {
+                return .init(503, #"{"error":{"code":"database_read_limit","message":"Quota","resetAt":"2999-01-01T00:00:00Z"}}"#)
+            }
+            return .init(pages[query] ?? #"{"items":[],"next":null}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let cache = MemoryWorkspaceCache(); try cache.save(original, scope: credential.cacheScope, at: .now)
+        let store = DiaryStore(api: api(storage), cache: cache)
+        await store.refresh()
+        XCTAssertNotNil(store.quotaBlockedUntil); XCTAssertNotNil(store.error)
+        XCTAssertLessThanOrEqual(StubProtocol.state.recorded().count, 8)
+        XCTAssertEqual(store.workspace.titles, original.titles); XCTAssertEqual(store.workspace.events, original.events)
+        XCTAssertEqual(cache.load(scope: credential.cacheScope)?.workspace.events, original.events)
+    }
+    func testSignOutDuringTheConsistencyRetryCannotPublishOrRecreateTheOldCache() async throws {
+        let original = PreviewData.workspace
+        let owner = try XCTUnwrap(original.events.first?.titleId)
+        var raced = original; raced.titles.removeAll { $0.id == owner }
+        let invalid = try workspacePages(raced), valid = try workspacePages(original)
+        let gate = StubProtocol.ResponseGate()
+        let validTitlePage = try XCTUnwrap(valid["section=titles"])
+        StubProtocol.state.reset { request in
+            let query = request.url?.query ?? ""
+            let titleReads = StubProtocol.state.recorded().filter { $0.url?.query == "section=titles" }.count
+            if query == "section=titles", titleReads == 2 {
+                var reply = StubProtocol.Reply(validTitlePage); reply.gate = gate; return reply
+            }
+            return .init((query == "section=titles" && titleReads == 1 ? invalid : valid)[query] ?? #"{"items":[],"next":null}"#)
+        }
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let cache = MemoryWorkspaceCache(); try cache.save(original, scope: credential.cacheScope, at: .now)
+        let store = DiaryStore(api: api(storage), cache: cache)
+        let task = Task { await store.refresh() }
+        guard await waitForRegressionCondition({ StubProtocol.state.recorded().filter { $0.url?.query == "section=titles" }.count == 2 }) else {
+            gate.release(); await task.value; XCTFail("No consistency retry"); return
+        }
+        store.signOut(); gate.release(); await task.value
+        XCTAssertTrue(store.needsSignIn); XCTAssertFalse(store.hasLoadedWorkspace)
+        XCTAssertTrue(store.workspace.titles.isEmpty); XCTAssertTrue(store.workspace.events.isEmpty)
+        XCTAssertNil(cache.load(scope: credential.cacheScope))
+    }
     private func workspacePages(_ workspace: Workspace) throws -> [String: String] {
         let sections: [String: Any] = ["titles": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.titles)),
                                        "episodes": try JSONSerialization.jsonObject(with: JSONEncoder().encode(workspace.episodes)),

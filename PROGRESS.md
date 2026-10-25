@@ -71,9 +71,32 @@ source inventory, all Swift grammar/YAML/Bash checks and16CI-tool cases pass.
 with tests passed. Source f557580plus a stricter asynchronous-test completion
 condition is reviewed; current architecture/parity/device documents now clearly
 separate accepted61, running62and uncompiled63and mark obsolete notes as history.
-Next: publish this coherent draft to the candidate source branch; let62finish,
-verify its official result/resources/screenshots, then run63once on Codemagic.
+63source**0c087e7** is published tocodex/ios-ci-next. CM63run
+**6ade51214a72334e32e51821** was submitted on that branch/full regression workflow;
+it is waiting for a machine and has no source-checkout/runtime evidence yet.
+Do not push64to that branch before verifying63's actual source checkout.
+Next: let62finish, verify its official result/resources/screenshots, and inspect
+63's checkout/unit results.62must qualify completely before independent GHA.
 Only the exact fully qualified source may move toios-native for independent GHA.
+
+## Native64local draft — workspace page consistency
+
+An actual isolated D1-driver reproduction reads titles, commits a fictional new
+movie/watch, then reads events: the event refers to a title absent from the first
+page. Fresh titles resolve it. This confirms a cross-section race during external
+imports; it is not an observed real-account data loss or a whole-transaction claim.
+The new backend characterization test passes. A native guard validates parent
+title/episode ownership after unique IDs, then retries the full GET snapshot once
+for this specific incompleteness. Persistent inconsistency/quota preserves the
+last complete diary/cache. It never drops rows or retries a mutation.
+
+Prepared one Core reference-integrity case and four URLProtocol cases: transient
+race success, persistent bounded failure/cache preservation, quota during retry,
+and sign-out during held retry.232native/54UI source cases plus69Core source cases;
+Swift grammar/YAML/Bash/16tool checks pass.408backend tests pass. Local check
+caught an over-narrow test projection cast; corrected it with runtime field
+validation, reran that case and typecheck now has0errors/0warnings. No native64
+macOS execution yet.64is local only;63's remote queued source stays0c087e7.
 
 ## Scope clarification and62database/workflow follow-up
 

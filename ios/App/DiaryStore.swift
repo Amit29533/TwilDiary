@@ -232,14 +232,17 @@ import TwilDiaryCore
         let session = sessionGeneration, revision = UUID()
         snapshotGeneration = revision
         // Publish only a complete snapshot. A failed page cannot replace good data with a partial diary.
-        async let titlePages = api.allPages("titles", as: MediaTitle.self)
-        async let episodePages = api.allPages("episodes", as: Episode.self)
-        async let eventPages = api.allPages("events", as: WatchEvent.self)
-        async let locationPages = api.allPages("locations", as: FileLocation.self)
-        let (titles, episodes, events, locations) = try await (titlePages, episodePages, eventPages, locationPages)
+        let snapshot: Workspace
+        do { snapshot = try await readWorkspaceSnapshot() }
+        catch WorkspaceIntegrityError.incompleteSnapshot {
+            try Task.checkCancellation()
+            guard session == sessionGeneration, revision == snapshotGeneration, !needsSignIn else { throw CancellationError() }
+            // A scheduled import may land between section reads. Retry GETs
+            // once; persistent inconsistency preserves the last complete diary.
+            snapshot = try await readWorkspaceSnapshot()
+        }
         try Task.checkCancellation()
         guard session == sessionGeneration, revision == snapshotGeneration, !needsSignIn else { throw CancellationError() }
-        let snapshot = try Workspace(titles: titles, episodes: episodes, events: events, locations: locations).validatingIdentities()
         workspace = snapshot; hasLoadedWorkspace = true; showingCachedSnapshot = false; lastRefreshedAt = .now
         needsMutationRefresh = false
         if let scope = api.credential?.cacheScope {
@@ -251,6 +254,15 @@ import TwilDiaryCore
                 if !(cacheFailure is CancellationError) { cacheWarning = "Your diary is loaded, but its protected offline copy could not be updated." }
             } else { cacheWarning = nil }
         }
+    }
+    private func readWorkspaceSnapshot() async throws -> Workspace {
+        async let titles = api.allPages("titles", as: MediaTitle.self)
+        async let episodes = api.allPages("episodes", as: Episode.self)
+        async let events = api.allPages("events", as: WatchEvent.self)
+        async let locations = api.allPages("locations", as: FileLocation.self)
+        let values = try await (titles, episodes, events, locations)
+        try Task.checkCancellation()
+        return try Workspace(titles: values.0, episodes: values.1, events: values.2, locations: values.3).validatingIdentities()
     }
     private func restoreCachedWorkspace() {
         guard let credential = api.credential, credential.isValid, !hasLoadedWorkspace else { return }

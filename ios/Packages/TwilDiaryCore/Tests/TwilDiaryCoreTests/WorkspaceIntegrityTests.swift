@@ -41,3 +41,23 @@ import TwilDiaryTestSupport
     #expect(rows.map(\.id) == history.map(\.id))
     #expect(rows.map(\.rewatched) == history.map(\.rewatched))
 }
+
+@Test func incompleteCrossSectionReferencesAreRejectedWithoutDroppingRecords() throws {
+    let original = SampleWorkspace.make()
+    let event = try #require(original.events.first { $0.episodeId != nil })
+    let episodeID = try #require(event.episodeId)
+    let other = try #require(original.titles.first { $0.id != event.titleId })
+    var missingTitle = original; missingTitle.titles.removeAll { $0.id == event.titleId }
+    var missingEpisode = original; missingEpisode.episodes.removeAll { $0.id == episodeID }
+    var wrongOwner = original
+    wrongOwner.events = [WatchEvent(id: "cross-owner", operationId: "cross-operation", titleId: other.id, episodeId: episodeID,
+                                   watchedAt: event.watchedAt, recordedAt: event.recordedAt, revokedAt: nil, origin: "manual", version: 1)]
+    var missingLocation = original
+    missingLocation.locations = [FileLocation(id: "orphan-location", titleId: "missing-title", deviceName: "Fixture", deviceId: nil, volumeId: nil,
+                                              driveLetter: "E:", root: "E:\\", relativePath: "Fixture", season: nil,
+                                              fileCount: 1, evidence: "present", sizeBytes: nil, checkedAt: nil)]
+    for workspace in [missingTitle, missingEpisode, wrongOwner, missingLocation] {
+        #expect(throws: WorkspaceIntegrityError.incompleteSnapshot) { try workspace.validatingIdentities() }
+    }
+    #expect(try original.validatingIdentities().events == original.events)
+}
