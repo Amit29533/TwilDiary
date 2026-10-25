@@ -1,5 +1,21 @@
 # Native TwilDiary progress
 
+## Native51 prepared — deterministic transport isolation and release-only resources
+
+Codemagic50/run6addcf2b4a72334e32e4f488 compiled and the quota race/expired-reset/late-retry regressions passed. Native suite184of186passed: the older write-reset parsing test used the moving real clock against2026-10-24, and the repeated-cursor per-section request-count assertion failed. No UI gates ran. After all unit results were printed, xcodebuild remained alive for over ten more minutes; cancelled the obsolete run after preserving .local/codemagic50-rendered-log.txt. Do not call the cancelled run a complete green or rerun it unchanged.
+
+51 freezes the parsing test clock before its fixed reset. The repeated-cursor production loop still rejects the second duplicate; its request bounds and assertions are unchanged, with query diagnostics added. The shared URLProtocol test handler had no case boundary and stopLoading was empty, allowing cancelled/delayed callbacks and older clients to enter a later case. Added per-case transport identifiers, cancellation-safe delivery and a regression proving an old client cannot consume the next handler/count. This addresses a test isolation defect; the actual pagination failure remains unaccepted until CI re-executes it. No production cursor bounds, response assertions or retry requirements were weakened.
+
+Both providers now bound native unit xcodebuild to480seconds, terminate its process group on timeout, retain a failing exit and run the existing artifact/summary trap. Three local process tests cover success, original nonzero status and a real timed-out child. This prevents another dead unit-runner consuming the whole120-minute candidate allowance. Existing in-test timeouts remain.
+
+Prepared resource-only51 moves synthetic SampleWorkspace/workspace.json to a separate test-support product, linked only by native/Core tests; shipping App remains Core-only. The new packaging gate rejects nested fixture/golden JSON or test-support bundles; three local regressions pass. Moved fixture bytes match the old source after newline normalization. Local all-changed Swift grammar/YAML/Bash/Python and3promotion checks pass,187native/51primary/sixfocused is source inventory only. Exact next: commit/push only codex/ios-ci-next; dispatch one51 after50cancellation completes; verify actual checkout, Core/native units, focused UI then complete/all-phone/Release. origin/ios-native remains8c9f163; no new stable IPA or hosted changes.
+
+## Native50 running; native51 release-resource repair prepared separately
+
+Codemagic50/run6addcf2b4a72334e32e4f488 is building exact5e56e33212e87563aa2c3b04a1b96bf9450b98e9; its checkout SHA was inspected in the live log. No runtime acceptance yet. Browser proof .local/codemagic50-started.jpg.49finished failed, no extra simultaneous retry. origin/ios-native remains8c9f163 and no stable artifact is published.
+
+While50runs, prepared51 removes the confirmed Core workspace.json production resource by moving SampleWorkspace and its byte-identical synthetic JSON to TwilDiaryTestSupport, a separate product linked only by Core/native unit-test targets. No shipping App imports it. Added the shared packaging verifier for nested fixture/golden names and test-support bundles; three Python gate regressions pass locally. Core/native/Release linking still requires macOS. No hosted/backend changes, cache actor rewrite or further UI changes are mixed into this resource-only batch. Keep50source frozen and finish its results first; do not send51 to ios-native.
+
 ## Native50 quota race repair — ready for candidate validation
 
 Browser access restored. Codemagic49/run6addc31e4a72334e32e4f1f8 (exact f75336c) FAILED with zero build warnings: 183/184 native tests passed; SessionTests.testSignInSurvivesDatabaseQuotaAndDoesNotProbeWorkspaceForAuthentication failed at line357 because the visible error was missing. No focused UI/full/layout/Release acceptance or IPA49. Actual rendered log inspected; proof saved at .local/codemagic49-quota-failure.jpg. Do not retry unchanged49 or promote it.

@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import TwilDiaryCore
+import TwilDiaryTestSupport
 
 @Test func collectionRequestsKeepReviewedVersionsAndOnlyEncodeTheChosenAction() throws {
     var title = try #require(SampleWorkspace.make().activeTitles.first)

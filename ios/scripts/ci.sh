@@ -45,18 +45,8 @@ PY
       -derivedDataPath "$PWD/ios/.derived/device" 2>&1 | tee "$ARTIFACTS/logs/device-build.log"
     ;;
   package)
-    python3 - "$PWD/ios/.derived/device/Build/Products/Release-iphoneos/TwilDiary.app" <<'PY' | tee "$ARTIFACTS/logs/release-resources.log"
-import fnmatch, pathlib, sys
-bundle = pathlib.Path(sys.argv[1])
-if not bundle.is_dir():
-    raise SystemExit('Release app bundle is missing.')
-patterns = ('catalog-*.json', 'trakt-*.json', 'reference-workspace.json')
-fixtures = sorted(p.name for p in bundle.rglob('*.json') if any(fnmatch.fnmatchcase(p.name, pattern) for pattern in patterns))
-if fixtures:
-    raise SystemExit('Release still contains disposable UI fixture resources: ' + ', '.join(fixtures))
-print('Release resource check passed: no disposable catalog/workspace/Trakt fixture JSON.')
-print('Production demo artwork and attribution resources are retained.')
-PY
+    python3 -B ios/tools/test_verify_release_resources.py
+    python3 ios/tools/verify-release-resources.py "$PWD/ios/.derived/device/Build/Products/Release-iphoneos/TwilDiary.app" | tee "$ARTIFACTS/logs/release-resources.log"
     mkdir -p "$ARTIFACTS/package/Payload"
     cp -R ios/.derived/device/Build/Products/Release-iphoneos/TwilDiary.app "$ARTIFACTS/package/Payload/"
     (cd "$ARTIFACTS/package" && ditto -c -k --keepParent Payload ../TwilDiary-unsigned.ipa)
@@ -66,7 +56,8 @@ PY
     xcrun simctl bootstatus "$SIMULATOR_ID" -b 2>&1 | tee "$ARTIFACTS/logs/simulator-boot.log"
     ;;
   test-unit)
-    xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
+    python3 -B ios/tools/test_run_bounded.py
+    python3 ios/tools/run-bounded.py 480 xcodebuild test-without-building "${COMMON[@]}" -destination "platform=iOS Simulator,id=$SIMULATOR_ID,arch=$SIM_ARCH" \
       -parallel-testing-enabled NO -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 180 \
       -only-testing:TwilDiaryTests -derivedDataPath "$PWD/ios/.derived/simulator" -resultBundlePath "$ARTIFACTS/UnitTests.xcresult" \
       2>&1 | tee "$ARTIFACTS/logs/unit-tests.log"

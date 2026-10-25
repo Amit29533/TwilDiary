@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import TwilDiaryCore
+import TwilDiaryTestSupport
 
 private func selectionEpisode(_ id: String, season: Int, number: Int, aired: String? = "2026-01-01", skipped: Bool = false) throws -> Episode {
     let body: [String: Any] = ["id": id, "titleId": "again", "season": season, "number": number, "name": id, "overview": "", "airedOn": aired as Any? ?? NSNull(), "skipped": skipped]

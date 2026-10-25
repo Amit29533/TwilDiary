@@ -46,8 +46,15 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
     }
     final class State: @unchecked Sendable {
         let lock = NSLock()
+        private var identifier = UUID().uuidString
         private var handler: @Sendable (URLRequest) -> Reply = { _ in Reply(500, "{}") }
         private var requests: [URLRequest] = []
+        var testIdentifier: String { lock.lock(); defer { lock.unlock() }; return identifier }
+        func beginTest() {
+            lock.lock(); defer { lock.unlock() }
+            identifier = UUID().uuidString; requests = []
+            handler = { _ in Reply(500, "{}") }
+        }
         func reset(_ handler: @escaping @Sendable (URLRequest) -> Reply) {
             lock.lock(); defer { lock.unlock() }
             self.handler = handler; requests = []
@@ -60,7 +67,12 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
                 while stream.hasBytesAvailable { let count = stream.read(&buffer, maxLength: buffer.count); if count <= 0 { break }; data.append(contentsOf: buffer.prefix(count)) }
                 recorded.httpBody = data
             }
-            lock.lock(); requests.append(recorded); let handler = handler; lock.unlock()
+            lock.lock()
+            guard recorded.value(forHTTPHeaderField: "X-TwilDiary-Test-Case") == identifier else {
+                lock.unlock()
+                var stale = Reply("{}"); stale.failureCode = .cancelled; return stale
+            }
+            requests.append(recorded); let handler = handler; lock.unlock()
             return handler(recorded)
         }
         func recorded() -> [URLRequest] {
@@ -68,6 +80,8 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         }
     }
     static let state = State()
+    private let deliveryLock = NSRecursiveLock()
+    private var stopped = false
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
     override func startLoading() {
@@ -79,14 +93,18 @@ private final class StubProtocol: URLProtocol, @unchecked Sendable {
         } else { deliver(reply) }
     }
     private func deliver(_ reply: Reply) {
+        deliveryLock.lock(); defer { deliveryLock.unlock() }
+        guard !stopped else { return }
         if let code = reply.failureCode { client?.urlProtocol(self, didFailWithError: URLError(code)); return }
         let response = HTTPURLResponse(url: request.url!, statusCode: reply.status, httpVersion: nil,
                                        headerFields: ["Content-Type": reply.contentType])!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        guard !stopped else { return }
         client?.urlProtocol(self, didLoad: Data(reply.body.utf8))
+        guard !stopped else { return }
         client?.urlProtocolDidFinishLoading(self)
     }
-    override func stopLoading() {}
+    override func stopLoading() { deliveryLock.lock(); stopped = true; deliveryLock.unlock() }
 }
 
 private final class WorkspaceDecodeGate: @unchecked Sendable {
@@ -120,10 +138,23 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
 
 @MainActor final class SessionTests: XCTestCase {
     private let credential = AccessCredential(token: "synthetic-test-session", expires: .distantFuture)
+    nonisolated override func setUpWithError() throws { StubProtocol.state.beginTest() }
     private func api(_ storage: MemorySessionStorage, clock: @escaping @MainActor () -> Date = { .now }) -> DiaryAPI {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubProtocol.self]
+        configuration.httpAdditionalHeaders = ["X-TwilDiary-Test-Case": StubProtocol.state.testIdentifier]
         return DiaryAPI(configuration: configuration, storage: storage, clock: clock)
+    }
+    func testStubSessionsCannotConsumeAnotherTestsHandlerOrRequestCount() async throws {
+        let storage = MemorySessionStorage(); storage.credential = credential
+        let old = api(storage)
+        StubProtocol.state.beginTest()
+        StubProtocol.state.reset { _ in .init("{}") }
+        do { let _: EmptyResponse = try await old.request("/api/glance/stale-test"); XCTFail("Old test session was accepted") }
+        catch is CancellationError { }
+        XCTAssertTrue(StubProtocol.state.recorded().isEmpty)
+        let _: EmptyResponse = try await api(storage).request("/api/glance/current-test")
+        XCTAssertEqual(StubProtocol.state.recorded().count, 1)
     }
     func testT29DroppedGETRetriesOnceAndPOSTDoesNotRetry() async throws {
         let storage = MemorySessionStorage(); storage.credential = credential
@@ -549,7 +580,7 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
         XCTAssertTrue((2...8).contains(requests.count), "Four concurrent sections may each fetch at most two pages")
         XCTAssertTrue(groups.values.contains { $0.count == 2 }, "At least one section must actually encounter the repeated cursor")
         for pages in groups.values {
-            XCTAssertTrue((1...2).contains(pages.count), "No section may continue around the cursor loop")
+            XCTAssertTrue((1...2).contains(pages.count), "No section may continue around the cursor loop: \(pages.map { $0.url?.query ?? "missing-query" })")
             let cursors = pages.map { request in
                 URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "after" }?.value
             }
@@ -599,8 +630,9 @@ private struct WorkspaceDecodeProbe: Decodable, Sendable {
             .init(503, #"{"error":{"code":"database_write_limit","message":"Quota exhausted","resetAt":"2026-10-24T00:00:00Z"}}"#)
         }
         let storage = MemorySessionStorage(); storage.credential = credential
+        let beforeReset = try XCTUnwrap(DiaryDate.parse("2026-10-23T12:00:00Z"))
         do {
-            let _: EmptyResponse = try await api(storage).request("/api/workspace")
+            let _: EmptyResponse = try await api(storage, clock: { beforeReset }).request("/api/workspace")
             XCTFail("Expected quota error")
         } catch APIError.databaseLimit(let reset) {
             XCTAssertEqual(reset, ISO8601DateFormatter().date(from: "2026-10-24T00:00:00Z"))

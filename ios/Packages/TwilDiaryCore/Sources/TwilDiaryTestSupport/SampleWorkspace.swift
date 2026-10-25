@@ -1,6 +1,7 @@
 import Foundation
+import TwilDiaryCore
 
-/// Synthetic data for previews and simulator tests. Never a fallback for a failed API request.
+/// Synthetic data linked only by test targets, never by the shipping application.
 public enum SampleWorkspace {
     public static func make() -> Workspace {
         let url = Bundle.module.url(forResource: "workspace", withExtension: "json")!

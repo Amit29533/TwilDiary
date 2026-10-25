@@ -1,5 +1,6 @@
 import XCTest
 import TwilDiaryCore
+import TwilDiaryTestSupport
 @testable import TwilDiary
 
 @MainActor final class RandomPickScopeTests: XCTestCase {

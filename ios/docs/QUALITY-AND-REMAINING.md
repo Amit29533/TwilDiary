@@ -20,6 +20,14 @@ and all-phone results are still pending. Review hardening is candidate-only;
 origin/ios-native remains the exact47 source. Historical evidence below retains
 its original checkpoint scope; it is not current all-step acceptance.
 
+Native50 passed the repaired quota ordering but failed a fixed-date parsing
+expectation and a repeated-cursor request-count assertion; the runner then
+stalled after test results and was cancelled.51 freezes the test clock, isolates
+URLProtocol cases/cancellation, retains strict cursor bounds with diagnostics,
+and bounds the unit process. It also prepares test-only resource separation and
+a stronger built-bundle gate. Native187/full51/all-phone/Release acceptance is
+pending; these are candidate changes, not a new stable release.
+
 ## Actual current evidence
 
 * Codemagic47 `6addaa674a72334e32e4ed86` checked out exact

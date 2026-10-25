@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import TwilDiaryCore
+import TwilDiaryTestSupport
 
 @Test func episodePiecesPreserveGapsAndUnloadedSlots() throws {
     let workspace = SampleWorkspace.make()

@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import TwilDiaryCore
+import TwilDiaryTestSupport
 
 @Test func randomPickExcludesTrashAndDoesNotImmediatelyRepeat() throws {
     let titles = SampleWorkspace.make().titles

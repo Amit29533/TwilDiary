@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import TwilDiaryCore
+import TwilDiaryTestSupport
 
 @Test func publicRatingsNeverSubstituteAnotherSource() throws {
     let unavailable = try JSONDecoder().decode(PublicRating.self, from: Data(#"{"score":null,"state":"unavailable"}"#.utf8))

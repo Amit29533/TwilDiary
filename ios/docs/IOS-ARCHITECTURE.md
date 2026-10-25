@@ -165,3 +165,23 @@ Disposable PreviewData/PreviewCatalog code is DEBUG-only. Release build settings
 The bottom capsule and Undo overlay now belong to each destination through DiaryPageChrome. Non-detail roots/lists keep the capsule; title/person details do not. UIKit moves the owning page and chrome together on push, pop and cancelled interactive pop, instead of a global post-presentation Bool changing the entire shell's safe area. NativeNavigationAppearance still observes real containment for diagnostics, but no longer drives geometry. Per-tab NavigationPath values remain intact.
 
 RootTabSwipeInput installs one public UIPanGestureRecognizer on the attached root hosting view, removes it on disappearance and refuses any pushed stack/active transition/presented sheet. Rightward completion advances once through the owner's requested tab order; leftward reverses, never wraps. Vertical or short drags do nothing. Horizontal scroll ancestors, native text/slider/switch controls and explicitly marked card/scrub regions own their own input. Exclusion geometry is inspected at touch-down, not per frame; no private UIKit selectors, synthetic native Back, remote package or continuous shared scroll-offset state. Reduce Motion disables tab-switch/compact-title animations.
+
+
+### Shipping resources and test support (native51 candidate)
+
+The synthetic SampleWorkspace and workspace.json now belong to the separate
+TwilDiaryTestSupport package product. Only Core regression tests and the native
+unit-test target depend on it. The shipping application depends on TwilDiaryCore,
+which has no test fixture resources or SampleWorkspace API. Golden reference
+JSON remains in the package test target. This fixes the previously confirmed
+workspace.json resource in the43 production IPA; it does not alter any real
+backend snapshot, demo artwork or user export.
+
+Both providers run the same built-bundle verifier during packaging. It rejects
+nested workspace/reference/catalog/Trakt/golden JSON and any test-support bundle,
+including an empty one. Its three local Python regressions cover the old Core
+bundle leak, all fixture filename patterns, legitimate attribution JSON and a
+missing app. Local source checks are not proof of Xcode target linking: Core,
+native tests and the physical Release bundle gate must pass on Codemagic before
+this candidate can be promoted. XcodeGen2.46 package product selection follows
+its pinned ProjectSpec.md dependency contract.

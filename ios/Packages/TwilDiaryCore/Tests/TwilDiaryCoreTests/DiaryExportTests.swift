@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import TwilDiaryCore
+import TwilDiaryTestSupport
 
 @Test func diaryExportRoundTripsTheWholeArchiveWithoutCredentials() throws {
     let workspace = SampleWorkspace.make(), data = try DiaryExport(workspace: SampleWorkspace.make()).encoded()

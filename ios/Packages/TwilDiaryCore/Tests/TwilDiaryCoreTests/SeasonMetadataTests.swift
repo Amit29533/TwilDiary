@@ -1,6 +1,7 @@
 import Foundation
 import Testing
 @testable import TwilDiaryCore
+import TwilDiaryTestSupport
 
 @Test func savedSeasonPreparationHonorsSixHourBoundaryVersionAndLoadedCount() throws {
     let workspace = SampleWorkspace.make(), original = try #require(workspace.titles.first)

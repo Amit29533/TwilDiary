@@ -1,6 +1,7 @@
 import XCTest
 import CryptoKit
 import TwilDiaryCore
+import TwilDiaryTestSupport
 @testable import TwilDiary
 
 @MainActor final class WorkspaceCacheTests: XCTestCase {
