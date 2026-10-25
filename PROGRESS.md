@@ -19,7 +19,7 @@ available locally; Windows checks grammar/YAML/Bash/Python only.
 | Track | Exact source | Current evidence |
 | --- | --- | --- |
 | GitHub ios-native, native54 | d59f55e5fa574382b067477f6b4fb079690507a8 | Complete Codemagic54 passed; independent GitHub54 running. |
-| Codemagic candidate codex/ios-ci-next, native55 | ae2cfdcccbe58fbd2f353abbbfabb4fa67b59766 | Cache preparation batch; actual checkout verified, compilation/testing in progress. |
+| Codemagic candidate codex/ios-ci-next, native55 | ae2cfdcccbe58fbd2f353abbbfabb4fa67b59766 | Warning-free simulator build and all194native tests pass, including every new cache/store race. UI/full gates still running. |
 | Local codex/ios-carousel-parity, native56 |9e30c49 plus this documentation update; use git rev-parse HEAD| Carousel batch,196native/52primary/9focused source cases; uncompiled. |
 
 Native source is **Amit29533/TwilDiary**, /ios. Original web /preview source
@@ -67,10 +67,7 @@ and top62/bottom34OS-only insets, with no stretching. Font weights/metrics,
 small spacing/card padding and requested native controls differ; no claim of
 pixel-identical parity. Comparison outputs remain .local/native54-*-web-comparison.png.
 
-Native53 phone diagnostic remains available at
-D:/Downloads/TwilDiary-native53-device-test.ipa; optional owner question about
-History/Explore swipe and slow/reversing compact-header scroll is pending.
-The newer54IPA is preferred. Earlier native40 owner feedback confirms
+Owner asked which IPA to try; directed them explicitly to native54, with History/Explore Back, slow/reverse compact-header scroll and the visible watched-episode Log rewatch action. No new phone result yet. Native53diagnostic remains available but is superseded for this check. Earlier native40 owner feedback confirms
 Information sentiments/dismissal, incoming-switch persistence, Notes targeting,
 watch/Undo, keyboard-safe search, tab scrub and offline navigation.
 
@@ -80,7 +77,7 @@ CM55 **6addf45f4a72334e32e4fd86**:
 https://codemagic.io/app/6adcc927390bc3069c9e5490/build/6addf45f4a72334e32e4fd86
 Actual checkoutae2cfdc was read in its source log. Startup proof:
 .local/codemagic55-started.jpg. This source has194native/51primary/8focused
-cases, not yet runtime acceptance.
+cases. All194native cases, including five cache concurrency tests and the store sign-out interleaving, now pass with warning-free simulator compilation; full UI/Release acceptance remains pending.
 
 Production changes: WorkspaceCache validation/JSON/AES preparation moves into a
 utility detached task with immutable Sendable inputs. Cancellation reaches the
@@ -95,7 +92,7 @@ preservation. Tests use temporary paths/injected keys. Scale test prints total
 async latency separately from sync load/index. Cold load, Keychain lookup and
 final protected commit intentionally remain synchronous. Prior native52M2
 10k-watch measurements: save66.66ms/load56.28ms/index25.47ms. No55speed claim
-until actual macOS measurements. All13CI-tool checks pass locally.
+until actual macOS measurements. Native55M2 diagnostic now reports10k events: sync save139.71ms, async total77.56ms, sync load75.51ms, index45.12ms (1k9.75/9.80/8.45/4.10ms). These are cross-run-noisy diagnostics; the gated test proves off-main preparation, not a phone speedup/FPS. All13CI-tool checks pass locally.
 
 ## Native56 — separate local carousel batch
 
@@ -120,7 +117,7 @@ so failures stop before the long suite. Source196native/52primary; local
    unchanged failures or promote a diagnostic-only success.
 2. If55fullgreen, download/verify current artifacts and measurements, then
    promote the exact55SHA. A red55requires inspecting concrete logs first.
-3. Continue56self-review while55runs. Keep56off the candidate ref until ready;
+3. Continue56self-review while55runs. New56carousel UI test resolves its identified container independent of UIKit accessibility element type, rejects nil selection and also requires exactly one fully visible/hittable cover after movement. Keep56off the candidate ref until ready;
    then run its own complete Codemagic validation. Verify real automatic/pause,
    restoration, card/root gestures and current screenshots; no hidden assertion
    removal or timeouts-until-green.
