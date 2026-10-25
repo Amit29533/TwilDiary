@@ -1,5 +1,11 @@
 # Native TwilDiary progress
 
+## Source audit follow-up while54runs
+
+Reconciled IOS-PARITY's current status and confirmed a real remaining Home gap directly against ContinueCarousel.svelte: native currently has snapping/manual swipe only; web5second visibility/active/reduced-motion/interaction guarded rotation and previous/next/pause/restoration are absent. Implement separately after current stability/cache batch, preserve root/card gestures. This is not falsely counted as completed.
+
+Added PRIVACY-AUDIT.md with actual app-only preferences and local elapsed-tap APIs, data flows to fixed Worker/D1/Trakt/TMDB, and explicit unverified provider/log retention. No manifest/zero-data/anonymous tracking assertion, App Store action, backend change or deployment. Native55cache source remains28cc7ac;54full regression continues independently. Exact next remains finish54full/artifact proof and then candidate55runtime, not rerunning unchanged builds.
+
 ## Native55 local cache-preparation batch ready; native54 full suite running
 
 At2026-10-25 11:41UTC, CM54/run6adde71f4a72334e32e4fa14 passes zero-warning simulator compilation,188native/all8focused/all10early tests. Visible episode rewatch + actual Undo + exactly8original History passes. Full51primary/all-phone/device Release/export still pending; no stable promotion. Do not overwrite frozen d59f55e candidate before its result. ios-native remains8c9f163, whose independent GH47failed.

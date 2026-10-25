@@ -1,6 +1,36 @@
 # Native parity status — work in progress
 
-## Current verification and owner-directed native changes (25 October)
+## Current checkpoint — 25 October, native54/55
+
+Complete Codemagic54/run6adde71f4a72334e32e4fa14 (d59f55e) has passed
+warning-free simulator compilation,188native tests,8focused UI and10early UI
+checks. Its full51primary suite and extra-phone/Release/artifacts remain in
+progress. Independent GitHub stable publication is still blocked at47; earlier
+passed screenshots are scoped evidence, not a finished-app declaration.
+Native53's verified physical-device diagnostic IPA was supplied separately for
+owner swipe/header feedback. Native55's cache-write preparation is a separate
+local draft, not part of54's screenshots or pass counts.
+
+The existing screen table below is a historical checklist. Its old build-specific
+pending statements need reconciling against the complete54artifacts before any
+final acceptance box is checked. Current focused passes establish Library
+relaunch, explicit episode rewatch/Undo/original8-history count, settings and
+Explore Back/content swipes, retained/scoped search, filmography, theme/search
+containment and title/range/movie Undo. They do not establish every error state,
+physical animation, VoiceOver or pixel-level visual parity.
+
+Confirmed remaining Home gap from direct code comparison: web
+src/lib/components/ContinueCarousel.svelte rotates every5seconds only while
+at least half visible, active, not paused/reduced-motion/focused/hovered and
+outside the5second interaction cooldown. It wraps previous/next and remembers
+title identity/pause state. Native HomeView currently has only a horizontally
+snapping ScrollView. Automatic rotation and accessible previous/next/pause
+behavior are absent, rather than merely untested. Preserve card gestures and
+owner-requested root swipes when implementing this separately after the current
+stability/cache batches. Respect native Reduce Motion and VoiceOver; document
+any deliberate adaptation instead of silently redesigning the cards.
+
+## Historical verification and owner-directed native changes (25 October)
 
 Codemagic native43 (d086023 / 6add74934a72334e32e4e58d) passes zero-warning compilation,167native units,47primary UI cases and3layout cases on each extra phone. This is a test baseline, not pixel-perfect/all-device production acceptance; later owner-video defects are being repaired in44. GitHub43 remains independent and pending. Backend incoming/community rollout is now authorized and deployed as recorded in PROGRESS.md; older no-deploy statements below are historical.
 
