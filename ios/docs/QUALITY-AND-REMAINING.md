@@ -7,6 +7,16 @@ projections, shared caching, navigation and CI, combined with T24–T37 claim
 verification. It is not a fresh runtime test of every screen or a real-device
 performance certification. Windows has not compiled Swift.
 
+## Latest acceptance update
+
+Codemagic47 is now fully successful: zero warnings/errors,173native,4focused,
+10early,49full UI and3layouts on each extra phone. Exact8c9f163 was promoted
+to ios-native; GitHub47/run40175024692 passes its same-SHA candidate-proof and
+is running independent native/full/all-phone verification. The older46 run
+failed early and was retired by normal concurrency. No184-test draft, new
+review feature or cache repair was promoted. The earlier checkpoint below
+records what was known during this audit.
+
 ## Actual current evidence
 
 * Codemagic47 `6addaa674a72334e32e4ed86` checked out exact

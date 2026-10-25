@@ -1,5 +1,16 @@
 # Native TwilDiary progress
 
+## Codemagic47 accepted; GitHub47 independent verification running
+
+Inspected actual completed Codemagic6addaa674a72334e32e4ed86 on exact8c9f16376389a4b8d162b7cd7b12e96d4fffb7b6:0warnings,0errors/failures,173native,4focused,10early,49/49full UI and3/3layouts on each extra phone; successful device Release and published5.33MBIPA. No all-device/final-product claim. Existing Core-test-resource release payload gap remains separately documented, despite current pattern gate success.
+
+Official completed same-SHA Codemagic check121112494860 success was re-read and accepted by local promotion guard. Promoted exact8c9f163 to ios-native without adding any pending review feature. GitHub47/run40175024692 https://github.com/Amit29533/TwilDiary/actions/runs/40175024692 : candidate-proof SUCCESS7s; build-test-artifacts in progress. Old46run40166839268 had already failed early UI and was cancelled by normal concurrency; do not describe it as green or fully completed diagnostics. An orphaned earlier CM47start check121103203822 is still pending; actual inspected run is complete, not evidence of two new builds.
+
+CM47 artifact page open-setting=build-artifacts publishes TwilDiary-unsigned.ipa5.33MB and TwilDiary_14_artifacts.zip608.42MB. One downloadMedia attempt timed out30s; no local47CRC/hash or image-archive review claim. Original .local/codemagic-build47-passed-artifacts.png and .local/github47-promoted-verification.png saved; these are browser verification proofs, not native UI screenshots. Verified43fallback remains available.
+
+Active stability worktree remains TwilDiary-native-stability at8c9f163 with live uncommitted PROGRESS only; keep source identical while GitHub runs. This review branch retains the separate184native/51primary draft and cache-size fix, not pushed. Next: verify GitHub47 full zero-warning/native/UI/all-phone acceptance and stable-provenance IPA publication, download current screenshots/IPA and inspect them, then start the next coherent review/quality candidate on Codemagic only.
+
+
 ## Quality/optimization pass — review draft remains unpromoted
 
 Owner requested a current remaining-work/code-quality review. ios/docs/QUALITY-AND-REMAINING.md records source-backed gaps, existing safeguards, measured diagnostic cost and remaining acceptance, without turning historical unchecked roadmap boxes into missing screens. Candidate47/source8c9f163 on Codemagic6addaa674a72334e32e4ed86 passes173native/4focused/10early; the full primary and extra-phone/final-summary gates remain pending. Cold1000-event Home+Stats diagnostic72.08ms, warm pair0.02ms; not phone frame-rate proof. No newer source pushed to ios-native.
