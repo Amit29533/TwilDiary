@@ -19,8 +19,8 @@ available locally; Windows checks grammar/YAML/Bash/Python only.
 | Track | Exact source | Current evidence |
 | --- | --- | --- |
 | GitHub ios-native, native54 | d59f55e5fa574382b067477f6b4fb079690507a8 | Complete Codemagic54 passed. GHA54attempt1 stopped on an incompatible restored pre-split Core module; cache invalidated, same-source attempt2 requested. |
-| Codemagic candidate codex/ios-ci-next, native55 | ae2cfdcccbe58fbd2f353abbbfabb4fa67b59766 | Warning-free simulator build and all194native/all8focused/all10early cases pass. Full51/extra-phone/Release still running. |
-| Local codex/ios-carousel-parity, native56 |9e30c49 plus this documentation update; use git rev-parse HEAD| Carousel batch,196native/52primary/9focused source cases; uncompiled. |
+| Codemagic candidate codex/ios-ci-next, native55 | ae2cfdcccbe58fbd2f353abbbfabb4fa67b59766 | Warning-free simulator build and allComplete CM55passed:0warnings/194native/8focused/10early/51primary/3layouts each extra phone/Release. Official success verified; artifacts need download. |
+| Local codex/ios-carousel-parity, native56 |9e30c49 plus this documentation update; use git rev-parse HEAD| Carousel batch,196native/52primary/10focused source cases; uncompiled. |
 
 Native source is **Amit29533/TwilDiary**, /ios. Original web /preview source
 and user-directed native changes are authoritative. The old TwilDiary-iOS repo
@@ -71,13 +71,13 @@ Owner asked which IPA to try; directed them explicitly to native54, with History
 Information sentiments/dismissal, incoming-switch persistence, Notes targeting,
 watch/Undo, keyboard-safe search, tab scrub and offline navigation.
 
-## Native55 — isolated cache optimization, running
+## Native55 — complete Codemagic pass; hold promotion during54GitHub
 
 CM55 **6addf45f4a72334e32e4fd86**:
 https://codemagic.io/app/6adcc927390bc3069c9e5490/build/6addf45f4a72334e32e4fd86
 Actual checkoutae2cfdc was read in its source log. Startup proof:
 .local/codemagic55-started.jpg. This source has194native/51primary/8focused
-cases. All194native cases, including five cache concurrency tests and the store sign-out interleaving, now pass with warning-free simulator compilation; full UI/Release acceptance remains pending.
+cases. All194native cases, including five cache concurrency tests and the store sign-out interleaving, now pass with warning-free simulator compilation; all51primary,8focused,10early,3per extra phone and Release/final0warning gates now pass. Official exact-SHA check accepted; artifact verification remains next.
 
 Production changes: WorkspaceCache validation/JSON/AES preparation moves into a
 utility detached task with immutable Sendable inputs. Cancellation reaches the
@@ -108,7 +108,7 @@ Self-review caught fixture scene-state leaking selected cards across separate UI
 A small rounded top-corner popover exposes previous/next/pause rather than the
 web's hover/focus-only controls. This deliberate native adaptation is documented
 in IOS-PARITY.md. Two policy tests and one actual automatic/pause/tab-return
-UI test are added; Home search explicitly suppresses automatic movement while open; the new case joins the focused gate (9cases, all old8remain)
+UI test are added; Home search explicitly suppresses automatic movement while open; the new case joins the focused gate (10cases: all old8plus carousel and the changed Glance hit-target/cover/menu case)
 so failures stop before the long suite. Source196native/52primary; local
 .local/validate56.py passes, **no56Swift compile/runtime/screenshots yet**.
 
@@ -126,6 +126,8 @@ remain pending; do not treat sending a checklist as a pass. Reviewed sync checks
 ## GitHub54 cache repair / native56future protection
 
 GHA54attempt1fails with ambiguous SampleWorkspace.make and two downstream key-path inference errors; actual notes identify a removed Core symbol plus the new Support symbol. Source is unchanged from fully passed clean CM54. Saved .local/github54-{failed,all}.log and exact restored cache list. Clear only rebuildable native-macos26-X64-xcode26.6 caches on ios-native (not diary/hosted data), then rerun the failed54job once. This is a changed cache environment, not retrying an unexplained failure. Future56restore/save keys now also include the Package.swift graph hash before the source hash, and fallback is restricted to the same graph; it cannot reuse the old target/resource layout. Current55CMref remains frozen.
+
+The changed Glance toast/cover/menu case now joins the focused gate alongside carousel, giving10focused cases while preserving all old8. Catch card-input regressions before the long suite.
 
 ## Exact next actions
 
@@ -176,7 +178,7 @@ CM mac_mini_m2. No hand-written pbxproj. No third-party Swift dependencies.
 Use ios/scripts/ci.sh and codemagic.yaml; only macOS runs Swift.
 
 Windows tools: C:/Program Files/GitHub CLI/gh.exe; python .local/validate56.py
-for current9-case source; earlier55uses validate48.py/8cases. The unchanged
+for current10-case source; earlier55uses validate48.py/8cases. The unchanged
 TraktSignIn parser limitation matches compiled47bytes; grammar is not typing.
 Use python -B ios/tools/test_verify_codemagic.py, test_verify_release_resources.py,
 test_run_bounded.py and test_verify_build_log.py (13cases total).

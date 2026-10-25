@@ -74,6 +74,7 @@ PY
       -only-testing:TwilDiaryUITests/NativeScreensTests/testT31LibraryLayoutAndSortSurviveAProcessRelaunch \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testT35WatchedEpisodeOffersRewatchAndUndoKeepsItsOriginalWatch \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testContinueCarouselControlsPauseAdvanceReturnAndRestoreAcrossTabs \
+      -only-testing:TwilDiaryUITests/NativeScreensTests/testToastExpiresAndCardCoverAndUsefulMenuWork \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeBackReturnsFromEverySettingsDestination \
       -only-testing:TwilDiaryUITests/NativeScreensTests/testNativeExploreReturnsByBackActiveHomeTabAndFullContentSwipe \
       -only-testing:TwilDiaryUITests/LayoutScreensTests/testEveryThemeIsSelectableAndGlassSearchKeepsOneContainedField \
