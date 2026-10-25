@@ -42,7 +42,7 @@ iOS26.5 iPhone17Pro/17e/17ProMax. CM M2candidate; GHA macos-26-intel independent
   metadata and official GitHub check both identify this exact SHA.228native and
   54primary UI source cases; no runtime result yet. Candidate refcodex/ios-ci-next
   stays at this source. No automatic candidate trigger.
-- **64 local draft:** eb0f3db plus evidence/document reconciliation oncodex/ios-phone-polish.232native/54primary and69Core
+- **64 local draft:** eb0f3db plus evidence/document reconciliation oncodex/ios-phone-polish.235native/54primary and69Core
   source cases; Swift grammar/YAML/Bash and16CI-tool cases pass.408backend tests
   and0-error/0-warning typecheck pass. Not compiled/run on macOS. Do not publish
   it over63's candidate ref while that evidence is still being collected.
@@ -141,6 +141,15 @@ complete diary/cache; no rowdrop/mutationretry. Corecase plus4URLProtocoltests
 cover reference validity, transient success, bounded persistentfailure/cache,
 quota and signoutduringheldretry.408backendtests/checkpass; macOS64stillpending.
 This protects references, not a transactionally versioned snapshot of every value.
+
+64also fences Pause/cancellation immediately after a held recovery GET. Previously
+apply/scan checked Pause before that await but could begin one extraPOST after it.
+New held-read regressions assert no additional apply after Pause/background and
+no scan-step after Pause/cancellation; background approval still resumes only after
+foreground read-back. This source-confirmed race is repaired in the local draft,
+not claimed as native runtime evidence. Three added cases bring native source235.
+Swift grammar/YAML/Bash checks pass; no backend rerun needed for this native-only
+follow-up.63remains frozen on its separate running source.
 
 ## Exact next work
 

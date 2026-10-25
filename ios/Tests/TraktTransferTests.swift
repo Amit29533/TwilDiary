@@ -10,6 +10,8 @@ import TwilDiaryCore
 @MainActor private final class TransferService: TraktServicing {
     var snapshot: TraktSync
     var applies = 0
+    var steps = 0
+    var stepRefusal: Error?
     var reads = 0
     var sequence = [String]()
     var failBefore = false
@@ -24,6 +26,8 @@ import TwilDiaryCore
     var statusReads = 0
     var holdStatus = false
     var heldStatus: CheckedContinuation<TraktStatus, Never>?
+    var holdReview = false
+    var heldReview: CheckedContinuation<TraktSync, Never>?
     var hold = false
     var held: CheckedContinuation<TraktSync, Never>?
     init(total: Int) {
@@ -40,11 +44,17 @@ import TwilDiaryCore
     func review(kind: TraktKind, query: String, after: String?) async throws -> TraktSync {
         reads += 1; sequence.append("read")
         if let error = reviewRefusal { reviewRefusal = nil; throw error }
+        if holdReview { holdReview = false; return await withCheckedContinuation { heldReview = $0 } }
         if replaceOnRead { var next = snapshot; next.run = nil; return next }
         return snapshot
     }
     func start(mode: TraktRatingMode) async throws -> String { "transfer-run" }
-    func step(id: String) async throws -> TraktSync { snapshot }
+    func step(id: String) async throws -> TraktSync {
+        steps += 1
+        if let error = stepRefusal { stepRefusal = nil; throw error }
+        snapshot.run?.state = "review"
+        return snapshot
+    }
     func apply(id: String, change: String?, choice: TraktChoice) async throws -> TraktSync {
         applies += 1; sequence.append("write")
         if let error = refusal { refusal = nil; throw error }
@@ -304,5 +314,48 @@ import TwilDiaryCore
         let stopped = await waitForRegressionCondition { controller.paused && !controller.busy }
         XCTAssertTrue(stopped); XCTAssertEqual(service.statusReads, 1)
         XCTAssertEqual(service.applies, 0); XCTAssertTrue(clock.waits.isEmpty); XCTAssertNil(checkpoint.runID)
+    }
+    func testPauseDuringHeldReadBackCannotBeginAnotherApplyRequest() async {
+        let service = TransferService(total: 3), clock = TransferClock()
+        let checkpoint = MemoryTraktApplyCheckpoint()
+        let controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { await clock.sleep($0) })
+        await controller.refresh(); service.failBefore = true; service.holdReview = true
+        controller.startApprovedApply()
+        guard await waitForRegressionCondition({ service.heldReview != nil }) else { XCTFail("No held read-back"); return }
+        XCTAssertEqual(service.applies, 1)
+        controller.pauseApplying(); service.heldReview?.resume(returning: service.snapshot)
+        let stopped = await waitForRegressionCondition { !controller.busy && !controller.loading }
+        XCTAssertTrue(stopped); XCTAssertEqual(service.applies, 1, "Pause must not begin another write after the read")
+        XCTAssertNil(checkpoint.runID); XCTAssertEqual(controller.sync?.counts["applied"], 0)
+    }
+    func testBackgroundDuringHeldReadBackCannotWriteUntilForegroundReadBack() async {
+        let service = TransferService(total: 3), clock = TransferClock()
+        let checkpoint = MemoryTraktApplyCheckpoint()
+        let controller = TraktController(service: service, checkpoint: checkpoint, clock: { clock.now }, sleep: { await clock.sleep($0) })
+        await controller.refresh(); service.failBefore = true; service.holdReview = true
+        controller.startApprovedApply()
+        guard await waitForRegressionCondition({ service.heldReview != nil }) else { XCTFail("No held read-back"); return }
+        controller.suspendForBackground(); service.heldReview?.resume(returning: service.snapshot)
+        await controller.finishSuspendingTransfer()
+        XCTAssertEqual(service.applies, 1); XCTAssertEqual(checkpoint.runID, "transfer-run")
+        await controller.refresh(); await controller.resumeApprovedApply()
+        let finished = await waitForRegressionCondition { controller.sync?.run?.state == "complete" && !controller.busy }
+        XCTAssertTrue(finished); XCTAssertEqual(controller.sync?.counts["applied"], 3); XCTAssertNil(checkpoint.runID)
+    }
+    func testPausedOrCancelledScanReadBackCannotBeginAnotherStep() async {
+        for cancelled in [false, true] {
+            let service = TransferService(total: 3), clock = TransferClock()
+            service.snapshot.run?.state = "building"
+            let controller = TraktController(service: service, clock: { clock.now }, sleep: { await clock.sleep($0) })
+            await controller.refresh()
+            service.holdReview = true
+            service.stepRefusal = TraktTransferFailure(status: 429, code: "trakt_rate_limited", message: "Cooldown")
+            let task = Task { await controller.scan(start: false) }
+            guard await waitForRegressionCondition({ service.heldReview != nil }) else { task.cancel(); XCTFail("No held scan read-back"); return }
+            if cancelled { task.cancel() } else { controller.pauseApplying() }
+            service.heldReview?.resume(returning: service.snapshot); await task.value
+            XCTAssertEqual(service.steps, 1); XCTAssertTrue(controller.paused); XCTAssertFalse(controller.busy)
+            XCTAssertEqual(service.applies, 0)
+        }
     }
 }

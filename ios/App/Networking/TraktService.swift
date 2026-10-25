@@ -224,7 +224,9 @@ import TwilDiaryCore
                 do {
                     if reconcile {
                         let saved = try await service.review(kind: .all, query: "", after: nil)
+                        try Task.checkCancellation()
                         guard operationID == ticket else { throw CancellationError() }
+                        if paused { break }
                         guard saved.run?.id == id else { throw APIError.message("The scan changed. Open the latest review.") }
                         accept(saved); reconcile = false
                         if cooldownUntil > clock() { continue }
@@ -285,8 +287,10 @@ import TwilDiaryCore
                 do {
                     if reconcile {
                         let latest = try await service.review(kind: .all, query: "", after: nil)
-                        guard latest.run?.id == id else { throw APIError.message("The review changed. Open the current review before continuing.") }
+                        try Task.checkCancellation()
                         guard operationID == ticket else { throw CancellationError() }
+                        if paused { break }
+                        guard latest.run?.id == id else { throw APIError.message("The review changed. Open the current review before continuing.") }
                         accept(latest); reconcile = false
                         if cooldownUntil > clock() { continue }
                     }
