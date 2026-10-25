@@ -1,5 +1,12 @@
 # Native parity status — work in progress
 
+## Current verification and owner-directed native changes (25 October)
+
+Codemagic native43 (d086023 / 6add74934a72334e32e4e58d) passes zero-warning compilation,167native units,47primary UI cases and3layout cases on each extra phone. This is a test baseline, not pixel-perfect/all-device production acceptance; later owner-video defects are being repaired in44. GitHub43 remains independent and pending. Backend incoming/community rollout is now authorized and deployed as recorded in PROGRESS.md; older no-deploy statements below are historical.
+
+Owner-directed changes beyond the old web design: root rightward-next/leftward-previous tab swipes; destination-owned chrome that travels with native push/pop; compact identity hysteresis/fade; persistent Information material with black sentiment cards; removal of incidental loading rows; recommendations switch beside heading; removal of filmography filter panel in favour of a single heading-level grid/list control.44 source621e196 is under validation; do not describe these as passed43 screenshots or completed visual parity. Current finite Trakt comparison UI translates a record offset; it never applies partial proposals or cancels the owner's active hosted review.
+
+
 Build27 update: Core54 and zero-warning simulator compile pass; earlyUI7/8 pass, now including complete Files/scanner and manual-movie Glance log/Undo. Only surprise modal accessibility bounds fail. No Release/IPA/full/all-phone execution or acceptance. Build28 adds a real bounded modal container and the documented duplicate/auth/reveal hardening; runtime acceptance is pending.
 
 Historical evidence: build 26 (40104599130 / 71ebe48) passes 54 Core tests, zero-warning simulator compilation and 5/8 early UI regressions, including full-bleed moving hero/Notes, Explore native Back, retained/scoped search and real watch/slider/Undo/movie behavior. It fails Files final-action clearance, manual movie Glance final-action hit testing and surprise accessibility bounds, so Release/full/all-phone tests are skipped and it is not accepted. Build 27 prepares bottom clearance and explicitly measured modal bounds; runtime acceptance is pending. Prior historical results below do not imply these new gates pass.
