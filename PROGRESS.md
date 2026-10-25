@@ -1,5 +1,9 @@
 # Native TwilDiary progress
 
+## Native41 validation running — 881f36a
+
+Codemagic run6add6f6c4a72334e32e4e4a7 started on temporary codex/ios-ci-next after its fast-forward to881f36a04b15a9fd561bff6bde17bfa6a854b7d1. Source checkout confirmation is the next gate, not assumed from the branch selection. Screenshot .local/codemagic-build41-start.png retained/shared. Expected167 native, focused two-case repeat gate, unchanged47 primary,3 layouts per extra phone, zero warnings and fixture-free Release IPA. Full runs stop early if the two repeated repair checks fail; successful targeted checks alone never constitute release acceptance. Browser control is working again. Native40 diagnostic archive download remains unresolved: timeout/paused-document response and no local ZIP, not a claimed artifact review. Current40 original remains 497e9fb; do not label41 preview source as a passed screenshot.
+
 ## Native41 repair gate and deployment authorization update
 
 Owner explicitly authorized deployment of the requested incoming-sync/sentiment features on25Oct; the previous no-deploy approval blocker is superseded for this concrete feature rollout. Wrangler authenticates to the expected account, reads D1 and lists existing secret names, but deployment/version APIs and a real scheduled-Worker deployment attempt return403 No access to the specified resource. Owner reports refreshing login; one recheck still403. No hosted migration, code deployment, incoming enable or secret upload succeeded. Do not keep retrying identical forbidden calls or change Access/permissions blindly. Production-config source is prepared with the existing account/D1 binding and no public endpoint. One active hosted manual review remains; preserve it rather than auto-cancelling it to force incoming work.
