@@ -1,5 +1,8 @@
 # Native TwilDiary progress
 
+### Native44 dispatched
+
+Committed621e1968e8338eff68ae3c2ee729c41dd4bf4b92 and pushed only codex/ios-ci-next. Codemagic44/run6add88d04a72334e32e4e863 queued at https://codemagic.io/app/6adcc927390bc3069c9e5490/build/6add88d04a72334e32e4e863 . Saved .local/codemagic-build44-start.png. Checkout SHA, compiler and all gates still require inspection. No canonical push/cancel while GitHub43 is active.
 ## Native44 prepared — owner-video repairs and new root-tab swipes
 
 Codemagic43/run6add74934a72334e32e4e58d on exactd086023a4dfd032dc0a4ac9b35eb9c77f4a56057 finished with zero build warnings/errors,167native units,4 repeated repair checks,10 early checks,47/47 primary UI and3/3 layouts on each extra phone. Actual rendered full log inspected25Oct; passed-run proof .local/codemagic-build43-passed.png. IPA43 artifact exists (5.30MB); native download requested but not yet present locally, so no local IPA43 checksum/ZIP validation claim. GitHub43/run40157535322 remains independently on the complete primary UI stage; do not cancel it with a canonical branch push.
