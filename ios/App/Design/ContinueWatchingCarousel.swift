@@ -43,41 +43,27 @@ struct ContinueWatchingCarousel: View {
             && !store.busy && store.cardActions.isEmpty && !store.needsSignIn && titles.count > 1
     }
     var body: some View {
-        ScrollView(.horizontal) {
-            LazyHStack(spacing: 12) {
-                ForEach(titles) { title in
-                    ProgressCard(title: title, compact: true)
-                        .containerRelativeFrame(.horizontal, count: 1, spacing: 12).id(title.id)
-                }
-            }.scrollTargetLayout()
-        }.scrollTargetBehavior(.viewAligned).scrollIndicators(.hidden)
-            .scrollPosition(id: position, anchor: .leading)
-            .onScrollPhaseChange { _, phase in
-                scrollIdle = phase == .idle
-                if phase == .tracking || phase == .interacting { lastInteraction = .now }
+        ZStack(alignment: .topTrailing) {
+            track.zIndex(0)
+            if titles.count > 1 {
+                Button { showControls = true } label: {
+                    Image(systemName: "ellipsis").font(.system(size: 15, weight: .semibold))
+                        .frame(width: 32, height: 32)
+                        .background { DiaryControlSurface(shape: Circle()) }
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }.buttonStyle(.plain).padding(2).zIndex(1)
+                    .accessibilityLabel("Continue watching controls").accessibilityIdentifier("continue-controls")
             }
-            .overlay(alignment: .topTrailing) {
-                if titles.count > 1 {
-                    Button { showControls = true } label: {
-                        Image(systemName: "ellipsis").font(.system(size: 15, weight: .semibold))
-                            .frame(width: 32, height: 32)
-                            .background { DiaryControlSurface(shape: Circle()) }
-                            .frame(width: 44, height: 44)
-                    }.buttonStyle(.plain).padding(2)
-                        .accessibilityLabel("Continue watching controls").accessibilityIdentifier("continue-controls")
-                        .popover(isPresented: $showControls) { controls.presentationCompactAdaptation(.popover) }
-                }
-            }
+        }
             .accessibilityElement(children: .contain).accessibilityIdentifier("continue-carousel")
             .accessibilityLabel("Continue watching")
             .accessibilityValue(titles.first { $0.id == selection }?.name ?? "")
+            .popover(isPresented: $showControls) { controls.presentationCompactAdaptation(.popover) }
             .onScrollVisibilityChange(threshold: 0.5) { visible = $0 }
             .onAppear {
                 if !initialized {
                     initialized = true
                     #if DEBUG
-                    // A deterministic paused preference keeps unrelated captures
-                    // stable. The dedicated carousel case exercises real rotation.
                     if store.isPreview {
                         selection = ids.first ?? ""
                         paused = !ProcessInfo.processInfo.arguments.contains("--ui-automatic-carousel")
@@ -102,6 +88,21 @@ struct ContinueWatchingCarousel: View {
                     guard automatic, !Task.isCancelled else { return }
                     if ContinueCarouselPolicy.cooldownEnded(at: .now, lastInteraction: lastInteraction) { move(forward: true, automatically: true) }
                 }
+            }
+    }
+    private var track: some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 12) {
+                ForEach(titles) { title in
+                    ProgressCard(title: title, compact: true)
+                        .containerRelativeFrame(.horizontal, count: 1, spacing: 12).id(title.id)
+                }
+            }.scrollTargetLayout()
+        }.scrollTargetBehavior(.viewAligned).scrollIndicators(.hidden)
+            .scrollPosition(id: position, anchor: .leading)
+            .onScrollPhaseChange { _, phase in
+                scrollIdle = phase == .idle
+                if phase == .tracking || phase == .interacting { lastInteraction = .now }
             }
     }
     private var controls: some View {

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import TwilDiaryCore
 
 /// Content-sized identity inside the system navigation bar. The system retains
@@ -57,4 +58,41 @@ struct TitleShareAction: View {
             }
         }.accessibilityLabel("Share " + name).accessibilityIdentifier("title-share")
     }
+}
+
+/// One native toolbar button owns the crossfade. Stacking two interactive
+/// toolbar controls can leave the invisible control intercepting the share tap.
+struct TitleHeaderAction: View {
+    let name: String
+    let kind: MediaKind
+    let id: Int?
+    let progress: CGFloat
+    @Binding var informationPresented: Bool
+    @State private var sharing = false
+    private var compact: Bool { progress >= 0.5 }
+    var body: some View {
+        Button {
+            if compact { sharing = true } else { informationPresented = true }
+        } label: {
+            ZStack {
+                Image(systemName: "square.and.arrow.up").opacity(Double(progress))
+                Image(systemName: "info.circle").opacity(Double(1 - progress))
+            }.frame(width: 32, height: 32)
+        }.accessibilityLabel(compact ? "Share " + name : "Community information")
+            .accessibilityIdentifier(compact ? "title-share" : "title-information")
+            .sheet(isPresented: $sharing) { TitleActivitySheet(name: name, kind: kind, id: id) }
+    }
+}
+
+@MainActor private struct TitleActivitySheet: UIViewControllerRepresentable {
+    let name: String
+    let kind: MediaKind
+    let id: Int?
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let item: Any
+        if let id, id > 0, let url = URL(string: "https://www.themoviedb.org/\(kind == .tv ? "tv" : "movie")/\(id)") { item = url }
+        else { item = name }
+        return UIActivityViewController(activityItems: [item], applicationActivities: nil)
+    }
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }

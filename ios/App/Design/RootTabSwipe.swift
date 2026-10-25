@@ -43,7 +43,9 @@ enum RootTabSwipe {
         private var startsOnWatchCard = false
         private lazy var pan: UIPanGestureRecognizer = {
             let gesture = UIPanGestureRecognizer(target: self, action: #selector(finish(_:)))
-            gesture.maximumNumberOfTouches = 1; gesture.cancelsTouchesInView = false; gesture.delegate = self
+            // Once a horizontal page pan begins, cancel the underlying button
+            // touch. Otherwise releasing over a cover can also push a title.
+            gesture.maximumNumberOfTouches = 1; gesture.cancelsTouchesInView = true; gesture.delegate = self
             return gesture
         }()
         override func loadView() {

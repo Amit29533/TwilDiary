@@ -48,8 +48,15 @@ import UIKit
         let carousel = app.descendants(matching: .any).matching(identifier: "continue-carousel").firstMatch
         let controls = app.buttons["continue-controls"]
         XCTAssertTrue(controls.waitForExistence(timeout: 5))
+        XCTAssertTrue(controls.isHittable)
+        capture("Home carousel controls before opening")
         controls.tap()
         let pause = app.buttons["continue-pause"]
+        if !pause.waitForExistence(timeout: 5) {
+            let attachment = XCTAttachment(string: app.debugDescription)
+            attachment.name = "Carousel controls presentation hierarchy"; attachment.lifetime = .keepAlways; add(attachment)
+        }
+        XCTAssertFalse(app.buttons["title-personal-rating"].exists, "Carousel controls must not open the cover underneath")
         XCTAssertTrue(pause.waitForExistence(timeout: 5))
         XCTAssertTrue(pause.label.hasPrefix("Pause")); pause.tap()
         guard let original = carousel.value as? String, !original.isEmpty else { XCTFail("Carousel has no selected title"); return }

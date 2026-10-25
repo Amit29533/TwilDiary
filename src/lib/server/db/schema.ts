@@ -437,7 +437,8 @@ export const traktSyncRuns = sqliteTable(
     leaseUntil: integer('lease_until'),
     error: text('error'),
     ratingMode: text('rating_mode').notNull(),
-    progress: integer('progress').notNull().default(0)
+    progress: integer('progress').notNull().default(0),
+    planAfter: text('plan_after')
   },
   (t) => [
     uniqueIndex('trakt_one_active_run')

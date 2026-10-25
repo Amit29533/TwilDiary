@@ -100,13 +100,7 @@ struct TitleDetailView: View {
                                     CompactTitleNavigation(name: title.name, poster: title.poster, progress: headerProgress)
                                 }
                                 ToolbarItemGroup(placement: .topBarTrailing) {
-                                    ZStack {
-                                        TitleShareAction(name: title.name, kind: title.isSeries ? .tv : .movie, id: title.tmdbId)
-                                            .opacity(Double(headerProgress)).allowsHitTesting(compactHeader).accessibilityHidden(!compactHeader)
-                                        Button { showInformation = true } label: { Image(systemName: "info.circle") }
-                                            .accessibilityLabel("Community information").accessibilityIdentifier("title-information")
-                                            .opacity(Double(1 - headerProgress)).allowsHitTesting(!compactHeader).accessibilityHidden(compactHeader)
-                                    }.frame(width: 32, height: 32)
+                                    TitleHeaderAction(name: title.name, kind: title.isSeries ? .tv : .movie, id: title.tmdbId, progress: headerProgress, informationPresented: $showInformation)
                                     Button { Task { await store.patch(title, values: ["favorite": !title.favorite]) } } label: { Image(systemName: title.favorite ? "heart.fill" : "heart") }.accessibilityLabel("Favorite").disabled(store.writesBlocked)
                                     Menu {
                                         if compactHeader {
@@ -329,7 +323,7 @@ struct TitleDetailView: View {
                 }.buttonStyle(.plain).accessibilityLabel("Episode \(episode.number) artwork")
                     .overlay(alignment: .bottomTrailing) {
                         episodeWatchControl(title, episode: episode, watched: isWatched)
-                            .background(.black.opacity(0.65), in: Circle()).padding(4)
+                            .background(.black.opacity(0.65), in: Circle())
                     }
                 Button { toggleEpisode(title, episode: episode) } label: {
                     episodeCaption(episode, watched: isWatched, next: next)
@@ -384,7 +378,7 @@ struct TitleDetailView: View {
                 await loadCard(title)
             }
         } label: {
-            Image(systemName: watched ? "checkmark.circle.fill" : "circle").font(.system(size: 24))
+            Image(systemName: watched ? "checkmark.circle.fill" : "circle").font(.system(size: episodesGrid ? 32 : 24))
                 .foregroundStyle(watched ? theme.accent : Color.secondary).frame(width: 44, height: 44)
         }.buttonStyle(.plain).disabled(store.writesBlocked || (!watched && !hasAired(episode)))
             .accessibilityLabel("Mark episode \(episode.number) \(watched ? "unwatched" : "watched")")

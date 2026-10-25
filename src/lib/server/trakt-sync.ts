@@ -753,19 +753,29 @@ export async function buildSyncStep(
       });
     } else if (run.stage === 'verify') {
       await assertSnapshot(db, run, trakt);
-      await saveRun(db, run, { stage: 'plan-remote-batch', page: 1 });
+      await saveRun(db, run, { stage: 'plan-remote-batch', page: 1, planAfter: null });
     } else if (['plan-remote', 'plan-history', 'plan-titles'].includes(run.stage)) {
       // Old plans stored a 20-row page number. New plans store the next row offset + 1.
       // Convert once so an interrupted preview resumes without skipping any records.
-      await saveRun(db, run, { stage: run.stage + '-batch', page: (run.page - 1) * 20 + 1 });
+      await saveRun(db, run, {
+        stage: run.stage + '-batch',
+        page: (run.page - 1) * 20 + 1,
+        planAfter: null
+      });
     } else if (run.stage === 'plan-remote-batch') {
       const rows = await db
         .select()
         .from(remote)
-        .where(and(eq(remote.runId, run.id), sql`${remote.kind}!='activities'`))
+        .where(
+          and(
+            eq(remote.runId, run.id),
+            sql`${remote.kind}!='activities'`,
+            run.planAfter ? sql`${remote.id}>${run.planAfter}` : undefined
+          )
+        )
         .orderBy(asc(remote.id))
         .limit(5)
-        .offset(run.page - 1)
+        .offset(run.planAfter ? 0 : run.page - 1)
         .all();
       const incoming = rows
         .map((row) => ({ row, item: row.payload as unknown as RemoteTraktItem }))
@@ -853,7 +863,8 @@ export async function buildSyncStep(
           await planItem(db, run, row.payload as unknown as RemoteTraktItem);
       await saveRun(db, run, {
         stage: rows.length === 5 ? 'plan-remote-batch' : 'plan-history-batch',
-        page: rows.length === 5 ? run.page + rows.length : 1
+        page: rows.length === 5 ? run.page + rows.length : 1,
+        planAfter: rows.length === 5 ? rows.at(-1)!.id : null
       });
     } else if (run.stage === 'plan-history-batch') {
       const rows = await db
@@ -875,12 +886,13 @@ export async function buildSyncStep(
         .where(
           and(
             isNull(titles.deletedAt),
+            run.planAfter ? sql`${watchEvents.id}>${run.planAfter}` : undefined,
             sql`NOT EXISTS(SELECT 1 FROM workspace_ui ui WHERE ui.title_id=${titles.id} AND ui.demo=1)`
           )
         )
         .orderBy(asc(watchEvents.id))
         .limit(5)
-        .offset(run.page - 1)
+        .offset(run.planAfter ? 0 : run.page - 1)
         .all();
       for (const row of rows) {
         if (await planned(db, run, 'history', row.event.id)) continue;
@@ -904,7 +916,8 @@ export async function buildSyncStep(
       }
       await saveRun(db, run, {
         stage: rows.length === 5 ? 'plan-history-batch' : 'plan-titles-batch',
-        page: rows.length === 5 ? run.page + rows.length : 1
+        page: rows.length === 5 ? run.page + rows.length : 1,
+        planAfter: rows.length === 5 ? rows.at(-1)!.event.id : null
       });
     } else if (run.stage === 'plan-titles-batch') {
       const rows = await db
@@ -917,12 +930,13 @@ export async function buildSyncStep(
         .where(
           and(
             isNull(titles.deletedAt),
+            run.planAfter ? sql`${titles.id}>${run.planAfter}` : undefined,
             sql`NOT EXISTS(SELECT 1 FROM workspace_ui ui WHERE ui.title_id=${titles.id} AND ui.demo=1)`
           )
         )
         .orderBy(asc(titles.id))
         .limit(5)
-        .offset(run.page - 1)
+        .offset(run.planAfter ? 0 : run.page - 1)
         .all();
       for (const row of rows)
         for (const kind of ['rating', 'watchlist'] as const) {
@@ -953,10 +967,11 @@ export async function buildSyncStep(
           if (saved) item.value = (saved.payload as unknown as RemoteTraktItem).value;
           await planItem(db, run, item, row.title);
         }
-      if (rows.length === 5) await saveRun(db, run, { page: run.page + rows.length });
+      if (rows.length === 5)
+        await saveRun(db, run, { page: run.page + rows.length, planAfter: rows.at(-1)!.title.id });
       else {
         await assertSnapshot(db, run, trakt);
-        await saveRun(db, run, { state: 'review', stage: 'ready', page: 1 });
+        await saveRun(db, run, { state: 'review', stage: 'ready', page: 1, planAfter: null });
       }
     }
   } catch (error) {

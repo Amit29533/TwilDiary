@@ -14,6 +14,38 @@ results and actual artifacts; reconcile before editing. Notes and source test
 counts never substitute for runtime evidence. No Mac/Xcode/Swift runtime is
 available locally; Windows checks grammar/YAML/Bash/Python only.
 
+## Native60 — follow-up from actual59 artifacts
+
+CM59 **6ade213a4a72334e32e50a40**, c12f24bf33712905a545b394915642f0c009bd36:
+0compiler warnings;213native tests pass;12of17focused cases pass. Five failures:
+carousel controls open18Again instead of popover (recording/hierarchy confirmed),
+returning root tab swipe also pushesFrieren (hierarchy confirmed), Share remains
+inactive after scroll, episode overlay checkmark14pt from edge versus<8pt contract,
+and native tab chrome still present on title search result. No unchanged rerun,
+no promotion. Complete diagnostics downloaded D:/Downloads/TwilDiary_25_artifacts.zip
+(308,602,905bytes, ZIP CRC pass), extracted .local/codemagic59-diagnostics.
+Three original screenshots from individually passed cases plus precise scope:
+ios/docs/screenshots/step-10/build-59-focused. Not a full passed build.
+
+60candidate batches fixes: carousel controls become a higher-priority sibling of
+the scroll track with a stable presentation owner; recognized page pans cancel
+underlying cover-button touches; one native toolbar button owns Information/Share
+crossfade and native activity sheet; remove root's forced-visible tab preference;
+episode glyph32inside44target at thumbnail corner. Existing assertions retained;
+carousel failure gets an explicit no-unwanted-title assertion and hierarchy.
+Information screenshot still appeared too opaque despite functional pass; reduce
+material masking and clear the NavigationStack container while retaining dark cards.
+
+Backend audit: new keyset planning cursor preserves old offset/page checkpoints
+once, then seeks byID. Migration0015is additive; presentation page stays compatible.
+Two cursor/replay tests and full402backend cases pass; all local migrations through
+0015pass. Added missing0014/0015Drizzle snapshots plus a no-schema-drift generator
+regression, preventing future duplicate CREATE statements. No hosted deploy.
+
+Exact next action: finish60self-review/docs/commit and run official CM full suite.
+Windows checks are syntax only;60is not compiled/runtime accepted. Continue audit
+while it runs; preserve candidate SHA and GitHub stable54branch.
+
 ## Native59 follow-up — actual58 failure and continued audit
 
 CM58 **6ade1cf14a72334e32e50900**, exact sourcef3b9d33262b0e048cf9afa6fb5e3623d7370e9c8:

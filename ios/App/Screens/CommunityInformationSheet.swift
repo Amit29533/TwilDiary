@@ -51,12 +51,12 @@ struct CommunityInformationSheet: View {
                 .containerBackground(.clear, for: .navigation)
                 .navigationTitle("Information").navigationBarTitleDisplayMode(.inline)
                 .toolbarBackground(.hidden, for: .navigationBar)
-        }.background {
+        }.containerBackground(.clear, for: .navigation).background {
             if reduceTransparency { Color(webHex: "#1c1c1e").ignoresSafeArea() }
             else {
                 ZStack {
-                    DiaryScreenBackground(path: artwork, name: name, forceGlass: true).opacity(0.55)
-                    Rectangle().fill(.ultraThinMaterial)
+                    DiaryScreenBackground(path: artwork, name: name, forceGlass: true)
+                    Rectangle().fill(.ultraThinMaterial).opacity(0.35)
                 }.ignoresSafeArea()
             }
         }.presentationDetents([.medium, .large], selection: $detent).presentationDragIndicator(.visible)
