@@ -1,5 +1,11 @@
 # Native TwilDiary progress
 
+## Native56 carousel draft isolated from the running54 and prepared55
+
+Local branch codex/ios-carousel-parity starts from the coherent native55cache/docs sourceae2cfdc. Prepared56replaces only Home's bare horizontal card ScrollView with a dedicated same-geometry ContinueWatchingCarousel. It retains snapping/card actions/root-gesture exclusions, adds visibility/scene/tab/path/write/motion/VoiceOver/control guards for5second rotation, five-second interaction cooldown, title-identity/pause scene restoration, bounded previous/next wrapping and cancellation/restart keyed by current IDs/session. A small rounded native controls popover exposes previous/next/pause without inserting a layout row. This is a documented native adaptation of web hover/focus controls, not a claimed pixel-identical overlay.
+
+Two pure policy regressions and one real UI case cover wrapping/removal/invalid clocks, manual next/back, tab return, actual automatic advance and remaining paused beyond5seconds. Source196native/52primary; local grammar/YAML/Bash/Python pass only, no56Swift type/runtime or visual acceptance yet. Keep55source194native/51UI separate if sending it to candidate; do not accidentally promote these new56features with54. Exact next: finish54artifact/final summary and same-SHApromotion after official green; dispatch55candidate independently, then review56before its own candidate run. No web/backend changes.
+
 ## Source audit follow-up while54runs
 
 Reconciled IOS-PARITY's current status and confirmed a real remaining Home gap directly against ContinueCarousel.svelte: native currently has snapping/manual swipe only; web5second visibility/active/reduced-motion/interaction guarded rotation and previous/next/pause/restoration are absent. Implement separately after current stability/cache batch, preserve root/card gestures. This is not falsely counted as completed.

@@ -38,6 +38,36 @@ import UIKit
         XCTAssertTrue(app.staticTexts["settings-cache-warning"].exists)
         capture("Cache information contained in Settings")
     }
+    func testContinueCarouselControlsPauseAdvanceReturnAndRestoreAcrossTabs() {
+        let app = launch()
+        app.buttons["tab-home"].tap()
+        let carousel = app.otherElements["continue-carousel"], controls = app.buttons["continue-controls"]
+        XCTAssertTrue(controls.waitForExistence(timeout: 5))
+        controls.tap()
+        let pause = app.buttons["continue-pause"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 5))
+        if pause.label.hasPrefix("Pause") { pause.tap() }
+        else { app.buttons["continue-next"].tap() }
+        guard let original = carousel.value as? String, !original.isEmpty else { XCTFail("Carousel has no selected title"); return }
+        controls.tap(); app.buttons["continue-next"].tap()
+        let advanced = NSPredicate(format: "value != %@ AND value != ''", original)
+        expectation(for: advanced, evaluatedWith: carousel); waitForExpectations(timeout: 5)
+        capture("Continue carousel next title")
+        controls.tap(); app.buttons["continue-previous"].tap()
+        expectation(for: NSPredicate(format: "value == %@", original), evaluatedWith: carousel); waitForExpectations(timeout: 5)
+        app.buttons["tab-more"].tap(); app.buttons["tab-home"].tap()
+        XCTAssertEqual(carousel.value as? String, original)
+        controls.tap()
+        XCTAssertTrue(pause.waitForExistence(timeout: 5)); XCTAssertTrue(pause.label.hasPrefix("Start"))
+        pause.tap()
+        expectation(for: advanced, evaluatedWith: carousel); waitForExpectations(timeout: 9)
+        controls.tap(); XCTAssertTrue(pause.waitForExistence(timeout: 5)); XCTAssertTrue(pause.label.hasPrefix("Pause")); pause.tap()
+        guard let stopped = carousel.value as? String else { XCTFail("Carousel lost its selected title"); return }
+        let unexpectedMove = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value != %@", stopped), object: carousel)
+        unexpectedMove.isInverted = true
+        XCTAssertEqual(XCTWaiter.wait(for: [unexpectedMove], timeout: 6), .completed, "A paused carousel must not advance after the five-second interval")
+        capture("Continue carousel stays paused")
+    }
     func testNativeTabsAndTitleNavigation() {
         let app = launch()
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'complete'")).firstMatch.waitForExistence(timeout: 5))

@@ -90,3 +90,15 @@ The user explicitly requests collection list/grid toggles and native navigation/
 ## Explicit owner-requested design changes — prepared build35
 
 The25Oct title reference replaces the old beside-poster synopsis: lowered identity on a darker hero, full-width opening synopsis below, retained opening lines with overflow-only More, and compact native poster/name/Back/Share while scrolled. Native Back replaces redundant Done on pushed pages; real editing sheets retain Done. Liquid Glass adds a blurred dominant-artwork background behind panels/controls/navigation, while foreground art remains sharp and accessibility can restore solid/reduced-motion presentation. These are requested differences from b43454e, not accidental parity drift. Source is prepared; all-size screenshots and native runtime acceptance are pending. The community route remains an undeployed additive backend change.
+
+## Prepared native56 carousel adaptation (uncompiled)
+
+The isolated next draft adds guarded5second rotation and previous/next/pause
+with scene-restored title identity. A small top-corner native popover replaces
+the web's hover/keyboard-only controls; card height, content, cover tap and
+horizontal snapping stay unchanged. Automatic movement stays off with Reduce
+Motion or VoiceOver instead of overriding those device settings. Rotation
+stops offscreen, during page/tab navigation, a write, drag or open controls.
+An ID/session-keyed task cancels when its list changes; no background polling
+is added. Two policy tests and one actual automatic/pause/tab-return UI test
+are prepared. This is not part of54/55runtime evidence or a passed comparison.

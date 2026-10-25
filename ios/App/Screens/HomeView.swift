@@ -24,11 +24,7 @@ struct HomeView: View {
                     if showSearch { CatalogSearchView(onClose: { showSearch = false }).padding(.horizontal, -14) }
                     if !watching.isEmpty { VStack(spacing: 10) {
                         SectionHeading(name: "Pick up where you left off") { Button("Glance →") { router.selectedTab = .glance } }
-                        Group {
-                            ScrollView(.horizontal) {
-                                LazyHStack(spacing: 12) { ForEach(watching) { ProgressCard(title: $0, compact: true).containerRelativeFrame(.horizontal, count: 1, spacing: 12) } }.scrollTargetLayout()
-                            }.scrollTargetBehavior(.viewAligned).scrollIndicators(.hidden)
-                        }
+                        ContinueWatchingCarousel(titles: watching)
                     } }
                     ScrollView(.horizontal) {
                         HStack(spacing: 8) {
