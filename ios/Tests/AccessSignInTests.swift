@@ -25,9 +25,14 @@ import XCTest
         XCTAssertNotNil(AccessCookiePolicy.credential([try cookie(path: "/api", expires: now.addingTimeInterval(600))], at: session, now: now))
         XCTAssertNotNil(AccessCookiePolicy.credential([try cookie(domain: "." + (AppConfiguration.backend.host ?? ""))], at: session, now: now))
     }
-    func testOversizedCookieCannotBecomeARequestHeader() throws {
-        XCTAssertNil(AccessCookiePolicy.credential([try cookie(token: String(repeating: "a", count: 16_385))], at: session, now: now))
-        XCTAssertNil(AccessCookiePolicy.credential([try cookie(token: "")], at: session, now: now))
+    func testOversizedCookieCannotBecomeARequestHeader() {
+        // Foundation refuses some malformed cookies before policy evaluation.
+        // Exercise the same production header validator without constructing one.
+        XCTAssertTrue(AccessCookiePolicy.validToken(String(repeating: "a", count: 16_384)))
+        XCTAssertFalse(AccessCookiePolicy.validToken(String(repeating: "a", count: 16_385)))
+        for token in ["", "a b", "a\nb", "a;b", "a,b", "a\"b", "a\\b", "aéb"] {
+            XCTAssertFalse(AccessCookiePolicy.validToken(token))
+        }
     }
     func testOneAttemptConsumesACandidateOnlyOnce() throws {
         let state = AccessSignInState(), value = try cookie()

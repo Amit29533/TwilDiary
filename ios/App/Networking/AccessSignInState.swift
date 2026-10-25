@@ -3,6 +3,10 @@ import Observation
 
 /// Candidate cookies are still validated by DiaryAPI.authenticate before Keychain.
 enum AccessCookiePolicy {
+    static func validToken(_ token: String) -> Bool {
+        !token.isEmpty && token.utf8.count <= 16_384
+            && token.unicodeScalars.allSatisfy { $0.isASCII && $0.value > 32 && $0.value < 127 && ![34, 44, 59, 92].contains($0.value) }
+    }
     static func trusted(_ url: URL?) -> Bool {
         guard let url else { return false }
         return url.scheme?.lowercased() == "https" && url.host?.lowercased() == AppConfiguration.backend.host?.lowercased()
@@ -16,8 +20,7 @@ enum AccessCookiePolicy {
             let token = cookie.value, path = cookie.path
             let matchesAPI = path == "/" || path == "/api" || path == "/api/" || path == "/api/session"
             return cookie.name == "CF_Authorization" && cookie.isSecure && domain == host && matchesAPI
-                && (cookie.expiresDate.map { $0 > now } ?? true) && !token.isEmpty && token.utf8.count <= 16_384
-                && token.unicodeScalars.allSatisfy { $0.isASCII && $0.value > 32 && $0.value < 127 && ![34, 44, 59, 92].contains($0.value) }
+                && (cookie.expiresDate.map { $0 > now } ?? true) && validToken(token)
         }
         return cookie.map { AccessCredential(token: $0.value, expires: $0.expiresDate) }
     }
