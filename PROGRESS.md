@@ -94,7 +94,7 @@ final protected commit intentionally remain synchronous. Prior native52M2
 10k-watch measurements: save66.66ms/load56.28ms/index25.47ms. No55speed claim
 until actual macOS measurements. Native55M2 diagnostic now reports10k events: sync save139.71ms, async total77.56ms, sync load75.51ms, index45.12ms (1k9.75/9.80/8.45/4.10ms). These are cross-run-noisy diagnostics; the gated test proves off-main preparation, not a phone speedup/FPS. All13CI-tool checks pass locally.
 
-## Native56 — separate local carousel batch
+## Native56 — separate local carousel and card-parity batch
 
 Direct audit confirmed web ContinueCarousel.svelte has guarded5second rotation,
 wrap previous/next, pause and retained identity, while native Home had only
@@ -109,6 +109,8 @@ in IOS-PARITY.md. Two policy tests and one actual automatic/pause/tab-return
 UI test are added; Home search explicitly suppresses automatic movement while open; the new case joins the focused gate (9cases, all old8remain)
 so failures stop before the long suite. Source196native/52primary; local
 .local/validate56.py passes, **no56Swift compile/runtime/screenshots yet**.
+
+Direct54web/native screenshot comparison also confirmed the Glance name/time gap: a44pt Menu occupied the title HStack height although the web absolutely positions its menu. Prepared56extracts that menu into an overlay, retains every existing action/Notes target, reserves title space, and matches the web17pt name/3pt copy gap. The web also uses44pt stepper/Home hit areas around32–36pt painted buttons. Native controls were only32–36pt;56adds44pt content shapes without enlarging the card row, fixes Home pending opacity by keeping tint inside the disabled-aware press style, and adds real hit-frame assertions to the existing toast/cover/menu UI case. No watch/menu/state rules changed. These layout/input changes are uncompiled56, absent from the owner's54IPA, and require fresh screenshots/full regression.
 
 ## Owner phone checklist
 

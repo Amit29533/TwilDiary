@@ -350,8 +350,11 @@ struct ProgressCard: View {
                     timeLine.font(.system(size: 12, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
                     GeometryReader { proxy in Capsule().fill(.white.opacity(0.15)).overlay(alignment: .leading) { Capsule().fill(.tint).frame(width: proxy.size.width * fraction) } }.frame(height: 4)
                 }.padding(.bottom, 4)
-                Button { Task { await markWatch() } } label: { actionIcon(.mark, symbol: title.isSeries ? "plus" : "checkmark", size: 24).frame(width: 36, height: 36) }
-                    .buttonStyle(.plain).foregroundStyle(theme.ink).background(.tint, in: RoundedRectangle(cornerRadius: 10)).disabled(!canMark).accessibilityLabel("Mark next watch for \(title.name)")
+                Button { Task { await markWatch() } } label: {
+                    actionIcon(.mark, symbol: title.isSeries ? "plus" : "checkmark", size: 24).foregroundStyle(theme.ink)
+                        .frame(width: 36, height: 36).background(.tint, in: RoundedRectangle(cornerRadius: 10))
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }.buttonStyle(DiaryPressStyle()).disabled(!canMark).accessibilityLabel("Mark next watch for \(title.name)")
             }
         }.padding(12).frame(height: 142)
     }
@@ -361,37 +364,24 @@ struct ProgressCard: View {
         VStack(spacing: 10) {
             topLayout {
                 Button { openTitle() } label: { Artwork(path: title.poster, title: title.name, initialsOnly: false).frame(width: grid ? nil : 94, height: grid ? 154 : 118).frame(maxWidth: grid ? .infinity : nil).clipShape(RoundedRectangle(cornerRadius: 8)) }.buttonStyle(.plain)
-                VStack(alignment: .leading, spacing: 7) {
-                    HStack(alignment: .top) {
-                        Button { openTitle() } label: { Text(title.name).font(.system(size: 18, weight: .semibold)).foregroundStyle(.white).lineLimit(2).multilineTextAlignment(.leading) }.buttonStyle(.plain).accessibilityIdentifier("progress-title-" + title.id)
-                        Spacer(minLength: 0)
-                        Menu {
-                            Button(title.favorite ? "Remove favorite" : "Favorite", systemImage: title.favorite ? "heart.slash" : "heart") { Task { await store.patchCard(title.id, values: ["favorite": !title.favorite]) } }
-                            Button(title.queued == true ? "Remove from Queue" : "Add to Queue", systemImage: "text.badge.plus") { Task { await store.patchCard(title.id, values: ["queued": title.queued != true]) } }
-                            if title.isSeries, let season = card?.season?.number {
-                                Button("Mark complete", systemImage: "checkmark.circle") { Task { await store.completeCardSeason(title.id, season: season) } }
-                            }
-                            Button("Dropped", systemImage: "stop.circle") { Task { await store.patchCard(title.id, values: ["status": "dropped"]) } }
-                            Button("Notes", systemImage: "note.text") {
-                                router.paths[router.selectedTab, default: NavigationPath()].append(SavedTitleRoute(id: title.id, season: card?.season?.number ?? 1, focusEpisodes: false, focusNotes: true))
-                            }
-                        } label: { DiaryIcon(name: "ellipsis", size: 19).frame(width: 44, height: 44) }
-                            .disabled(cardBusy || store.needsMutationRefresh).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel("More options for " + title.name).accessibilityIdentifier("progress-menu-" + title.id)
-                    }
-                    timeLine.font(.system(size: 13, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Button { openTitle() } label: { Text(title.name).font(.system(size: 17, weight: .semibold)).tracking(-0.425).foregroundStyle(.white).lineLimit(2).multilineTextAlignment(.leading) }
+                        .buttonStyle(.plain).padding(.trailing, 34).accessibilityIdentifier("progress-title-" + title.id)
+                    timeLine.font(.system(size: 13, weight: .semibold)).lineSpacing(3.5).fixedSize(horizontal: false, vertical: true).frame(minHeight: 20, alignment: .topLeading)
                     Spacer(minLength: 0)
-                }
+                }.padding(.top, grid ? 0 : 8).frame(maxWidth: .infinity, alignment: .topLeading)
+                    .overlay(alignment: .topTrailing) { cardMenu.offset(x: 10, y: -10) }
             }
             actionLayout {
                 VStack(alignment: .leading, spacing: 5) {
                     GeometryReader { proxy in Capsule().fill(.white.opacity(0.16)).overlay(alignment: .leading) { Capsule().fill(.tint).frame(width: proxy.size.width * fraction) } }.frame(height: 6)
                     Text(title.isSeries ? "\(Int((fraction * 100).rounded()))% complete" : fraction > 0 ? "Watched" : "Not watched yet").font(.system(size: 13)).foregroundStyle(Color(webHex: "#c5c0cf"))
                 }
-                HStack(spacing: 12) {
+                HStack(spacing: 6) {
                 if title.isSeries {
-                    Button { Task { await removeWatch() } } label: { actionIcon(.remove, symbol: "minus", size: 18).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))) }.buttonStyle(.plain).disabled(cardBusy || store.needsMutationRefresh || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
-                    Text("\(card?.progress.watched ?? 0)").font(.system(size: 17, weight: .semibold)).monospacedDigit().contentTransition(.numericText()).animation(reduceMotion ? nil : .snappy(duration: 0.2), value: card?.progress.watched).accessibilityIdentifier("watch-count-" + title.id)
-                    Button { Task { await markWatch() } } label: { actionIcon(.mark, symbol: "plus", size: 20).foregroundStyle(theme.ink).frame(width: 34, height: 34).background(.tint, in: RoundedRectangle(cornerRadius: 10)) }.buttonStyle(DiaryPressStyle()).disabled(!canMark).accessibilityLabel("Mark next watch for \(title.name)")
+                    Button { Task { await removeWatch() } } label: { actionIcon(.remove, symbol: "minus", size: 18).frame(width: 32, height: 32).background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.3))).frame(width: 44, height: 44).contentShape(Rectangle()) }.buttonStyle(.plain).disabled(cardBusy || store.needsMutationRefresh || card?.previous == nil).accessibilityLabel("Remove latest watch for \(title.name)")
+                    Text("\(card?.progress.watched ?? 0)").font(.system(size: 17, weight: .semibold)).monospacedDigit().contentTransition(.numericText()).animation(reduceMotion ? nil : .snappy(duration: 0.2), value: card?.progress.watched).frame(minWidth: 24).accessibilityIdentifier("watch-count-" + title.id)
+                    Button { Task { await markWatch() } } label: { actionIcon(.mark, symbol: "plus", size: 20).foregroundStyle(theme.ink).frame(width: 34, height: 34).background(.tint, in: RoundedRectangle(cornerRadius: 10)).frame(width: 44, height: 44).contentShape(Rectangle()) }.buttonStyle(DiaryPressStyle()).disabled(!canMark).accessibilityLabel("Mark next watch for \(title.name)")
                 } else {
                     Button { Task { await markWatch() } } label: {
                         HStack(spacing: 8) { actionIcon(.mark, symbol: "checkmark", size: 17); Text(fraction > 0 ? "Watched" : "Log watch") }
@@ -399,9 +389,23 @@ struct ProgressCard: View {
                             .foregroundStyle(theme.ink).background(theme.accent, in: RoundedRectangle(cornerRadius: 12))
                     }.buttonStyle(DiaryPressStyle()).disabled(!canMark).accessibilityLabel((fraction > 0 ? "Watched " : "Log watch for ") + title.name)
                 }
-                }
+                }.frame(height: title.isSeries ? 34 : 44)
             }
         }.padding(10)
+    }
+    private var cardMenu: some View {
+        Menu {
+            Button(title.favorite ? "Remove favorite" : "Favorite", systemImage: title.favorite ? "heart.slash" : "heart") { Task { await store.patchCard(title.id, values: ["favorite": !title.favorite]) } }
+            Button(title.queued == true ? "Remove from Queue" : "Add to Queue", systemImage: "text.badge.plus") { Task { await store.patchCard(title.id, values: ["queued": title.queued != true]) } }
+            if title.isSeries, let season = card?.season?.number {
+                Button("Mark complete", systemImage: "checkmark.circle") { Task { await store.completeCardSeason(title.id, season: season) } }
+            }
+            Button("Dropped", systemImage: "stop.circle") { Task { await store.patchCard(title.id, values: ["status": "dropped"]) } }
+            Button("Notes", systemImage: "note.text") {
+                router.paths[router.selectedTab, default: NavigationPath()].append(SavedTitleRoute(id: title.id, season: card?.season?.number ?? 1, focusEpisodes: false, focusNotes: true))
+            }
+        } label: { DiaryIcon(name: "ellipsis", size: 19).frame(width: 44, height: 44) }
+            .disabled(cardBusy || store.needsMutationRefresh).foregroundStyle(Color(webHex: "#c5c0cf")).accessibilityLabel("More options for " + title.name).accessibilityIdentifier("progress-menu-" + title.id)
     }
     private var timeLine: some View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {

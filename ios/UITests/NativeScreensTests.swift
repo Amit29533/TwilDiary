@@ -1062,7 +1062,12 @@ import UIKit
     func testToastExpiresAndCardCoverAndUsefulMenuWork() {
         let app = launch(mutations: true)
         let mark = app.buttons["Mark next watch for 18 Again"]
-        XCTAssertTrue(mark.waitForExistence(timeout: 5)); mark.tap()
+        XCTAssertTrue(mark.waitForExistence(timeout: 5))
+        for control in [mark, app.buttons["Remove latest watch for 18 Again"]] {
+            XCTAssertGreaterThanOrEqual(control.frame.width, 43.5)
+            XCTAssertGreaterThanOrEqual(control.frame.height, 43.5)
+        }
+        mark.tap()
         let toast = app.otherElements["undo-toast"]
         XCTAssertTrue(app.buttons["Undo"].waitForExistence(timeout: 5))
         if toast.exists { XCTAssertLessThan(toast.frame.height, 80) }

@@ -102,3 +102,12 @@ stops offscreen, during page/tab navigation, a write, drag or open controls.
 An ID/session-keyed task cancels when its list changes; no background polling
 is added. Two policy tests and one actual automatic/pause/tab-return UI test
 are prepared. This is not part of54/55runtime evidence or a passed comparison.
+
+Native56also prepares the confirmed Glance copy/menu gap and touch-target
+parity: source GlanceCard.svelte uses an absolutely positioned menu,17pt title,
+3pt metadata margin and44pt targets around the smaller painted stepper. Native
+previously let the menu impose44pt title-row height and exposed32–36pt targets.
+The isolated draft overlays the extracted unchanged menu, preserves card height
+and button paint sizes, adds44pt hit areas and makes the Home pending style
+include its tinted background. Existing watch/cover/menu tests gain real target
+bounds. Runtime and screenshot comparison remain pending;54images are unchanged.
